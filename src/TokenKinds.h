@@ -18,9 +18,6 @@ namespace compiler
 			CHAR_LITERAL,				// 字符常量
 			STRING_LITERAL,				// 字符串字面值
 
-			BOOL_TRUE,					// Bool true 字面常量
-			BOOL_FALSE,					// Bool false 字面常量
-
 			BO_Mul, BO_Div, BO_Rem,		// * / %
 			BO_Add, BO_Sub,				// + -
 			BO_LT, BO_GT, BO_LE, BO_GE,	// < > <= >=
@@ -64,6 +61,9 @@ namespace compiler
 			KEYWORD_int,				// int
 			KEYWORD_bool,				// bool
 			KEYWORD_func,				// 函数定义
+			KEYWORD_void,				// 函数返回void
+			BOOL_TRUE,					// Bool true 字面常量
+			BOOL_FALSE,					// Bool false 字面常量
 
 			FILE_EOF,
 			UNKNOWN

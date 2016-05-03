@@ -17,4 +17,9 @@ namespace compiler
 	{
 		std::cerr << "parser error: " << msg << std::endl;
 	}
+
+	void errorSema(const std::string& msg)
+	{
+		std::cerr << "sema error: " << msg << std::endl;
+	}
 }

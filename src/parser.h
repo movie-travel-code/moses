@@ -3,10 +3,10 @@
 // This file is used to implement the parser.
 // 
 //===---------------------------------------------------------------------===//
-#ifndef Parser_INCLUDE
-#define Parser_INCLUDE
+#ifndef PARSER_INCLUDE
+#define PARSER_INCLUDE
 #include <algorithm>
-#include "Scanner.h"
+#include "scanner.h"
 #include "ast.h"
 #include "sema.h"
 namespace compiler
@@ -136,14 +136,21 @@ namespace compiler
 			static std::vector<TokenValue> ClassBodySafeSymbols = { TokenValue::PUNCTUATOR_Semicolon };
 		}
 
+		/// \brief Parser - Implenment a LL(1) parser.
+		/// Use syntax-directed semantic analysis.
+		/// --------------------------nonsense for coding-------------------------------
+		/// parse*()函数接受该非终结符的继承属性，并返回该非终结符的综合属性
+		/// --------------------------nonsense for coding-------------------------------
 		class Parser
 		{
+			enum class ContextKind { TopLevel, Function, Class, While};
 			Parser(const Parser &) = delete;
 			void operator=(const Parser&) = delete;
 		private:
 			Scanner& scan;
 			ASTPtr AST;
 			Sema& Actions;
+			ContextKind CurrentContext;
 		public:
 			explicit Parser(Scanner& scan, Sema& Actions);
 			/// \brief parse - Parse the entire file specified.
@@ -165,10 +172,10 @@ namespace compiler
 			StmtASTPtr ParseWhileStatement();
 			StmtASTPtr ParseBreakStatement();
 			StmtASTPtr ParseContinueStatement();
-			StmtASTPtr ParsereturnStatement();
+			StmtASTPtr ParsereturnStatement(FunctionSymbol* funcSym);
 
 			ExprASTPtr ParseBoolenExpression();
-			ExprASTPtr ParseStringLitreal();
+			ExprASTPtr ParseStringLiteral();
 
 			ExprASTPtr ParseBoolLiteral(bool isTrue);
 
@@ -214,7 +221,7 @@ namespace compiler
 			bool expectToken(tok::TokenValue value, const std::string& lexem, bool advanceToNextToken) const;
 			bool validateToken(tok::TokenValue value) const;
 			bool validateToken(tok::TokenValue value, bool advanceToNextToken) const;
-			bool errorReport(const std::string& msg) const;
+			bool errorReport(const std::string& msg, ErrorKind kind) const;
 			/// \brief Use "panic mode" to achieve syntax error recovery.
 			void syntaxErrorRecovery(ParseContext::context context);
 		};

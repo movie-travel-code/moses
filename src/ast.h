@@ -20,6 +20,12 @@ namespace compiler
 	/// 也就是说在构建syntax tree的时候，只是执行一些简单的语义分析，并存储错误。构建完成
 	/// syntax tree后，再遍历syntax tree并执行代码生成部分。
 	///---------------------------nonsense for coding------------------------------///
+
+	namespace sema
+	{
+		class VariableSymbol;
+	}
+	
 	namespace ast
 	{
 		class Expr;
@@ -30,13 +36,13 @@ namespace compiler
 		class StatementAST;
 		class ParameterDecl;
 		class FunctionDecl;
-		class Decl;
 		class CompoundStmt;
-		class VarDecl;
+		class VarDecl;	
 
 		using ASTPtr = std::vector<std::unique_ptr<StatementAST>>;
 		using StmtASTPtr = std::unique_ptr<StatementAST>;
 		using ExprASTPtr = std::unique_ptr<Expr>;
+		using CallExprPtr = std::unique_ptr<CallExpr>;
 		using DeclASTPtr = std::unique_ptr<DeclStatement>;
 		using CompoundStmtPtr = std::unique_ptr<CompoundStmt>;
 		using ParmDeclPtr = std::unique_ptr<ParameterDecl>;
@@ -69,10 +75,39 @@ namespace compiler
 		class Expr : public StatementAST
 		{
 		public:
-			Expr() {}
-			Expr(SourceLocation start, SourceLocation end) :
-				StatementAST(start, end) {}
-			Expr(const Expr& expr) : StatementAST(expr.LocStart, expr.LocEnd) {}
+			/// \brief The categorization of expression values.
+			enum class ExprValueKind
+			{
+				/// \brief An r-value expression produces a temporary value.
+				/// Note: lvalue can convert to rvalue, so VK_LValue implication VK_RValue.
+				VK_RValue,
+				VK_LValue
+			};
+		private:
+			// ------------------------nonsense for coding---------------------------
+			// Expr都会有相应的Type，这个很重要，用于进行类型检查。
+			// ------------------------nonsense for coding---------------------------
+			std::shared_ptr<Type> ExprType;
+			ExprValueKind VK;
+		public:
+			Expr() : ExprType(nullptr) {}
+			Expr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, ExprValueKind vk) :
+				StatementAST(start, end), ExprType(type), VK(vk) {}
+			Expr(const Expr& expr) : 
+				StatementAST(expr.LocStart, expr.LocEnd), ExprType(expr.ExprType) {}
+			std::shared_ptr<Type> getType() const { return ExprType; }
+
+			/// isLvalue - True if this expression is an "l-value" according to
+			/// the rules of the current language. Like C/C++，moses give somewhat
+			/// different rules for this concept, but in general, the result of 
+			/// an l-value expression identifies a specific object whereas the
+			/// result of an r-value expression is a value detached from any 
+			/// specific storage.
+			bool isLValue() const { return VK == ExprValueKind::VK_LValue; }
+			bool isRValue() const { return VK == ExprValueKind::VK_RValue; }
+
+			void setExprValueKind(ExprValueKind valueKind) { VK = valueKind; }
+
 			virtual ~Expr() {}
 		};
 
@@ -82,7 +117,8 @@ namespace compiler
 			double Val;
 		public:
 			NumberExpr(SourceLocation start, SourceLocation end, double Val) :
-				Expr(start, end), Val(Val) {}
+				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::INT, true), ExprValueKind::VK_RValue),
+				Val(Val) {}
 			virtual ~NumberExpr() {}
 		};
 
@@ -91,8 +127,10 @@ namespace compiler
 		{
 			std::string C;
 		public:
-			CharExpr(SourceLocation start, SourceLocation end, std::string c) :
-				Expr(start, end), C(c) {}
+			/// To Do: 此处使用INT来表示CharExpr，也就是两者可以相加减
+			CharExpr(SourceLocation start, SourceLocation end, std::string c) : 
+				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::INT, true), ExprValueKind::VK_RValue),
+				C(c) {}
 			virtual ~CharExpr() {}
 		};
 
@@ -101,8 +139,8 @@ namespace compiler
 		{
 			std::string str;
 		public:
-			StringLiteral(SourceLocation start, SourceLocation end, std::string str) :
-				Expr(start, end), str(str) {}
+			StringLiteral(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
+				std::string str) : Expr(start, end, type, ExprValueKind::VK_RValue), str(str) {}
 			virtual ~StringLiteral() {}
 		};
 
@@ -112,7 +150,8 @@ namespace compiler
 			bool value;
 		public:
 			BoolLiteral(SourceLocation start, SourceLocation end, bool value) :
-				Expr(start, end), value(value) {}
+				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::BOOL, true), ExprValueKind::VK_RValue),
+				value(value) {}
 		};
 
 		/// @brief DeclRefExprAST - A reference to a declared variable, function, enum, etc.
@@ -125,11 +164,16 @@ namespace compiler
 		class DeclRefExpr final : public Expr
 		{
 			std::string Name;
-			std::unique_ptr<Decl> decl;
+			std::unique_ptr<DeclStatement> decl;
 		public:
-			DeclRefExpr(SourceLocation start, SourceLocation end, std::string name,
-				std::unique_ptr<Decl> decl) : Expr(start, end), Name(name), 
-				decl(std::move(decl)) {}
+			// Note: 一般情况下，DeclRefExpr都是左值的，但是有一种情况例外，就是函数名字调用
+			// 但是函数调用对应的expression是CallExpr，不是DeclRefExpr.
+			// To Do: 有可能会有潜在的bug
+			DeclRefExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, std::string name,
+				std::unique_ptr<DeclStatement> decl) : 
+				Expr(start, end, type, ExprValueKind::VK_LValue), Name(name), decl(std::move(decl)) {}
+
+			std::string getDeclName() const { return Name; }
 
 			virtual ~DeclRefExpr() {}
 		};
@@ -138,14 +182,14 @@ namespace compiler
 		class BinaryExpr : public Expr
 		{
 			std::string OpName;
-			// 使用unique_ptr来表示左右子树
-			// unique_ptr只能有一个指针指向，利用RAII特性，在异常产生的时候可以顺利释放
-			// 另，unique_ptr不能赋值，只能显示的通过move操作转换所有权
 			ExprASTPtr LHS, RHS;
 		public:
-			BinaryExpr(SourceLocation start, SourceLocation end, std::string Op, ExprASTPtr LHS, 
-				ExprASTPtr RHS) :
-				Expr(start, end), OpName(Op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+			// Note: 在moses中不存在指针类型，所以不存在binary为lvalue的情况
+			// 例如: 'int* p = &num;'
+			// 'p + 1'就可以作为左值
+			BinaryExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
+				std::string Op, ExprASTPtr LHS, ExprASTPtr RHS) :
+				Expr(start, end, type, ExprValueKind::VK_RValue), OpName(Op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
 
 			virtual ~BinaryExpr() {}
 		};
@@ -156,9 +200,9 @@ namespace compiler
 			std::string OpName;
 			ExprASTPtr SubExpr;
 		public:
-			UnaryExpr(SourceLocation start, SourceLocation end, std::string Op,
-				ExprASTPtr subExpr) :
-				Expr(start, end), OpName(Op), SubExpr(std::move(SubExpr)) {}
+			UnaryExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, std::string Op,
+				ExprASTPtr subExpr, ExprValueKind vk) :
+				Expr(start, end, type, vk), OpName(Op), SubExpr(std::move(SubExpr)) {}
 
 			std::string getOpCodeName() { return OpName; }
 			void setOpCodeName(std::string name) { OpName = name; }
@@ -169,13 +213,14 @@ namespace compiler
 		class CallExpr : public Expr
 		{
 			std::string CalleeName;
-			std::unique_ptr<FunctionDecl> FuncDecl;
+			// To Do: FunctionDecl*
+			const FunctionDecl* FuncDecl;
 			std::vector<std::unique_ptr<Expr> > Args;
 		public:
-			CallExpr(SourceLocation start, SourceLocation end, const std::string& Callee,
-				std::vector<std::unique_ptr<Expr>> Args,
-				std::unique_ptr<FunctionDecl> FuncDecl) : Expr(start, end), CalleeName(Callee),
-				Args(std::move(Args)), FuncDecl(std::move(FuncDecl)) {}
+			CallExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
+				const std::string& Callee, std::vector<std::unique_ptr<Expr>> Args, 
+				ExprValueKind vk, const FunctionDecl* FD) : 
+				Expr(start, end, type, vk), CalleeName(Callee), Args(std::move(Args)), FuncDecl(FD) {}
 
 			virtual ~CallExpr() {}
 		};
@@ -200,9 +245,10 @@ namespace compiler
 			/// This is the location of the -> or . in the expression.
 			SourceLocation OperatorLoc;
 		public:
-			MemberExpr(SourceLocation start, SourceLocation end, std::unique_ptr<Expr> base,
-				SourceLocation operatorloc, std::unique_ptr<VarDecl> memberDecl, std::string name) :
-				Expr(start, end), Base(std::move(base)), OperatorLoc(operatorloc),
+			MemberExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
+				std::unique_ptr<Expr> base, SourceLocation operatorloc,
+				std::unique_ptr<VarDecl> memberDecl, std::string name) :
+				Expr(start, end, type, ExprValueKind::VK_LValue), Base(std::move(base)), OperatorLoc(operatorloc),
 				MemberDecl(std::move(memberDecl)), name(name) {}
 
 			void setBase(ExprASTPtr E) { Base = std::move(E); }
@@ -342,29 +388,22 @@ namespace compiler
 			virtual ~DeclStatement() {}
 		};
 
-		/// \brief Decl - The base class for FunctionDecl, ValueDecl, ClassDecl
-		class Decl
-		{
-		private:
-			SourceLocation LocStart;
-			SourceLocation LocEnd;
-		public:
-			Decl(SourceLocation start, SourceLocation end) : LocStart(start), LocEnd(end) {}
-			virtual ~Decl() {}
-		};
-
 		/// @brief ParameterDecl - This class represents a ParameterDecl
 		/// ParameterDecl's Grammar as below:
 		/// para-declaration -> type identifier | const type identifier
-		class ParameterDecl : public Decl
+		///
+		/// --------------------nonsense for coding-------------------------
+		/// AST类的设计不必过于拘泥于文法
+		/// --------------------nonsense for coding-------------------------
+		class ParameterDecl : public DeclStatement
 		{
 		private:
 			std::string ParaName;
 			std::shared_ptr<Type> type;
 		public:
-			ParameterDecl(SourceLocation start, SourceLocation end, std::string name)
-				std::shared_ptr<Type> type) :
-				Decl(start, end), ParaName(name), type(std::move(type)) {}
+			ParameterDecl(SourceLocation start, SourceLocation end, std::string name, 
+				std::shared_ptr<Type> type) : 
+				DeclStatement(start, end), ParaName(name),  type(type) {}
 		};
 
 		/// @brief FunctionDecl - This class represents a Function Declaration
@@ -382,11 +421,12 @@ namespace compiler
 			std::vector<ParmDeclPtr> parameters;
 			unsigned paraNum;
 			StmtASTPtr funcBody;
+			std::shared_ptr<Type> returnType;
 		public:
 			FunctionDecl(SourceLocation start, SourceLocation end, const std::string& name,
-				std::vector<ParmDeclPtr> Args, StmtASTPtr body) :
+				std::vector<ParmDeclPtr> Args, StmtASTPtr body, std::shared_ptr<Type> returnType) :
 				DeclStatement(start, end), FDName(name), parameters(std::move(Args)),
-				funcBody(std::move(body)), paraNum(parameters.size()) {}
+				funcBody(std::move(body)), paraNum(parameters.size()), returnType(returnType) {}
 			virtual ~FunctionDecl() {}
 
 			unsigned getParaNum() { return paraNum; }
@@ -405,11 +445,12 @@ namespace compiler
 		class VarDecl : public DeclStatement
 		{
 			bool IsConst;
-			std::shared_ptr<>
+			std::string name;
+			std::shared_ptr<Type> declType;
 		public:
-			VarDecl(SourceLocation start, SourceLocation end, /*std::unique_ptr<Type> type,*/
-				bool isConst) :
-				DeclStatement(start, end/*, std::move(type)*/), IsConst(isConst) {}
+			VarDecl(SourceLocation start, SourceLocation end, std::string name, 
+				std::shared_ptr<Type> type, bool isConst) :
+				DeclStatement(start, end), name(name), declType(type), IsConst(isConst) {}
 			bool isClass();
 			bool isConst() { return IsConst; }
 		};

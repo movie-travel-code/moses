@@ -111,17 +111,117 @@ namespace compiler
 		TokenLocation& getTokenLoc() { return loc; }
 		void setTokenLoc(const TokenLocation& loc) { this->loc = loc; }
 
-		// 一些辅助判断函数
-		bool isIdentifier(TokenValue Tok) { return Tok == TokenValue::IDENTIFIER; }
-		bool isKeyword(TokenValue Tok) { return Tok >= TokenValue::KEYWORD_var && Tok <= TokenValue::KEYWORD_return; }
-		bool isPunctuator(TokenValue Tok) 
-		{ 
-			return Tok >= TokenValue::PUNCTUATOR_Left_Paren && 
-				Tok <= TokenValue::PUNCTUATOR_Comma;
+		// help method
+		bool isIdentifier() { return value == TokenValue::IDENTIFIER; }
+
+		bool isAssign()
+		{
+			return (value >= TokenValue::BO_OrAssign) && (value <= TokenValue::BO_SubAssign);
 		}
-		bool isCharConstant(TokenValue Tok) { return Tok == TokenValue::CHAR_LITERAL; }
-		bool isNumericConstant(TokenValue Tok) { return Tok == TokenValue::REAL_LITERAL || Tok == TokenValue::INTEGER_LITERAL;  }
-		bool isStringLiteral(TokenValue Tok) { return Tok == TokenValue::STRING_LITERAL; }
+
+		bool isIntOperator()
+		{
+			if (value == TokenValue::BO_Add			|| 
+				value == TokenValue::BO_AddAssign	|| 
+				value == TokenValue::BO_Sub			|| 
+				value == TokenValue::BO_SubAssign	|| 
+				value == TokenValue::BO_Mul			|| 
+				value == TokenValue::BO_MulAssign	|| 
+				value == TokenValue::BO_Div			|| 
+				value == TokenValue::BO_DivAssign	||
+				value == TokenValue::BO_EQ			||
+				value == TokenValue::BO_GE			||
+				value == TokenValue::BO_GT			||
+				value == TokenValue::BO_LE			||
+				value == TokenValue::BO_LT			||
+				value == TokenValue::BO_NE)
+			{
+				return true;
+			}
+			return false;
+		}
+
+		bool isBoolOperator()
+		{
+			if (value == TokenValue::BO_And			|| 
+				value == TokenValue::BO_Or			|| 
+				value == TokenValue::UO_Exclamatory || 
+				value == TokenValue::BO_AndAssign	|| 
+				value == TokenValue::BO_OrAssign	||
+				value == TokenValue::BO_NE)
+			{
+				return true;
+			}
+			return false;
+		}
+
+		bool isArithmeticOperator()
+		{
+			if (value == TokenValue::BO_Add			||
+				value == TokenValue::BO_AddAssign	||
+				value == TokenValue::BO_Sub			||
+				value == TokenValue::BO_SubAssign	||
+				value == TokenValue::BO_Mul			||
+				value == TokenValue::BO_MulAssign	||
+				value == TokenValue::BO_Div			||
+				value == TokenValue::BO_DivAssign )
+			{
+				return true;
+			}
+			return false;
+		}
+
+		// Note: 在moses中，int和bool类型无法转换
+		bool isLogicalOperator()
+		{
+			if (value == TokenValue::BO_EQ			||
+				value == TokenValue::BO_GE			||
+				value == TokenValue::BO_GT			||
+				value == TokenValue::BO_LE			||
+				value == TokenValue::BO_LT			||
+				value == TokenValue::BO_NE			||
+				value == TokenValue::BO_And			||
+				value == TokenValue::BO_Or			||
+				value == TokenValue::UO_Exclamatory ||
+				value == TokenValue::BO_AndAssign	||
+				value == TokenValue::BO_OrAssign)
+			{
+				return true;
+			}
+			return false;
+		}
+
+		bool isKeyword() 
+		{ 
+			return (value >= TokenValue::KEYWORD_var) && (value <= TokenValue::KEYWORD_return); 
+		}
+
+		bool isPunctuator() 
+		{ 
+			return (value >= TokenValue::PUNCTUATOR_Left_Paren) && 
+				(value <= TokenValue::PUNCTUATOR_Comma);
+		}
+
+		bool isBinaryOp()
+		{
+			return (value >= TokenValue::BO_Mul) && 
+				(value <= TokenValue::BO_OrAssign) && 
+				(value != TokenValue::UO_Inc || value != TokenValue::UO_Dec || value != TokenValue::UO_Exclamatory);
+		}
+		
+		bool isUnaryOp()
+		{
+			return (value == TokenValue::UO_Dec) || 
+				(value == TokenValue::UO_Inc) || 
+				(value == TokenValue::UO_Exclamatory);
+		}
+
+		bool isCharConstant() { return value == TokenValue::CHAR_LITERAL; }
+		bool isNumericConstant() 
+		{ 
+			return value == TokenValue::REAL_LITERAL || value == TokenValue::INTEGER_LITERAL;  
+		}
+		bool isStringLiteral() { return value == TokenValue::STRING_LITERAL; }
 
 		// 获取Token的Token值
 		tok::TokenValue getValue() const { return value; }
@@ -147,6 +247,5 @@ namespace compiler
 			return !operator==(token);
 		}
 	};
-
 }
 #endif

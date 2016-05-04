@@ -42,6 +42,7 @@ namespace compiler
 
 			State state;
 			Token Tok;
+			Token LastTok;
 
 			// 预设Token
 			PreStoreToken table;
@@ -109,6 +110,7 @@ namespace compiler
 			explicit Scanner(const std::string& srcFileName);
 			// 获取当前Token
 			Token getToken() const { return Tok; };
+			Token getLastToken() const { return LastTok; };
 			// 获取下一个Token，这个方法会被Parser调用
 			Token getNextToken();
 

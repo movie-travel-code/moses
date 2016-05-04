@@ -134,6 +134,10 @@ namespace compiler
 
 			for (auto item : subTypes)
 			{
+				if (!(item.first.get()))
+				{
+					continue;
+				}
 				fingerPrint += item.first.get()->getTypeFingerPrint();
 			}
 			return fingerPrint;
@@ -149,6 +153,10 @@ namespace compiler
 
 			for (auto item : subTypes)
 			{
+				if (!(item.first.get()))
+				{
+					continue;
+				}
 				fingerPrint += item.first.get()->getTypeFingerPrintWithNoConst();
 			}
 			return fingerPrint;

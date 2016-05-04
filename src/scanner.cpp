@@ -57,6 +57,7 @@ namespace compiler
 		void Scanner::makeToken(tok::TokenValue tv, const TokenLocation& Loc, std::string name)
 		{
 			std::cout << name << std::endl;
+			LastTok = Tok;
 			Tok = Token(tv, Loc, name);
 			buffer.clear();
 			// 生成成功一个token，然后再把状态置空
@@ -67,6 +68,7 @@ namespace compiler
 		void Scanner::makeToken(tok::TokenValue tv, const TokenLocation& loc, long intvalue, std::string name)
 		{
 			std::cout << name << std::endl;
+			LastTok = Tok;
 			Tok = Token(tv, loc, intvalue, name);
 			buffer.clear();
 			state = State::NONE;
@@ -76,6 +78,7 @@ namespace compiler
 		void Scanner::makeToken(tok::TokenValue tv, const TokenLocation& loc, double realvalue, std::string name)
 		{
 			std::cout << name << std::endl;
+			LastTok = Tok;
 			Tok = Token(tv, loc, realvalue, name);
 			buffer.clear();
 			state = State::NONE;
@@ -187,6 +190,7 @@ namespace compiler
 					// 遇到文件尾
 				case Scanner::State::END_OF_FILE:
 					handleEOFState();
+					LastTok = Tok;
 					Tok = Token();
 					return Tok;
 					break;

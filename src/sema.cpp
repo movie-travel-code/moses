@@ -181,6 +181,17 @@ namespace compiler
 				unsigned size = args.size();
 				for (int i = 0; i < size; i++)
 				{
+					if (!args[i])
+					{
+						errorSema("The argument of index " + std::to_string(i) + " is wrong.");
+					}
+					// Note: 函数定义中的错误，此处不予报出，continue即可
+					// 由于条件表达式的短路求值特性，不会出现(*FuncSym)[i]为空，同时
+					if (!(*FuncSym)[i] || !((*FuncSym)[i]->getType()))
+					{
+						continue;
+					}
+
 					if (args[i]->getTypeFingerPrintWithNoConst() == (*FuncSym)[i]->getType()->getTypeFingerPrintWithNoConst())
 					{
 						continue;
@@ -207,6 +218,20 @@ namespace compiler
 		ExprASTPtr Sema::ActOnBinaryOperator(SourceLocation start, SourceLocation end, 
 			ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
 		{
+			if (!lhs || !rhs)
+				return nullptr;
+			if (!(lhs->getType()))
+			{
+				errorSema("Left hand expression' type wrong.");
+				return nullptr;
+			}
+
+			if (!(rhs->getType()))
+			{
+				errorSema("Right hand expression' type wrong.");
+				return nullptr;
+			}
+				
 			// Check expression's value kind.
 			if (tok.isAssign())
 			{

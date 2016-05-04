@@ -174,7 +174,6 @@ namespace compiler
 			StmtASTPtr ParseContinueStatement();
 			StmtASTPtr ParsereturnStatement(FunctionSymbol* funcSym);
 
-			ExprASTPtr ParseBoolenExpression();
 			ExprASTPtr ParseStringLiteral();
 
 			ExprASTPtr ParseBoolLiteral(bool isTrue);

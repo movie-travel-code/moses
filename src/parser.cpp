@@ -55,6 +55,8 @@ namespace compiler
 
 		/// \brief Parser constructor.
 		/// Get the first token and start parse	tokens.
+		/// Note: 虽然moses采用了类型推导，但是moses仍然是静态类型语言
+		/// 在moses中，每个变量的类型在编译期间都是可以唯一确定的
 		Parser::Parser(Scanner& scan, Sema& sema) : scan(scan), Actions(sema)
 		{
 			scan.getNextToken();
@@ -156,6 +158,11 @@ namespace compiler
 
 			// Parse condition expression and go head.
 			auto condition = ParseExpression();
+			
+			if (!condition)
+			{
+				errorReport("Error occured in condition expression.", ErrorKind::PARSER_ERROR);
+			}
 
 			// To Do: Perform simple semantic analysis
 			// (Check whether the type of the conditional expression is a Boolean type).
@@ -450,6 +457,10 @@ namespace compiler
 			}
 			auto condition = ParsePrimaryExpr();
 
+			if (!condition || !(condition->getType()))
+			{
+				errorReport("Error occured in condition expression.", ErrorKind::PARSER_ERROR);
+			}
 			// Perform semantic analysis.
 			// (Check whether the type of the conditional expression is a boolean type).
 			if (condition->getType()->getKind() != TypeKind::BOOL)
@@ -539,6 +550,11 @@ namespace compiler
 
 			// Simple semantic analysis(Get return-expr type and check).
 			auto retType = funcSym->getReturnType();
+			// 函数返回类型出错，在解析函数定义时就已经报错，这里不再报错
+			if (!retType)
+			{
+				return nullptr;
+			}
 			if (retType->getKind() == TypeKind::VOID && !returnExpr)
 			{
 				errorReport("Function return type is void.", ErrorKind::SEMA_error);
@@ -559,13 +575,6 @@ namespace compiler
 
 			return std::make_unique<ReturnStatement>(locStart, scan.getToken().getTokenLoc(),
 				std::move(returnExpr));
-		}
-
-		/// \brief ParseBooleanExpression - 解析while语句的condition，解析If语句的condition
-		ExprASTPtr Parser::ParseBoolenExpression()
-		{
-			auto locStart = scan.getToken().getTokenLoc();
-			return nullptr;
 		}
 
 		/// \brief ParseStringLiteral - parse string literal.
@@ -673,8 +682,10 @@ namespace compiler
 				// -----------------------nonsense for coding-------------------
 				scan.getNextToken();
 				LHS = ParseWrappedUnaryExpression();
-
-				// To Do: 需要执行很多很多的语义分析
+				if (!LHS || !(LHS->getType()))
+				{
+					errorReport("Error occured in left hand expression.", ErrorKind::PARSER_ERROR);
+				}
 
 				// To Do: UserDefinedType暂时不能进行代码运算符重载，所以如果发现Type是用户自定义的，则报错
 				if (LHS->getType()->getKind() != TypeKind::USERDEFIED)
@@ -780,6 +791,9 @@ namespace compiler
 					// Note:in moses, have no pointer
 					// Eat the '.' token
 
+					// Note: If LHS is nullptr, it's meaningless to analyze the subsequent.
+					if (!LHS)
+						return nullptr;
 					// Perform simple semantic analysis(Check Type).
 					if (LHS->getType()->getKind() != TypeKind::USERDEFIED)
 					{
@@ -1284,6 +1298,10 @@ namespace compiler
 				if (ClassSymbol* CS = dynamic_cast<ClassSymbol*>(Actions.getCurScope()->Resolve(TypeLexem).get()))
 				{
 					DeclType = CS->getType();
+					if (!DeclType)
+					{
+						errorReport("The type is illegal", ErrorKind::PARSER_ERROR);
+					}
 					DeclType->setConst(isConst);
 				}
 				else
@@ -1304,13 +1322,15 @@ namespace compiler
 		}
 
 		/// \brief ParseClassDecl - Parse class declaration.
-		// ---------------------------------------------------------
-		// class decl's Grammar as below.
-		// class-declaration -> class identifier class-body;
-		// class-body -> { class-member }
-		// class-member -> declaration-statement class-member | 
-		//			function-definition class-member | EPSILON
-		// ---------------------------------------------------------
+		/// ---------------------------------------------------------
+		/// class decl's Grammar as below.
+		/// class-declaration -> class identifier class-body;
+		/// class-body -> { class-member }
+		/// class-member -> declaration-statement class-member | 
+		///			function-definition class-member | EPSILON
+		/// ---------------------------------------------------------
+		/// Note: 类似于ClassDecl以及VarDecl等都是不会真正产生code的
+		/// 最主要的作用是填充符号表信息
 		DeclASTPtr Parser::ParseClassDecl()
 		{
 			auto locStart = scan.getToken().getTokenLoc();
@@ -1334,7 +1354,8 @@ namespace compiler
 			// Check Type Redefinition and Create New Scope.
 			Actions.ActOnClassDeclStart(className);
 
-			CompoundStmtPtr classBody = nullptr;
+			std::vector<StmtASTPtr> classBody;
+			auto classBodyStart = scan.getToken().getTokenLoc();
 			// 此时不需要错误恢复，直接使用简单的策略即可，即假装这里有'{'token
 			expectToken(tok::TokenValue::PUNCTUATOR_Left_Brace, "{", true);
 
@@ -1346,16 +1367,21 @@ namespace compiler
 				case tok::TokenValue::KEYWORD_const:
 				case tok::TokenValue::KEYWORD_class:
 				case tok::TokenValue::KEYWORD_var:
-					classBody->addSubStmt(ParseDeclStmt());
+					classBody.push_back(ParseDeclStmt());
 					break;
-				case tok::TokenValue::KEYWORD_func:
-					classBody->addSubStmt(ParseFunctionDefinition());
-					break;
-				case tok::TokenValue::PUNCTUATOR_Left_Brace:
+				/// Note: 在moses中，class暂时不支持成员方法定义
+				/*case tok::TokenValue::KEYWORD_func:
+					classBody.push_back(ParseFunctionDefinition());
+					break;*/
+				/// Note: class body内部不会有'{'
+				/*case tok::TokenValue::PUNCTUATOR_Left_Brace:
+					break;*/
+				case tok::TokenValue::PUNCTUATOR_Semicolon:
+					scan.getNextToken();
 					break;
 				default:
 					// 错误恢复简直fuck 
-					syntaxErrorRecovery(ParseContext::context::ClassBody);
+					syntaxErrorRecovery(ParseContext::context::Statement);
 					// 我们遇到';'，会停下错误恢复完成
 					scan.getNextToken();
 					break;
@@ -1378,7 +1404,8 @@ namespace compiler
 			Actions.PopScope();
 			CurrentContext = ContextKind::TopLevel;
 			return std::make_unique<ClassDecl>(locStart, scan.getToken().getTokenLoc(), className,
-				std::move(classBody));
+				std::make_unique<CompoundStmt>(classBodyStart, scan.getToken().getTokenLoc(), 
+				std::move(classBody)));
 		}
 
 		// Helper Functions.
@@ -1425,9 +1452,9 @@ namespace compiler
 		bool Parser::errorReport(const std::string& msg, ErrorKind kind) const
 		{
 			if (kind == ErrorKind::PARSER_ERROR)
-				errorParser(scan.getToken().getTokenLoc().toString() + " --- " + msg);
+				errorParser(scan.getLastToken().getTokenLoc().toString() + " --- " + msg);
 			else if (kind == ErrorKind::SEMA_error)
-				errorSema(scan.getToken().getTokenLoc().toString() + " --- " + msg);
+				errorSema(scan.getLastToken().getTokenLoc().toString() + " --- " + msg);
 			return true;
 		}
 
@@ -1477,12 +1504,19 @@ namespace compiler
 			default:
 				break;
 			}
-			auto curKind = scan.getToken().getKind();
+			auto initial = scan.getToken().getKind();
+iterate:	auto curKind = initial;
 			// 如果找到SafeSymbol，则停止并返回
 			while (find(curSafeSymbols.begin(), curSafeSymbols.end(), curKind) == curSafeSymbols.end())
 			{
 				scan.getNextToken();
 				curKind = scan.getToken().getKind();
+			}
+			// Note: 如果SyntaxZErrorRecovery()没有任何进展，则强行前进一步
+			if (initial == scan.getToken().getKind())
+			{
+				scan.getNextToken();
+				goto iterate;
 			}
 		}
 	}

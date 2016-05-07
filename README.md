@@ -36,8 +36,10 @@ class
 为了语义的完整性，我们也可以在变量声明时使用匿名类型，同时对匿名类型的变量可以进行解包操作。如下所示：
 
 ```
-var num : {int, {int, bool}};
+// moses暂时只支持直接初始化，不支持声明。也就是下面这种情况是不允许的。
+var num : {int, {int, bool}}; 
 num = {0, {0, true}};
+// moses暂时只支持这种情况
 var num = {10, {!false, true}};
 var {a, {b, c}} = num; // 进行解包操作之后，a = 10, b = true, c = true
 ```

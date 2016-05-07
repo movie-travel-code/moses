@@ -15,6 +15,7 @@
 #include <string>
 #include <memory>
 #include "Type.h"
+#include "scanner.h"
 #include "ast.h"
 
 namespace compiler
@@ -127,7 +128,9 @@ namespace compiler
 			bool IsInitial;
 		public:
 			VariableSymbol(std::string lexem, std::shared_ptr<Scope> beongTo,
-				std::shared_ptr<Type> type, bool initial) : Symbol(lexem, beongTo, type), IsInitial(initial) {}
+				std::shared_ptr<Type> type, bool initial) : Symbol(lexem, beongTo, type), IsInitial(initial) 
+			{}
+
 			std::shared_ptr<Type> getType() const { return type; }
 			void setInitial(bool initial) { IsInitial = initial; }
 			bool isInitial() const { return IsInitial; }
@@ -177,6 +180,9 @@ namespace compiler
 			/// ---------------------nonsense for coding----------------------------
 			void addSubType(std::shared_ptr<Type> subType, std::string name) 
 			{
+				// Note: 这段代码没有对转换是否成功进行判断，存在问题！
+				// 但是由于type本来就是UserDefinedType的，初始化后就不为空
+				// 同时外部接触不到type，不可能将其修改为nullptr，所以暂且算是安全的用法。
 				(dynamic_cast<UserDefinedType*>(type.get()))->addSubType(subType, name); 
 			}
 			std::shared_ptr<Type> getType() const { return type; }
@@ -219,6 +225,7 @@ namespace compiler
 		{
 			Sema(const Sema&) = delete;
 			void operator=(const Sema&) = delete;
+			parse::Scanner* scan;
 		private:
 			std::shared_ptr<Scope> CurScope;
 
@@ -253,6 +260,9 @@ namespace compiler
 			Sema() {}
 		public:
 			// The functions for handling scope.
+			// Shit Code!
+			// 这个函数的唯一作用sema想获取到当前的token，只能通过获取scan的地址。
+			void getScannerPointer(parse::Scanner* scan) { this->scan = scan; };
 			std::shared_ptr<Scope> getCurScope() { return CurScope; }
 			std::shared_ptr<Scope> getTopLevelScope() { return ScopeStack[0]; }
 			void PushScope(std::shared_ptr<Scope> scope);
@@ -272,32 +282,76 @@ namespace compiler
 			// Note: shit code!sema中报错无法获知当前报错位置。
 			// To Do: 调整报错机制，单独定义一个报错引擎出来。
 			void ActOnTranslationUnitStart();
+
 			void ActOnFunctionDeclStart(std::string name);
+
 			void ActOnFunctionDecl(std::string name, std::shared_ptr<Type> returnType);
+
 			StmtASTPtr ActOnFunctionDeclEnd(std::string name);
+
 			void ActOnParmDecl(std::string name, std::shared_ptr<Type> type);
+
 			StmtASTPtr ActOnConstDecl(std::string name, std::shared_ptr<Type> type);
-			void ActOnVarDecl(std::string name, std::shared_ptr<Type> type, bool isInitial);
+
+			ExprASTPtr ActOnVarDecl(std::string name, std::shared_ptr<Type> type, ExprASTPtr init);
+
 			void ActOnClassDeclStart(std::string name);
 			void ActOnCompoundStmt();
+
 			StmtASTPtr ActOnIfStmt(SourceLocation start, SourceLocation end, ExprASTPtr condtion, 
 				StmtASTPtr ThenPart, StmtASTPtr ElsePart);
-			StmtASTPtr ActOnWhileStmt();
-			StmtASTPtr ActOnBreakStmt();
+
+			std::shared_ptr<Type> ActOnReturnType(const std::string& name) const;
+
+			bool ActOnBreakAndContinueStmt(bool whileContext);
+
 			StmtASTPtr ActOnContinueStmt();
-			StmtASTPtr ActOnReturnStmt();
+
+			bool ActOnReturnStmt(std::shared_ptr<Type> type) const;
+
 			StmtASTPtr BuildReturnStmt();
+
+			bool ActOnUnpackDeclElement(std::string name);
+
+			UnpackDeclPtr ActOnUnpackDecl(UnpackDeclPtr unpackDecl, std::shared_ptr<Type> type);
+
+			bool ActOnReturnAnonymous(std::shared_ptr<Type> type) const;
 
 			// (2) Expression
 			ExprASTPtr ActOnConstantExpression();
-			bool ActOnCallExpr(std::string calleeName, std::vector<std::shared_ptr<Type>> Args);
+
+			std::shared_ptr<Type> ActOnCallExpr(std::string calleeName, 
+				std::vector<std::shared_ptr<Type>> Args);
+
 			ExprASTPtr ActOnUnaryOperator();
+
 			ExprASTPtr ActOnPostfixUnaryOperator();
-			ExprASTPtr ActOnBinaryOperator(SourceLocation start, SourceLocation end, ExprASTPtr lhs, Token tok, ExprASTPtr rhs);
+
+			ExprASTPtr ActOnBinaryOperator(SourceLocation start, SourceLocation end, 
+				ExprASTPtr lhs, Token tok, ExprASTPtr rhs);
+
 			std::shared_ptr<Type> ActOnDeclRefExpr(std::string name);
+
 			ExprASTPtr ActOnStringLiteral();
-			ExprASTPtr ActOnMemberReferenceExpr();
+
+			ExprASTPtr ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok);
+
 			ExprASTPtr ActOnExprStmt();
+
+			bool ActOnConditionExpr(std::shared_ptr<Type> type) const;
+
+			// (3) help method
+			bool isInFunctionContext() const { return FunctionStack.size() != 0; }
+
+			/// \brief 注意这里不区分前置Inc和后置Inc
+			/// (两者的唯一区别是前者返回的表达式是左值得，而后者返回的是右值的)
+			ExprASTPtr ActOnDecOrIncExpr(ExprASTPtr rhs);
+
+			/// \brief 例如： -10;
+			ExprASTPtr ActOnUnarySubExpr(ExprASTPtr rhs);
+
+			/// \brief 例如：!flag
+			ExprASTPtr ActOnUnaryExclamatoryExpr(ExprASTPtr rhs);
 
 			// To Do: implement RAII
 			class CompoundScopeRAII
@@ -306,15 +360,12 @@ namespace compiler
 			class FunctionScopeRAII
 			{};
 		private:
-			std::shared_ptr<Scope> getScopeStackTop() const 
-			{
-				if (ScopeStack.size() == 0)
-				{
-					errorSema("Now in top-level scope and we can't get current scope.");
-					return nullptr;
-				}
-				return ScopeStack[ScopeStack.size() - 1];
-			}
+			std::shared_ptr<Scope> getScopeStackTop() const;
+
+			void errorReport(const std::string& msg) const;
+			
+			UnpackDeclPtr unpackDeclTypeChecking(UnpackDeclPtr unpackDecl, 
+				std::shared_ptr<Type> initType) const;
 		};
 	}
 }

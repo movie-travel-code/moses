@@ -28,11 +28,11 @@ namespace compiler
 			BO_Assign, BO_MulAssign,	// = *=
 			BO_DivAssign, BO_RemAssign,	// /= %=
 			BO_AddAssign, BO_SubAssign,	// += -=
-
-			BO_And,						// &&
-			BO_Or,						// ||
+			
 			BO_AndAssign,				// &&=
 			BO_OrAssign,				// ||=
+			BO_And,						// &&
+			BO_Or,						// ||
 
 			PUNCTUATOR_Left_Paren,		// (
 			PUNCTUATOR_Right_Paren,		// )

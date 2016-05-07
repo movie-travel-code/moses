@@ -50,7 +50,8 @@ namespace compiler
 				ParmDecl,
 				ArgExpression,
 				FunctionDefinition,
-				ClassBody
+				ClassBody,
+				ReturnType
 			};
 			using namespace tok;
 
@@ -134,6 +135,17 @@ namespace compiler
 
 			// class-body
 			static std::vector<TokenValue> ClassBodySafeSymbols = { TokenValue::PUNCTUATOR_Semicolon };
+
+			static std::vector<TokenValue> ReturnType = {TokenValue::PUNCTUATOR_Right_Brace,
+				TokenValue::PUNCTUATOR_Left_Brace, TokenValue::KEYWORD_while,
+				TokenValue::KEYWORD_continue, TokenValue::KEYWORD_if,
+				TokenValue::KEYWORD_return, TokenValue::KEYWORD_break,
+				TokenValue::KEYWORD_const, TokenValue::KEYWORD_class, TokenValue::KEYWORD_var,
+				TokenValue::PUNCTUATOR_Semicolon, TokenValue::BO_Sub,
+				TokenValue::UO_Exclamatory, TokenValue::UO_Inc, TokenValue::UO_Dec,
+				TokenValue::IDENTIFIER, TokenValue::PUNCTUATOR_Left_Paren,
+				TokenValue::INTEGER_LITERAL, TokenValue::BOOL_FALSE, TokenValue::BOOL_TRUE,
+				TokenValue::KEYWORD_func};
 		}
 
 		/// \brief Parser - Implenment a LL(1) parser.
@@ -143,9 +155,11 @@ namespace compiler
 		/// --------------------------nonsense for coding-------------------------------
 		class Parser
 		{
-			enum class ContextKind { TopLevel, Function, Class, While};
+			
 			Parser(const Parser &) = delete;
 			void operator=(const Parser&) = delete;
+		public:
+			enum class ContextKind { TopLevel, Function, Class, While };
 		private:
 			Scanner& scan;
 			ASTPtr AST;
@@ -172,7 +186,7 @@ namespace compiler
 			StmtASTPtr ParseWhileStatement();
 			StmtASTPtr ParseBreakStatement();
 			StmtASTPtr ParseContinueStatement();
-			StmtASTPtr ParsereturnStatement(FunctionSymbol* funcSym);
+			StmtASTPtr ParsereturnStatement();
 
 			ExprASTPtr ParseStringLiteral();
 
@@ -181,6 +195,23 @@ namespace compiler
 			StmtASTPtr ParseExpressionStatement();
 
 			StmtASTPtr ParseDeclStmt();
+
+			/// \brief moses对于自定义类型支持“列表初始化”
+			/// 例如： 
+			/// var num : 10;
+			/// var num = {num, {10, 10 * num}, false}
+			/// num的类型如下：
+			/// class AnonymousType
+			///	{
+			///		var : int;
+			///		class 
+			///		{
+			///			var : int;
+			///			var : int;
+			///		}
+			///		var : bool;
+			/// }
+			ExprASTPtr ParseAnonymousInitExpr();
 
 			ExprASTPtr ParseExpression();
 
@@ -206,11 +237,15 @@ namespace compiler
 
 			std::vector<ParmDeclPtr> ParseParameterList();
 
+			UnpackDeclPtr ParseUnpackDecl();
+
 			ParmDeclPtr ParseParmDecl();
 
 			StmtASTPtr ParseClassBody();
 
 			DeclASTPtr ParseClassDecl();
+
+			std::shared_ptr<AnonymousType> ParseAnony();
 			
 		public:
 			std::shared_ptr<Scope> getCurScope() { Actions.getCurScope(); }
@@ -220,7 +255,7 @@ namespace compiler
 			bool expectToken(tok::TokenValue value, const std::string& lexem, bool advanceToNextToken) const;
 			bool validateToken(tok::TokenValue value) const;
 			bool validateToken(tok::TokenValue value, bool advanceToNextToken) const;
-			bool errorReport(const std::string& msg, ErrorKind kind) const;
+			void errorReport(const std::string& msg) const;
 			/// \brief Use "panic mode" to achieve syntax error recovery.
 			void syntaxErrorRecovery(ParseContext::context context);
 		};

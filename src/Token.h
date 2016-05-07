@@ -116,7 +116,7 @@ namespace compiler
 
 		bool isAssign()
 		{
-			return (value >= TokenValue::BO_OrAssign) && (value <= TokenValue::BO_SubAssign);
+			return (value >= TokenValue::BO_Assign) && (value <= TokenValue::BO_OrAssign);
 		}
 
 		bool isIntOperator()

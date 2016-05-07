@@ -38,6 +38,7 @@ namespace compiler
 		class FunctionDecl;
 		class CompoundStmt;
 		class VarDecl;	
+		class UnpackDecl;
 
 		using ASTPtr = std::vector<std::unique_ptr<StatementAST>>;
 		using StmtASTPtr = std::unique_ptr<StatementAST>;
@@ -46,6 +47,7 @@ namespace compiler
 		using DeclASTPtr = std::unique_ptr<DeclStatement>;
 		using CompoundStmtPtr = std::unique_ptr<CompoundStmt>;
 		using ParmDeclPtr = std::unique_ptr<ParameterDecl>;
+		using UnpackDeclPtr = std::unique_ptr<UnpackDecl>;
 
 		/// \brief StatementAST - Base class for all statements.
 		class StatementAST
@@ -235,10 +237,6 @@ namespace compiler
 			/// name - member name
 			std::string name;
 
-			/// MemberDecl - This is the decl being referenced by the field/member name.
-			/// In X.F, this is the decl referenced by F.
-			std::unique_ptr<VarDecl> MemberDecl;
-
 			/// MemberLoc - This is the location of the member name.
 			SourceLocation MemberLoc;
 
@@ -246,18 +244,26 @@ namespace compiler
 			SourceLocation OperatorLoc;
 		public:
 			MemberExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-				std::unique_ptr<Expr> base, SourceLocation operatorloc,
-				std::unique_ptr<VarDecl> memberDecl, std::string name) :
+				std::unique_ptr<Expr> base, SourceLocation operatorloc, std::string name) :
 				Expr(start, end, type, ExprValueKind::VK_LValue), Base(std::move(base)), OperatorLoc(operatorloc),
-				MemberDecl(std::move(memberDecl)), name(name) {}
+				name(name) 
+			{}
 
 			void setBase(ExprASTPtr E) { Base = std::move(E); }
 			ExprASTPtr getBase() const { return nullptr; }
+		};
 
-			/// \brief 获取这个表达式（MemberExpr）引用的member declaration.
-			/// 这个返回的声明有可能是FieldDecl或者是CXXMethodDecl.
 
-			/// 
+		/// \brief
+		class AnonymousInitExpr final : public Expr
+		{
+			AnonymousInitExpr() = delete;
+			AnonymousInitExpr(const AnonymousInitExpr&) = delete;
+			std::vector<ExprASTPtr> InitExprs;
+		public:
+			AnonymousInitExpr(SourceLocation start, SourceLocation end, 
+				std::vector<ExprASTPtr> initExprs, std::shared_ptr<Type> type) :
+			Expr(start, end, type, Expr::ExprValueKind::VK_RValue), InitExprs(std::move(initExprs)) {}
 		};
 
 		/// \brief CompoundStatement - This class represents a Compound Statement
@@ -345,7 +351,9 @@ namespace compiler
 		/// @brief ReturnStatementAST - This class represents a Return Statement
 		/// ---------------------------------------------
 		/// Return Statement's Grammar as below.
-		/// return-statement -> "return" expression? ";"
+		/// return-statement -> "return" expression ";"
+		/// return-statement -> "return" ";"
+		/// return-statement -> "return" anonymous-initial ";"
 		/// ---------------------------------------------
 		class ReturnStatement : public StatementAST
 		{
@@ -395,7 +403,7 @@ namespace compiler
 		/// --------------------nonsense for coding-------------------------
 		/// AST类的设计不必过于拘泥于文法
 		/// --------------------nonsense for coding-------------------------
-		class ParameterDecl : public DeclStatement
+		class ParameterDecl final : public DeclStatement
 		{
 		private:
 			std::string ParaName;
@@ -404,6 +412,27 @@ namespace compiler
 			ParameterDecl(SourceLocation start, SourceLocation end, std::string name, 
 				std::shared_ptr<Type> type) : 
 				DeclStatement(start, end), ParaName(name),  type(type) {}
+		};
+
+		/// \brief UnpackDecl - This class represents a UnpackDecl.
+		/// 由于moses支持匿名类型，匿名类型的变量可以来回传递。对于匿名类型的变量，如果想要
+		/// 获取其中的值，就需要进行解包，注意解包得到的变量默认都是const的，也就是说匿名类型
+		/// 变量仅仅只用于数据传递，类似于C++中的临时值（或者说是右值）。
+		/// Note: UnpackDecl只用于解包，没有名字。
+		class UnpackDecl final : public DeclStatement
+		{
+		private:
+			std::vector<DeclASTPtr> decls;
+			std::shared_ptr<Type> type;
+		public:
+			UnpackDecl(SourceLocation start, SourceLocation end, std::vector<DeclASTPtr> decls)
+				: DeclStatement(start, end), decls(std::move(decls)) {}
+			bool TypeCheckingAndTypeSetting(AnonymousType* type);
+			// To Do: Shit code!
+			void setCorrespondingType(std::shared_ptr<Type> type);
+			unsigned getDeclNumber() const { return decls.size(); };
+			std::vector<std::string> operator[](unsigned index) const;
+			void getDeclNames(std::vector<std::string>& names) const;
 		};
 
 		/// @brief FunctionDecl - This class represents a Function Declaration
@@ -447,10 +476,13 @@ namespace compiler
 			bool IsConst;
 			std::string name;
 			std::shared_ptr<Type> declType;
+			ExprASTPtr InitExpr;
 		public:
 			VarDecl(SourceLocation start, SourceLocation end, std::string name, 
-				std::shared_ptr<Type> type, bool isConst) :
-				DeclStatement(start, end), name(name), declType(type), IsConst(isConst) {}
+				std::shared_ptr<Type> type, bool isConst, ExprASTPtr init) :
+				DeclStatement(start, end), name(name), declType(type), IsConst(isConst), 
+				InitExpr(std::move(init)) {}
+			std::string getName() { return name; }
 			bool isClass();
 			bool isConst() { return IsConst; }
 		};

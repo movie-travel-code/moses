@@ -317,6 +317,8 @@ namespace compiler
 
 			bool ActOnReturnAnonymous(std::shared_ptr<Type> type) const;
 
+			BinaryPtr ActOnAnonymousTypeVariableAssignment(ExprASTPtr lhs, ExprASTPtr rhs) const;
+
 			// (2) Expression
 			ExprASTPtr ActOnConstantExpression();
 
@@ -327,8 +329,7 @@ namespace compiler
 
 			ExprASTPtr ActOnPostfixUnaryOperator();
 
-			ExprASTPtr ActOnBinaryOperator(SourceLocation start, SourceLocation end, 
-				ExprASTPtr lhs, Token tok, ExprASTPtr rhs);
+			ExprASTPtr ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs);
 
 			std::shared_ptr<Type> ActOnDeclRefExpr(std::string name);
 

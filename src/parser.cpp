@@ -791,6 +791,7 @@ namespace compiler
 		/// Parser就是一个超级玛丽，不断跳上跳下的切换ParseBinOpRHS()，并只在同层级上执行语法解析
 		/// 切换层级的时候（也就是最终返回往下跳级的时候），将结果返回，将优先级高的子表达式作为一个
 		/// 整的操作数
+		/// Note: Anonymous type need specially handled.
 		ExprASTPtr Parser::ParseBinOpRHS(OperatorPrec::Level MinPrec, ExprASTPtr lhs)
 		{
 			auto curTok = scan.getToken();
@@ -816,10 +817,23 @@ namespace compiler
 					errorReport("Must be binary operator!");
 				}
 
-				// Semantic analysis(Type checking.)
+				// Handled anonymous initexpr specially.
+				// num = {expr1, expr2};
+				if (OpToken.getLexem() == "=")
+				{
+					scan.getNextToken();
+					// Anonymous initexpr.
+					if (validateToken(tok::TokenValue::PUNCTUATOR_Left_Brace, false))
+					{
+						ExprASTPtr RHS = ParseAnonymousInitExpr();
+						return Actions.ActOnAnonymousTypeVariableAssignment(std::move(lhs), 
+							std::move(RHS));
+					}
+				}
 
 				// consume the operator
-				scan.getNextToken();
+				if (OpToken.getLexem() != "=")
+					scan.getNextToken();
 
 				// Parse another leaf here for the RHS of the operator.
 				// For example, "num1 * ++num2", '++num2' is a operand
@@ -857,8 +871,7 @@ namespace compiler
 				}
 				// 如果没有递归调用ParseBinOpRHS()的话，NextTokPrec的优先级是固定的
 				// Perform semantic and combine the LHS and RHS into LHS (e.g. build AST)
-				lhs = Actions.ActOnBinaryOperator(locStart, scan.getToken().getTokenLoc(),
-					std::move(lhs), OpToken, std::move(RHS));
+				lhs = Actions.ActOnBinaryOperator(std::move(lhs), OpToken, std::move(RHS));
 
 			}
 			return std::move(lhs);
@@ -1053,6 +1066,10 @@ namespace compiler
 						DeclType = classSym->getType();
 					}
 					scan.getNextToken();
+				}
+				else if (validateToken(tok::TokenValue::PUNCTUATOR_Left_Brace, false))
+				{
+					DeclType = ParseAnony();
 				}
 				else
 				{
@@ -1636,6 +1653,11 @@ namespace compiler
 				break;
 			}
 			auto initial = scan.getToken().getKind();
+			if (initial == tok::TokenValue::FILE_EOF)
+			{
+				return;
+			}
+
 		iterate:	auto curKind = initial;
 			// 如果找到SafeSymbol，则停止并返回
 			while (find(curSafeSymbols.begin(), curSafeSymbols.end(), curKind) == curSafeSymbols.end())

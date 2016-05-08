@@ -48,6 +48,7 @@ namespace compiler
 		using CompoundStmtPtr = std::unique_ptr<CompoundStmt>;
 		using ParmDeclPtr = std::unique_ptr<ParameterDecl>;
 		using UnpackDeclPtr = std::unique_ptr<UnpackDecl>;
+		using BinaryPtr = std::unique_ptr<BinaryExpr>;
 
 		/// \brief StatementAST - Base class for all statements.
 		class StatementAST

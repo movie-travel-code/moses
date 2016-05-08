@@ -308,8 +308,7 @@ namespace compiler
 		/// \brief Act on Binary Operator(Type checking and create new binary expr through lhs and rhs).
 		/// Note: 在C/C++中，赋值语句返回的是所赋的值。
 		/// 例如：'a = 10;'返回的值是10.
-		ExprASTPtr Sema::ActOnBinaryOperator(SourceLocation start, SourceLocation end,
-			ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
+		ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
 		{
 			if (!lhs || !rhs)
 				return nullptr;
@@ -398,7 +397,7 @@ namespace compiler
 			}
 
 			// Note: 为了简化设计，BinaryOperator默认是rvalue
-			return std::make_unique<BinaryExpr>(start, end, type, tok.getLexem(), 
+			return std::make_unique<BinaryExpr>(lhs->getLocStart(), rhs->getLocEnd(), type, tok.getLexem(), 
 				std::move(lhs), std::move(rhs));
 		}
 
@@ -503,6 +502,26 @@ namespace compiler
 			errorReport("Left hand expression isn's unpack declaration.");
 			// To Do: 此处直接返回nullptr太过激进，需要更合适的处理方式。
 			return nullptr;
+		}
+
+		/// \brief 
+		BinaryPtr Sema::ActOnAnonymousTypeVariableAssignment(ExprASTPtr lhs, ExprASTPtr rhs) const
+		{
+			if (DeclRefExpr* DRE = dynamic_cast<DeclRefExpr*>(lhs.get()))
+			{
+				// Type Checking.
+				if (DRE->getType()->getTypeFingerPrintWithNoConst() != 
+					rhs->getType()->getTypeFingerPrintWithNoConst())
+				{
+					errorReport("Type error occured in anonymous type variable assigning.");
+				}
+			}
+			else
+			{
+				errorReport("Error occured in anonymous type variable assigning.");
+			}
+			return std::make_unique<BinaryExpr>(lhs->getLocStart(), rhs->getLocEnd(), 
+				lhs->getType(), "=", std::move(lhs), std::move(rhs));
 		}
 
 		bool Sema::ActOnConditionExpr(std::shared_ptr<Type> type) const

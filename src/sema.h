@@ -341,6 +341,8 @@ namespace compiler
 
 			bool ActOnConditionExpr(std::shared_ptr<Type> type) const;
 
+			std::shared_ptr<Type> ActOnParmDeclUserDefinedType(Token tok) const;
+
 			// (3) help method
 			bool isInFunctionContext() const { return FunctionStack.size() != 0; }
 

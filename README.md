@@ -10,7 +10,7 @@ Moses是一门很简单的编程语言，参考了swift，但是比swift更简�
 var num : int;
 var num = 10;
 ```
-以 **var** 关键字开头表示变量声明，然后后面跟 **:** 和类型名。同时也使用表达式进行初始化，moses会从表达式推断出相应的类型。moses暂时支4种类型，**int**、**bool** 、**user defined type**、**anonymous type**。其中 **user defined type** 表示用户自定义类型，类似于C中的struct，而 **anonymous type** 表示通过表达式推断出来的匿名类型，后面我们会详细介绍。
+以 **var** 关键字开头表示变量声明，后面可以跟 **:** 和类型名来显示指定变量类型，同时也使用表达式进行初始化，moses会通过初始化表达式推断出相应的类型。moses暂时支4种类型，**int**、**bool** 、**user defined type**、**anonymous type**。其中 **user defined type** 表示用户自定义类型，类似于C中的struct，而 **anonymous type** 表示通过匿名类型表达式（由'{' '}'指定）推断出来的匿名类型。
 
 对于匿名类型变量的初始化，如下代码所示：
 
@@ -19,19 +19,18 @@ var flag = false;
 var size = 500;
 var num = {10, {!false, size}}; // Anonymous type.
 ```
-其中num推导出的匿名类型如下所示：
+第三行的 **{10, {!false, size}}** 表示匿名类型表达式，moses会根据该表达式推导出一个匿名类型附加在变量 **num** 上，其中num推导出的匿名类型如下所示：
 
 ```
 class 
 {
     var : int;
     {
-		var : bool;
+    	var : bool;
 		var : int;
 	}
 }
 ```
-我们会给变量num附加上推导出的匿名类型。
 
 为了语义的完整性，我们也可以在变量声明时使用匿名类型，同时对匿名类型的变量可以进行解包操作。如下所示：
 
@@ -41,8 +40,24 @@ num = {0, {0, true}};
 var num = {10, {!false, true}};
 var {a, {b, c}} = num; // 进行解包操作之后，a = 10, b = true, c = true
 ```
-但是解包出的变量在moses中默认是const的（有点儿类似于C++中的临时变量），并且作用于就在当前的scope中。匿名类型变量只作为值的传递方式出现。能够进行解包只有变量和函数调用返回值。
+解包操作有两种实现方式，第一种就是通过解包声明（unpack declaration）来进行解包，第二种就是通过用户自定义的类型变量来进行解包。解包声明的变量类型是const的，并且作用于就在当前的scope中,匿名类型变量只作为值的传递方式出现(有点儿类似于C++中的临时变量）。只能够对匿名类型变量和返回类型为匿名类型的函数调用表达式进行解包。
 
+```
+// (1) 通过用户自定义类型来进行解包(注： user defined type不能向anonymous type转换)
+class base
+{
+    var start : int;
+    var end : int;
+};
+
+var num = {0, 1};
+base = num;
+
+// (2) 通过解包声明来进行解包
+var num = {0, 1};
+var {start, end} = num;
+
+```
 
 类似于swift，moses支持const变量，
 

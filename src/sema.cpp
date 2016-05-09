@@ -524,6 +524,8 @@ namespace compiler
 				lhs->getType(), "=", std::move(lhs), std::move(rhs));
 		}
 
+
+		/// \brief Mainly check the conditon expression type.
 		bool Sema::ActOnConditionExpr(std::shared_ptr<Type> type) const
 		{
 			if (!type || type->getKind() != TypeKind::BOOL)
@@ -533,6 +535,23 @@ namespace compiler
 			}
 			return true;
 		}
+
+
+		/// \brief Mainly check parameter declaration type.
+		std::shared_ptr<Type> Sema::ActOnParmDeclUserDefinedType(Token tok) const
+		{
+			if (ClassSymbol* csym = 
+				dynamic_cast<ClassSymbol*>(ScopeStack[0]->LookupName(tok.getLexem()).get()))
+			{
+				return csym->getType();
+			}
+			else
+			{
+				errorReport("Undefined type.");
+			}
+			return nullptr;
+		}
+
 
 		void Sema::PopClassStack()
 		{

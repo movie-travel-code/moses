@@ -1396,26 +1396,14 @@ namespace compiler
 			{
 				DeclType = std::make_shared<BuiltinType>(TypeKind::BOOL, isConst);
 			}
-			else if (validateToken(tok::TokenValue::IDENTIFIER))
+			else if (validateToken(tok::TokenValue::IDENTIFIER, false))
 			{
 				// 用户自定义类型形参
 				// Type checking.
-				std::string TypeLexem = scan.getToken().getLexem();
-				std::shared_ptr<Symbol> result = Actions.getCurScope()->Resolve(TypeLexem);
-				if (ClassSymbol* CS = 
-					dynamic_cast<ClassSymbol*>(Actions.getCurScope()->Resolve(TypeLexem).get()))
-				{
-					DeclType = CS->getType();
-					if (!DeclType)
-					{
-						errorReport("The type is illegal");
-					}
-					DeclType->setConst(isConst);
-				}
-				else
-				{
-					errorReport("Undefined type.");
-				}
+				DeclType = Actions.ActOnParmDeclUserDefinedType(scan.getToken());
+				DeclType->setConst(isConst);
+				// consume user defined type(identifier).
+				scan.getNextToken();
 			}
 			else if (validateToken(tok::TokenValue::PUNCTUATOR_Left_Brace, false))
 			{

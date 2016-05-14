@@ -100,7 +100,7 @@ namespace compiler
 		bool Sema::ActOnUnpackDeclElement(std::string name)
 		{
 			// 在当前CurScope中发现同名变量
-			if (CurScope->LookupName(name))
+			if (CurScope->CheckWhetherInCurScope(name))
 			{
 				errorReport("Error occured in unpack decl.  Variable " + name + " redefinition.");
 				return false;
@@ -122,7 +122,7 @@ namespace compiler
 		std::shared_ptr<Type> Sema::ActOnReturnType(const std::string& name) const
 		{
 			// Note: 在moses中，class暂时定义在Top-Level中
-			if (ClassSymbol* sym = dynamic_cast<ClassSymbol*>(ScopeStack[0]->LookupName(name).get()))
+			if (ClassSymbol* sym = dynamic_cast<ClassSymbol*>(ScopeStack[0]->CheckWhetherInCurScope(name).get()))
 			{
 				return sym->getType();
 			}
@@ -136,7 +136,7 @@ namespace compiler
 		void Sema::ActOnParmDecl(std::string name, std::shared_ptr<Type> DeclType)
 		{
 			// Check redefinition.
-			if (CurScope->LookupName(name))
+			if (CurScope->CheckWhetherInCurScope(name))
 			{
 				errorReport("Parameter redefinition.");
 
@@ -151,7 +151,7 @@ namespace compiler
 		void Sema::ActOnClassDeclStart(std::string name)
 		{
 			// check class redefinition.
-			if (CurScope->LookupName(name))
+			if (CurScope->CheckWhetherInCurScope(name))
 			{
 				errorReport("Class redefinition.");
 				return;
@@ -263,7 +263,7 @@ namespace compiler
 		{
 			std::shared_ptr<Type> ReturnType = nullptr;
 			if (FunctionSymbol* FuncSym =
-				dynamic_cast<FunctionSymbol*>(ScopeStack[0]->LookupName(name).get()))
+				dynamic_cast<FunctionSymbol*>(ScopeStack[0]->CheckWhetherInCurScope(name).get()))
 			{
 				ReturnType = FuncSym->getReturnType();
 				// check args number and type.
@@ -541,7 +541,7 @@ namespace compiler
 		std::shared_ptr<Type> Sema::ActOnParmDeclUserDefinedType(Token tok) const
 		{
 			if (ClassSymbol* csym = 
-				dynamic_cast<ClassSymbol*>(ScopeStack[0]->LookupName(tok.getLexem()).get()))
+				dynamic_cast<ClassSymbol*>(ScopeStack[0]->CheckWhetherInCurScope(tok.getLexem()).get()))
 			{
 				return csym->getType();
 			}
@@ -552,6 +552,12 @@ namespace compiler
 			return nullptr;
 		}
 
+
+		/// \brief Mainly check variable declararion type.
+		std::shared_ptr<Type> Sema::ActOnVarDeclUserDefinedType(Token tok) const
+		{
+			return ActOnParmDeclUserDefinedType(tok);
+		}
 
 		void Sema::PopClassStack()
 		{
@@ -589,7 +595,7 @@ namespace compiler
 		}
 
 		/// \brief Look up name for current scope.
-		std::shared_ptr<Symbol> Scope::LookupName(std::string name)
+		std::shared_ptr<Symbol> Scope::CheckWhetherInCurScope(std::string name)
 		{
 
 			for (auto item : SymbolTable)

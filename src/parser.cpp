@@ -1060,11 +1060,7 @@ namespace compiler
 					// Simple semantic analysis. Check whether the user-defined type
 					// 由于func定义和class定义只存在于Top-Level中，所以只需要在Top-Level Scope
 					// 中进行name lookup就可以了。
-					if (const ClassSymbol* classSym = dynamic_cast<ClassSymbol*>(
-						Actions.getTopLevelScope()->LookupName(scan.getToken().getLexem()).get()))
-					{
-						DeclType = classSym->getType();
-					}
+					DeclType = Actions.ActOnVarDeclUserDefinedType(scan.getToken());
 					scan.getNextToken();
 				}
 				else if (validateToken(tok::TokenValue::PUNCTUATOR_Left_Brace, false))

@@ -3,6 +3,41 @@
 // This file defines the Sema class, which performs semantic analysis and 
 // builds ASTs. Consult Clang 2.6.
 // Ad hoc syntax-directed semantic analysis.
+//
+// Checks of many kinds.
+// (1) All identifiers are declared.
+// (2) Types (经过语义分析之后，语法树上的任意表达式都有其对应类型， 即fully typed)
+// (3) Inheritance relationsships(Temporarily moses's class type doesn't have
+//		inheritance).
+// (4) classes defined only once.
+// (5) Methods in a class defined only once(Temporarily moses's class type
+//		doesn't support method.).
+// (6) Reserved identifiers are mot misused.
+// And others.
+// ---------------------------------Nonsense for coding------------------------
+// 我们使用语法制导的翻译方法，就是在语法分析的过程中间，调用一些函数来进行语义分析，
+// 这些函数有一个统一的名称就是Action Routines。从另一种角度看语义分析，就是通过
+// 属性文法的形式，Attribute Grammar在文法层面定义了，在进行语法分析的时候要进行
+// 哪些操作，属性文法中有继承属性和综合属性的改变，继承属性就是当前分析节点从父亲节点
+// 和左手兄弟节点获得的属性，而综合属性只是由当前节点为根的子树提供的。
+// 
+// moses中有一些属性信息是需要沿途收集的（moses是上下文相关的语言），也就是后面的某些判错需要
+// 前面收集到的信息（例如符号表，scope等）。这些信息可以在语法分析（这里采用的是递归下降）
+// 的过程中沿途收集，挨个节点的向下传递，这里采用了符号表（Symbol Table）的结构作为
+// 全局可访问的数据结构，避免了沿节点传递的问题。还好moses的语义比较简单，符号表加上
+// 一些简单的ActionRoutine就已经满足要求了。
+// 
+// 并且有些语义分析有先后顺序，例如遇到DeclRefExpr，首先检查该identifier有无定义，
+// 没有定义报错“undefined variable”，定义了的话获取其类型再做Type Checking.
+// ----------------------------------------------------------------------------
+//
+// -----------------------------------Nonsense for coding------------------------
+// Three kinds of languages:
+// (1) statically typed: All or almost all checking of types is done as part of 
+//	   compilation(C, Java, including moses)
+// (2) Dynamically typed: Almost all checking of types is done as part of program
+//     execution(Scheme, Lisp, python, perl).
+// ------------------------------------------------------------------------------
 //===---------------------------------------------------------------------===//
 
 // To Do: 为了内存管理上的方便，我大量使用了std::shared_ptr，shared_ptr会为
@@ -44,6 +79,8 @@ namespace compiler
 				SK_TopLevel
 			};
 		private:
+
+			// A symbol table is a data structure that tracks the current bindings of identifiers
 			std::vector<std::shared_ptr<Symbol>> SymbolTable;
 			/// SubScopes ? ? ?
 			std::vector<std::pair<std::shared_ptr<Scope>, unsigned>> SubScopes;
@@ -83,7 +120,8 @@ namespace compiler
 			std::shared_ptr<Symbol> Resolve(std::string name) const;
 			
 			/// \brief Perform name lookup in current scope.
-			std::shared_ptr<Symbol> LookupName(std::string name);
+			// std::shared_ptr<Symbol> LookupName(std::string name);
+			std::shared_ptr<Symbol> CheckWhetherInCurScope(std::string name);
 
 			bool isAnonymous() const { return ScopeName == ""; }	
 
@@ -342,6 +380,8 @@ namespace compiler
 			bool ActOnConditionExpr(std::shared_ptr<Type> type) const;
 
 			std::shared_ptr<Type> ActOnParmDeclUserDefinedType(Token tok) const;
+
+			std::shared_ptr<Type> ActOnVarDeclUserDefinedType(Token tok) const;
 
 			// (3) help method
 			bool isInFunctionContext() const { return FunctionStack.size() != 0; }

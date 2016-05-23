@@ -9,8 +9,8 @@
 #include <vector>
 #include <memory>
 #include <utility>
-#include "error.h"
-#include "TokenKinds.h"
+#include "../Support/error.h"
+#include "../Lexer/TokenKinds.h"
 
 namespace compiler
 {
@@ -67,7 +67,7 @@ namespace compiler
 			}
 			bool isConst() const { return IsConst; }
 			void setConst(bool isConst) { IsConst = isConst; }
-			TypeKind getKind() const { return Kind; }
+ 			TypeKind getKind() const { return Kind; }
 			static TypeKind checkTypeKind(tok::TokenValue kind);
 
 			/// \brief 由于现在使用std::shared_ptr<Type>存储编译中的类型信息

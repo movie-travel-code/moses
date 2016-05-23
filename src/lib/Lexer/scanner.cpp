@@ -3,7 +3,7 @@
 // This file is used to implements scanner.
 //
 //===------------------------------------------------------------------------===//
-#include "scanner.h"
+#include "../../include/Lexer/scanner.h"
 
 namespace compiler
 {

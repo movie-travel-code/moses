@@ -4,8 +4,8 @@
 // To Do: Implement action routines.
 // 
 //===---------------------------------------------------------------------===//
-#include "sema.h"
-#include "error.h"
+#include "../../include/Parser/sema.h"
+#include "../../include/Support/error.h"
 namespace compiler
 {
 	namespace sema

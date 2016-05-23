@@ -3,7 +3,7 @@
 // This file is used to implement class Type.
 // 
 //===---------------------------------------------------------------------===//
-#include "Type.h"
+#include "../../include/Parser/Type.h"
 
 namespace compiler
 {

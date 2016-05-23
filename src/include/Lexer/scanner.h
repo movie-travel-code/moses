@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <cassert>
 #include "TokenKinds.h"
-#include "error.h"
+#include "../Support/error.h"
 #include "PreStoreToken.h"
 #include "Token.h"
 

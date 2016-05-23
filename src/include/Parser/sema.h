@@ -50,7 +50,7 @@
 #include <string>
 #include <memory>
 #include "Type.h"
-#include "scanner.h"
+#include "../Lexer/scanner.h"
 #include "ast.h"
 
 namespace compiler

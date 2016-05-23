@@ -4,7 +4,7 @@
 // To Do: The semantic analyzer use syntax-directed pattern.
 // 
 //===---------------------------------------------------------------------===//
-#include "ast.h"
+#include "../../include/Parser/ast.h"
 
 namespace compiler
 {

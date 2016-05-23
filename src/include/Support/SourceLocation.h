@@ -2,7 +2,7 @@
 #define SOURCELOCATION_INCLUDE
 #include <iostream>
 #include <string>
-#include "Token.h"
+#include "../Lexer/Token.h"
 
 namespace compiler
 {

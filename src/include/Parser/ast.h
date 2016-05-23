@@ -10,7 +10,7 @@
 #include <string>
 #include <vector>
 #include <memory>
-#include "SourceLocation.h"
+#include "../Support/SourceLocation.h"
 #include "Type.h"
 
 namespace compiler
@@ -21,11 +21,70 @@ namespace compiler
 	/// syntax tree后，再遍历syntax tree并执行代码生成部分。
 	///---------------------------nonsense for coding------------------------------///
 
-	namespace sema
-	{
-		class VariableSymbol;
-	}
-	
+	//namespace visitor
+	//{
+	//	// The visitor pattern achieves a form of double dispath for languages
+	//	// that offer only single dispatch. The visitor pattern enables phase- 
+	//	// and node-specific code to be invoked clealy.
+	//	// Every phase extends the Visitor class, so that it inherits the
+	//	// visit(AbstractNode n) method.
+
+	//	// Note: Wile the inclusion of the Accept method in every node class 
+	//	// seems redundant, it cannot be factored into a common superclass, 
+	//	// because the type of this must be specific to the visited node.
+
+	//	// --------------------visitor code as below---------------------
+	//	/*class Visitor
+	//	procedure visit(AbstractNode n)
+	//	n.accept()
+	//	end
+	//	end
+
+	//	class TypeChecking extends Visitor
+	//	procedure visit(IfNode n)
+	//	end
+
+	//	procedure visit(PlusNode n)
+	//	end
+
+	//	procedure visit(MinusNode m)
+	//	end
+
+	//	end
+
+	//	class IFNode extends AbstractNode
+	//	procedure accept(Visitor v)
+	//	v.visit(this)
+	//	end
+	//	end
+
+	//	class PlusNode externds AbstractNode
+	//	procedure accept(Visitor v)
+	//	v.visit(this)
+	//	end
+	//	...
+	//	end
+
+	//	class MinusNode extends AbstractNode
+	//	procedure accept(Visitor v)
+	//	v.visit(this)
+	//	end
+	//	...
+	//	end
+	//	*/
+	//	// --------------------------------------------------------------
+	//	class Visitor
+	//	{
+	//	public:
+	//		virtual void visit(ast::StatementAST* root)
+	//		{
+	//			root->Accept(std::shared_ptr<Visitor>(this));
+	//		}
+
+	//		void func() {}
+	//	};
+	//}
+
 	namespace ast
 	{
 		class Expr;
@@ -53,6 +112,18 @@ namespace compiler
 		/// \brief StatementAST - Base class for all statements.
 		class StatementAST
 		{
+		public:
+			class Visitor
+			{
+			public:
+				virtual void visit(ast::StatementAST* root)
+				{
+					root->Accept(std::shared_ptr<Visitor>(this));
+				}
+
+				void func() {}
+			};
+
 		protected:
 			SourceLocation LocStart;
 			SourceLocation LocEnd;
@@ -66,10 +137,21 @@ namespace compiler
 				LocEnd(stmt.LocEnd) {}
 
 			virtual ~StatementAST() {}
+
+			// We use visitor pattern for IR build(Note: Because we use ad-hoc translation
+			// , semantic analysis doesn't use vistor pattern).
+			// When a node accepts a visitor, actions are performed that are appropriate to
+			// both the visitor and the node at hand(double dispatch).
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				// v->visit(this);
+			}
+
 			SourceLocation getLocStart() const { return LocStart; }
 			SourceLocation getLocEnd() const { return LocEnd; }
 			void setLocStart(unsigned long line, unsigned long number) {}
 			void setLocEnd(unsigned long line, unsigned long number) {}
+			// virtual 
 		};
 
 		/// @brief ExprAST - Base class for all expression nodes.
@@ -112,6 +194,14 @@ namespace compiler
 			void setExprValueKind(ExprValueKind valueKind) { VK = valueKind; }
 
 			virtual ~Expr() {}
+
+			// ---------------------nonsense for coding-------------------------
+			// 注意这里accept与父类的相比不是多余，是通过this的声明类型来实现多态的
+			// -----------------------------------------------------------------
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				//v->visit(this);
+			}
 		};
 
 		/// \brief NumberExpr - 用来表示numeric literal, 例如"1".
@@ -123,6 +213,11 @@ namespace compiler
 				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::INT, true), ExprValueKind::VK_RValue),
 				Val(Val) {}
 			virtual ~NumberExpr() {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				// v->visit(this);
+			}
 		};
 
 		/// \brief CharExpr - 用来表示char literal, 例如"c"
@@ -135,6 +230,11 @@ namespace compiler
 				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::INT, true), ExprValueKind::VK_RValue),
 				C(c) {}
 			virtual ~CharExpr() {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				// v->visit(this);
+			}
 		};
 
 		/// \brief StringLiteral - 用来表示string.
@@ -145,6 +245,11 @@ namespace compiler
 			StringLiteral(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
 				std::string str) : Expr(start, end, type, ExprValueKind::VK_RValue), str(str) {}
 			virtual ~StringLiteral() {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				// v->visit(this);
+			}
 		};
 
 		/// \brief BoolLiteral - 用来表示bool字面值.
@@ -155,6 +260,11 @@ namespace compiler
 			BoolLiteral(SourceLocation start, SourceLocation end, bool value) :
 				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::BOOL, true), ExprValueKind::VK_RValue),
 				value(value) {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// @brief DeclRefExprAST - A reference to a declared variable, function, enum, etc.
@@ -179,6 +289,11 @@ namespace compiler
 			std::string getDeclName() const { return Name; }
 
 			virtual ~DeclRefExpr() {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// @brief BinaryExpr - Expression class for a binary operator.
@@ -195,6 +310,11 @@ namespace compiler
 				Expr(start, end, type, ExprValueKind::VK_RValue), OpName(Op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
 
 			virtual ~BinaryExpr() {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// \brief UnaryExpr - Expression class for a unary operator.
@@ -210,6 +330,11 @@ namespace compiler
 			std::string getOpCodeName() { return OpName; }
 			void setOpCodeName(std::string name) { OpName = name; }
 			virtual ~UnaryExpr() {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// @brief CallExprAST - Expression class for function calls.
@@ -226,6 +351,11 @@ namespace compiler
 				Expr(start, end, type, vk), CalleeName(Callee), Args(std::move(Args)), FuncDecl(FD) {}
 
 			virtual ~CallExpr() {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// \brief MemberExpr - Class members. X.F.
@@ -252,6 +382,11 @@ namespace compiler
 
 			void setBase(ExprASTPtr E) { Base = std::move(E); }
 			ExprASTPtr getBase() const { return nullptr; }
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 
@@ -265,6 +400,11 @@ namespace compiler
 			AnonymousInitExpr(SourceLocation start, SourceLocation end, 
 				std::vector<ExprASTPtr> initExprs, std::shared_ptr<Type> type) :
 			Expr(start, end, type, Expr::ExprValueKind::VK_RValue), InitExprs(std::move(initExprs)) {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// \brief CompoundStatement - This class represents a Compound Statement
@@ -286,6 +426,11 @@ namespace compiler
 			void addSubStmt(StmtASTPtr stmt);
 			const StatementAST* getSubStmt(unsigned index);
 			unsigned getSize() { return size; }
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// @brief IfStatementAST - This class represents a If Statement
@@ -306,6 +451,11 @@ namespace compiler
 				Condition(std::move(Condition)), Then(std::move(Then)), Else(std::move(Else)) {}
 
 			virtual ~IfStatement() {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// @brief WhileStatementAST - This class represents a While Statement
@@ -323,6 +473,11 @@ namespace compiler
 				std::unique_ptr<StatementAST> body) :StatementAST(start, end),
 				Condition(std::move(condition)), WhileBody(std::move(body)) {}
 			virtual ~WhileStatement() {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// @brief BreakStatementAST - This class represents a Break Statement
@@ -334,6 +489,11 @@ namespace compiler
 		{
 		public:
 			BreakStatement(SourceLocation start, SourceLocation end) : StatementAST(start, end) {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// @brief ContinueStatementAST - This class represents a Continue Statement
@@ -347,6 +507,11 @@ namespace compiler
 			ContinueStatement(SourceLocation start, SourceLocation end) :
 				StatementAST(start, end) {}
 			virtual ~ContinueStatement() {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// @brief ReturnStatementAST - This class represents a Return Statement
@@ -365,6 +530,11 @@ namespace compiler
 				ReturnExpr(std::move(ReturnExpr)) {}
 
 			virtual ~ReturnStatement() {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// @brief ExprStatementAST - This class represents a statement of expressions.
@@ -380,6 +550,11 @@ namespace compiler
 				std::unique_ptr<Expr> expr) : StatementAST(start, end), expr(std::move(expr)) {}
 
 			virtual ~ExprStatement() {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// @brief DeclStatementAST - This class represents a Declaration Statement
@@ -395,6 +570,11 @@ namespace compiler
 		public:
 			DeclStatement(SourceLocation start, SourceLocation end) : StatementAST(start, end) {}
 			virtual ~DeclStatement() {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// @brief ParameterDecl - This class represents a ParameterDecl
@@ -413,6 +593,11 @@ namespace compiler
 			ParameterDecl(SourceLocation start, SourceLocation end, std::string name, 
 				std::shared_ptr<Type> type) : 
 				DeclStatement(start, end), ParaName(name),  type(type) {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// \brief UnpackDecl - This class represents a UnpackDecl.
@@ -434,6 +619,11 @@ namespace compiler
 			unsigned getDeclNumber() const { return decls.size(); };
 			std::vector<std::string> operator[](unsigned index) const;
 			void getDeclNames(std::vector<std::string>& names) const;
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// @brief FunctionDecl - This class represents a Function Declaration
@@ -460,6 +650,11 @@ namespace compiler
 			virtual ~FunctionDecl() {}
 
 			unsigned getParaNum() { return paraNum; }
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// @brief VarDecl - This class represents a Variable Declaration or a Const Variable 
@@ -486,6 +681,11 @@ namespace compiler
 			std::string getName() { return name; }
 			bool isClass();
 			bool isConst() { return IsConst; }
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 
 		/// @brief ClassDecl - This class represents a Class Declaration
@@ -507,7 +707,14 @@ namespace compiler
 		public:
 			ClassDecl(SourceLocation start, SourceLocation end, std::string name, StmtASTPtr body) :
 				DeclStatement(start, end), ClassName(name), Body(std::move(body)) {}
+
+			virtual void Accept(std::shared_ptr<Visitor> v)
+			{
+				v->visit(this);
+			}
 		};
 	}
+
+	
 }
 #endif

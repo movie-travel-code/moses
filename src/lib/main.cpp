@@ -4,8 +4,8 @@
 // 
 //===-------------------------------------------------------------------------===//
 #include <iostream>
-#include "scanner.h"
-#include "parser.h"
+#include "../include/Lexer/scanner.h"
+#include "../include/Parser/parser.h"
 using namespace compiler::parse;
 using namespace compiler::sema;
 int main()

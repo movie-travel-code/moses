@@ -4,7 +4,7 @@
 //
 //===-----------------------------------------------------------------------------------===//
 #include <iostream>
-#include "error.h"
+#include "../../include/Support/error.h"
 
 namespace compiler
 {

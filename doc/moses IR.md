@@ -114,9 +114,66 @@ var num = add(arg);
 参数1 <- sp
 ```
 如下图所示：
+
 ![此处输入图片的描述][4]
 
-对于moses就是参照该方式实现。
+------------
+
+
+### LLVM 2.3 MRV的支持
+
+对于moses就是参照该方式实现。在[LLVM 2.3][7]中已经开始支持多值返回（multiple return value, MRV）了，细节可参考这篇[日记][8]。下面是对应的描述：
+
+**In LLVM, if a function returns multiple values, we transform the function to take a pointer to a memory location, and store the return values through the pointer. This is inefficient for multiple reasons (temporary memory must ba stack allocated, memory stores and the corresponding loads must be emitted, etc), but it also means that we cannot properly support those platforms that return multiple values in registers properly.**
+
+**The real problem with returning multiple values from functions is how to bind them on the caller side. In particular, we currently have the situation where the call instruction "is" the return value (when used as an oeprand to another instructios). When we have the situation where a call can define multiple values, there is no suitable value to use**
+
+从上面我们可以看到，返回多值的无非就是两种方式（类似于结构体的返回），使用寄存器或者在 *caller stack frame* 中分配一块临时内存，下面就是实现方式中的相关约定，注意这里所描述的LLVM版本是2.3。
+
+#### Suggested approach: callee side
+**On the callee side, the return instruction will be enhanced to be an n-ary instruciton. In paticular, it will be perfectly valid to have an function like:**
+```
+{int, float} %foo()
+{
+    ret int 4, float 17
+}
+```
+当然上面这段代码只是规定了在callee端如何表示多值返回（LLVM中没有显示的 *int* *float* 类型）。上面这段代码可以使用寄存器进行返回，所以这里是 *target-dependent* 的。
+
+#### Suggester approach: caller side
+
+**The description above is straight-forward, but does not address how multiple return values are bound to LLVM Value*'s. I suggest that this happens in two steps. First, the aggregate return value is bound to the Call instruction's Value* as an aggregate. Second, the individual components of the aggregate are accessed with simple LLVM instructions.**
+
+**Consider a call to %foo above:**
+```
+    %Agg = call {int, float} %foo()
+    %Agg.0 = getaggregatevalue {int, float} %Agg, uint 0
+    %Agg.1 = getaggregatevalue {int, float} %Agg, uint 1
+```
+
+**In the example above, the 'getaggregatevalue' instructions bind the individual returned values from the aggregate LLVM value to individual ones. Because they may only be used on one-level structs, the first operand is always a struct, and the second operand is always a constant uint.**
+
+上述代码只是简单介绍了多值返回的形式，并没有给出细节。
+> * %Agg是否是在 *caller stack frame* 中 *alloca* 的内存空间?
+> * **%Agg = call {int, float} %foo()** 其实是 illegal 的，是否需要更改 *function signature* ，例如将%Agg的地址作为函数参数?
+
+
+注意上面在 *caller* 端，第一步和第二步的操作和 moses 中多值返回的情形有异曲同工之妙。moses多值返回如下所示：
+
+```
+func add() -> {int, int}
+{
+    return {0, 1}
+}
+
+var num = add();
+var {start, end} = num;
+
+```
+在moses中，同样会声明一个变量来接受函数的返回，然后使用一个 *anonymous declaration* 来对该变量进行解包。在 moses 设计的过程中，我们也提到过，这样做效率不是很高，可以一步到位，直接使用 *anonymoust declaration* 来接受多值返回。
+
+
+------------
 
 **ccc** 调用惯例，就是传统的调用惯例，从右至左压参，使用栈来传递参数，使用栈来进行值的返回， caller来负责参数栈空间的回收。
 
@@ -145,15 +202,17 @@ class type2
 
 因此，moses IR允许定义两种类型，"identified" 和 "literal"。其中"literal"类型可以在结构上唯一确定，也就是说在源码中出现的多处 **"{int, int}"** 都是等价的，我们也会给匿名类型命名，相同结构的匿名类型会统一指向其中一个匿名类型。虽然moses采用结构类型等价，但是"identified"类型只能通过name来唯一确定，两种class type可以等价但不同名。
 
-匿名类型对应的"iteral"类型的声明如下：
+匿名类型在moses IR中是没有声明，在需要匿名类型的位置直接插入该匿名类型的“聚合类型体”就行了。例如在使用 *getelementptr* 指令的时候，需要提供类型说明符，此处就直接使用“聚合类型体”来表示。
 ```
-%mytype = anonytype { int, int }
+getelementptr {i32, i1}* %num, i32 0, i32 0 ; 表示提取的是 *{i32, i1}* 中的 *i32*
 ```
 
 一种"identified"类型的声明如下：
 ```
-%mytype = type { int, int }
+%class.mytype = type { int, int }
 ```
+其中用户自定义类型使用 *class* 前缀来标识。
+
 **Note: 从moses设计至今，其实一直在回避一个问题，就是类型嵌套，例如：**
 ```
 class type
@@ -317,7 +376,33 @@ moses关于整型只有int类型，用i32表示。
 **Structure constants**
 结构体常量和结构体类型的表示很相似，例如："{i32 4, i1 false}"，其实结构体常量和匿名类型的初始化表达式很相似。
 
+**Note: 关于LLVM中的constant类型，还有些疑问如下：**
+```
+const int global = 11;
+void func()
+{
+    const int num = 10;
+}
+```
+从上面的代码可以看出声明了两个constant变量，一个是const global，一个是const local，但是在生成LLVM IR后，两者却有区别。LLVM IR如下所示：
+```
+@global = constant i32 11, align 4
 
+; Function Attrs: nounwind
+define void @func() #0 {
+  %num = alloca i32, align 4
+  store i32 10, i32* %num, align 4
+  ret void
+}
+```
+从上面可以看出，全局变量global的确是由 *constant* 修饰的，constant修饰的变量在后面的优化中，可以很方便的做constant propagation和constant floding，不需要再对IR进行分析。但是local variable只是简单的使用alloca在栈上分配一块内存，并没有使用 *constant* 进行修饰，所有这里有些疑问？
+
+关于这方面的问题，LLVM IR官网给出来一部分的解释：
+A variable may de defined as a global *constant* , which indicates that the contents of the variable will **never** be modified(enabling better optimization, allowing the global data to be placed in the read-only section of an executable, etc). Note that variables that need runtime initialization cannot be marked *constant* as there is a store to the variable.
+
+LLVM explicitly allows *declarations* of global variables to be marked constant, even if the final definition of the global if not.
+
+*constant* 在 LLVM 中的解释是只能被初始化（赋值一次），所以 *%num* 就不符合要求，但是在 moses 中的 *const* 更像 *readonly* ，所以可以先声明而不初始化，后面再对其进行赋值（初始化）。所以在moses IR中尝试将局部常量也附加上 *constant* 属性。
 ----------
 ## Global Variable and Function Addresses
 moses IR中关于全局变量和函数的地址都是有效的，因为在引用全局变量或者调用函数时都是通过两者的地址实现的。
@@ -457,6 +542,8 @@ moses IR支持几种对聚合类型操作的指令。
 两者的区别在于：
 > * 因为 'extractvalue' 指令获取的是值，所以第一个下标就省略了，默认为0
 > * 至少有一个index
+
+其实 *extractvalue* 指令可以说是由一系列*getelementptr* 指令和 *load* 指令组合得到的，但是比 *getelementptr* 和 *load* 指令更方便。
 
 因为moses中的匿名类型，是不允许被动态扩展的。所以LLVM IR中对应 'insertvalue' 在moses中不存在的。
 
@@ -741,3 +828,5 @@ func void @mosesir.gcwrite(i8* %P1, i8* %Obj, i8** %P2)
   [4]: https://tiancaiamao.gitbooks.io/go-internals/content/zh/images/3.2.funcall.jpg
   [5]: https://en.wikipedia.org/wiki/Dominator_%28graph_theory%29
   [6]: http://weibo.com/movietravelcode
+  [7]: http://llvm.org/releases/2.3/docs/ReleaseNotes.html
+  [8]: http://nondot.org/sabre/LLVMNotes/MultipleReturnValues.txt

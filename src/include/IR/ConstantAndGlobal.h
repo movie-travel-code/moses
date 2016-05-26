@@ -37,7 +37,7 @@ namespace compiler
 			void operator=(const Constant&) = delete;
 			Constant(const Constant&) = delete;
 		protected:
-			Constant(const Type* Ty) : User(Ty, Value::ValueTy::ConstantVal){}
+			Constant(TyPtr Ty) : User(Ty, Value::ValueTy::ConstantVal){}
 			~Constant() {}
 		public:
 			// setName - Specialize setName to handle symbol table majik...(°ÑÏ·)
@@ -96,7 +96,7 @@ namespace compiler
 		{
 			GlobalValue(const GlobalValue&) = delete;
 		protected:
-			GlobalValue(const Type* Ty, ValueTy vty, const std::string &name = "") :
+			GlobalValue(TyPtr Ty, ValueTy vty, const std::string &name = "") :
 				User(Ty, vty, name) {}
 		public:
 			~GlobalValue() {}
@@ -181,7 +181,7 @@ namespace compiler
 		{
 			ConstantIntegral(const ConstantIntegral&) = delete;
 		protected:
-			ConstantIntegral(const Type *Ty) : Constant(Ty) {}
+			ConstantIntegral(TyPtr Ty) : Constant(Ty) {}
 		public:
 			/// isNullValue - Return true if this is the value that would be returned
 			/// by getNullValue.
@@ -280,7 +280,7 @@ namespace compiler
 
 			/// getValues - Return a vector of the component constants that make up
 			/// this structure.
-			const std::vector<Use> &getValue() const { return Operands; }
+			// const std::vector<Use> &getValue() const { return Operands; }
 		};
 
 
@@ -293,36 +293,6 @@ namespace compiler
 		{
 
 		};
-
-		//===----------------------------------------------------------------===//
-		// All zero aggregate value
-		class ConstantAggregateZero final : public Constant
-		{
-			ConstantAggregateZero(const ConstantAggregateZero&) = delete;
-			friend class Constand;
-		public:
-
-		};
-
-		/// Base class for aggregate constants(with operands).
-		///
-		/// These constants are aggregate of other constants, which are stored
-		/// as operands.???
-		///
-		/// Subclasses are ConstantStruct, ConstantAnony
-		class ConstantAggregate : public Constant
-		{
-
-		};
-
-		//===-----------------------------------------------------------===//
-		// Constant Struct Declarations.
-		class ConstantStruct final : public ConstantAggregate
-		{
-		public:
-		};
-
-		//===-----------------------------------------------------------===//
 	}
 }
 

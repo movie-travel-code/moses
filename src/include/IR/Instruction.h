@@ -46,8 +46,6 @@ namespace compiler
 				PHI,			// PHI node instruction
 				Call			// Call a function
 			};
-			typedef std::shared_ptr<Instruction> InstPtr;
-			typedef std::shared_ptr<BasicBlock> BBPtr;
 
 		private:
 			BBPtr Parent;
@@ -65,8 +63,7 @@ namespace compiler
 			/// 
 			/// Note: it is undefined behavior to call this on an instruction not
 			/// currently inserted into a function.
-			const Function *getFunction() const;
-			Function *getFunction();
+			FuncPtr getFunction();
 
 			/// Insert an unlinked instruction into a basic block immediately after the
 			/// specified intruction.
@@ -160,8 +157,6 @@ namespace compiler
 		// ---------------------nonsense for coding------------------------- //
 		class UnaryInstruction : public Instruction
 		{
-		private:
-			UsePtr operand0;
 		protected:
 			UnaryInstruction(TyPtr Ty, Opcode op, ValPtr V, InstPtr IB = nullptr)
 				: Instruction(Ty, op, 1, IB) 
@@ -173,7 +168,6 @@ namespace compiler
 
 			static bool classof(InstPtr I)
 			{
-				I->getOpcode() == Instruction::Opcode::Alloca;
 				return I->getOpcode() == Instruction::Opcode::Alloca || I->getOpcode() == Instruction::Opcode::Load;
 			}
 		};
@@ -203,6 +197,10 @@ namespace compiler
 			virtual BBPtr getSuccessorV(unsigned idx) const = 0;
 			virtual unsigned getNumSuccessorV() const = 0;
 			virtual void setSuccessorV(unsigned idx, BBPtr B) = 0;
+			//===---------------------------------------------------------------------===//
+			// 
+			//===---------------------------------------------------------------------===//
+
 		public:
 			/// Return the number of successors that this terminator hsa.
 			unsigned getNumSuccessors() const
@@ -234,10 +232,6 @@ namespace compiler
 		//===-------------------------------------------------------------===//
 		class BinaryOperator : public Instruction
 		{
-		public:
-			typedef std::shared_ptr<BinaryOperator> BOPtr;
-		private:
-			UsePtr operand0, operand1;
 		protected:
 			void init();
 			BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty, 
@@ -270,13 +264,12 @@ namespace compiler
 		};
 
 		//===-------------------------------------------------------------===//
-		//						CastInst Class
+		//						TruncInst Class
 		//===-------------------------------------------------------------===//
-		// This is the base class for all instructions that perform data casts.
 		// 在moses中唯一需要执行 cast 操作的就是匿名类型赋值给用户自定义类型的转换
-		class CastInst : public UnaryInstruction
+		class TruncInst : public UnaryInstruction
 		{
-
+			// TrancInst 也有operand，operand的类型必须是type类型的
 		};
 
 		//===-------------------------------------------------------------===//
@@ -285,8 +278,6 @@ namespace compiler
 
 		class CmpInst : public Instruction
 		{
-		public:
-			typedef std::shared_ptr<CmpInst> CmpInstPtr;
 			/// This enumeration lists the possible predicates for CmpInst.
 			enum Predicate
 			{
@@ -344,8 +335,6 @@ namespace compiler
 		/// 在moses中，只有单值的alloca，暂时不支持Array的alloca
 		class AllocaInst : public UnaryInstruction
 		{
-		public:
-			typedef std::shared_ptr<AllocaInst> AllocInstPtr;
 		private:
 			TyPtr AllocatedType;
 		public:
@@ -376,8 +365,6 @@ namespace compiler
 
 		class GetElementPtrInst : public Instruction
 		{
-		public:
-			typedef GetElementPtrInst GEPInstPtr;
 		private:
 			TyPtr SourceElementType;
 			TyPtr ResultElementType;
@@ -447,10 +434,6 @@ namespace compiler
 
 		class CallInst : public Instruction
 		{
-		public:
-			typedef std::shared_ptr<CallInst> CallInstPtr;
-			typedef std::shared_ptr<FunctionType> FuncTyPtr;
-			typedef std::shared_ptr<Function> FunctionPtr;
 		private:
 			FuncTyPtr FTy;
 
@@ -529,7 +512,7 @@ namespace compiler
 			/// \brief Determine if any call argument is an aggregate passed by value.
 			bool hasByValArgument() const { return true; }
 
-			FunctionPtr getCalledFunction() const 
+			FuncPtr getCalledFunction() const 
 			{ 
 				// return nullptr; 
 			}
@@ -548,7 +531,7 @@ namespace compiler
 			// Methods for support type inquiry through isa, cast, and dyn_cast:
 			static bool classof(InstPtr I)
 			{
-				return I->getOpcode == Instruction::Opcode::Call;
+				return I->getOpcode() == Instruction::Opcode::Call;
 			}
 		};
 
@@ -558,13 +541,14 @@ namespace compiler
 
 		// ExtractValueInst - This instruction extracts a struct member or array
 		// element value from an aggregate value.
+		// <result> = extractvalue <aggregate type> <val>, <idx>{, <idx>}*
+		// Example:  <result> = extractvalue {i32, float} %agg, 0
+
 		// 在moses中没有array类型，只有聚合类型，也就是匿名类型和用户自定义类型
 		class ExtractValueInst : public UnaryInstruction
 		{
-		public:
-			typedef ExtractValueInst EVInstPtr;
 		private:
-			std::vector<unsigned> Indices;
+			TyPtr AggregateType;
 
 			ExtractValueInst(const ExtractValueInst &EVI);
 			void init(std::vector<unsigned> Idxs, std::string NameStr);
@@ -579,16 +563,16 @@ namespace compiler
 				BBPtr InsertAtEnd);
 
 			// allocate space for exactly one operand
-			void *operator new(size_t s){ return User::operator new(s, 1); }
+			// void *operator new(size_t s){ return User::operator new(s, 1); }
 		public:
 			static EVInstPtr Create(ValPtr Agg, std::vector<unsigned> Idxs,
-				std::string NameStr = "", Instruction *InsertBefore = nullptr)
+				std::string NameStr = "", InstPtr InsertBefore = nullptr)
 			{
 				// return new ExtractValueInst(Agg, Idxs, NameStr, InsertBefore);
 			}
 
 			static EVInstPtr Create(ValPtr Agg, std::vector<unsigned> Idxs,
-				std::string NameStr, BBPtr InsertAtEnd)
+				std::string NameStr, BBPtr InsertAtEnd = nullptr)
 			{
 				// return new ExtractValueInst(Agg, Idxs, NameStr, InsertAtEnd);
 			}
@@ -603,15 +587,13 @@ namespace compiler
 		// PHINode - The PHINode class is used to represent the magical mystical
 		// (神秘的)PHI node, that can not exist in nature, but can be synthesized
 		// in a computer scientist's overactive imagination.
+		// To Do: PHINode的参数是一系列的pair，PHINode的设计暂时不完整。
 		class PHINode : public Instruction
 		{
-		public:
-			typedef std::shared_ptr<PHINode> PHINodePtr;
 		private:
 			// void *operator new(size_t, unsigned) = delete;
 			/// ReservedSpace - The number of operands actually allocated. NumOperands
 			/// is the number actually in use.
-			unsigned ReservedSpace;
 			PHINode(const PHINode &PN);
 
 			// allocate space for exactly zero operands
@@ -622,8 +604,7 @@ namespace compiler
 
 			explicit PHINode(TyPtr Ty, unsigned NumReservedValues, 
 				std::string NameStr = "", InstPtr InsertBefore = nullptr) :
-				Instruction(Ty, Instruction::Opcode::PHI, 0, InsertBefore),
-				ReservedSpace(NumReservedValues)
+				Instruction(Ty, Instruction::Opcode::PHI, 0, InsertBefore)
 			{
 			}
 		protected:
@@ -728,11 +709,9 @@ namespace compiler
 		// does not continue in this  function any longer.
 		class ReturnInst : public TerminatorInst
 		{
-		public:
-			typedef std::shared_ptr<ReturnInst> RetInstPtr;
 		private:
 			ReturnInst(const ReturnInst &RI) = delete;
-			ValPtr RetVal;
+			// ValPtr RetVal; 在operand中可以体现
 		private:
 			// ReturnInst constructors:
 			// ReturnInst()						- 'ret void'	instruction
@@ -768,10 +747,10 @@ namespace compiler
 
 			~ReturnInst();
 
-			ValPtr getReturnValue() const
+			/*ValPtr getReturnValue() const
 			{
 				return RetVal;
-			}
+			}*/
 
 			unsigned getNumSuccessors() const { return 0; }
 
@@ -818,7 +797,7 @@ namespace compiler
 				// return new
 			}
 
-			static BBPtr Create(BasicBlock *IfTrue, BBPtr IfFalse, ValPtr Cond,
+			static BBPtr Create(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond,
 				InstPtr InsertBefore = nullptr)
 			{
 				return nullptr;
@@ -843,7 +822,7 @@ namespace compiler
 				return true;
 			}
 
-			Value* getCondition() const
+			ValPtr getCondition() const
 			{
 				return nullptr;
 			}

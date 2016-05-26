@@ -42,9 +42,42 @@ namespace compiler
 		class Instruction;
 		class BasicBlock;
 		class GlobalValue;
+		class CmpInst;
+		class AllocaInst;
+		class GetElementPtrInst;
+		class CallInst;
 		class Function;
+		class FunctionType;
+		class ExtractValueInst;
+		class PHINode;
+		class ReturnInst;
 		class GlobalVariable;
-		class SymbolTable;
+		class ValueSymbolTable;
+		class ValueSymbolTable;
+		class BinaryOperator;
+		class User;
+		class Argument;
+		class TerminatorInst;
+
+		typedef std::shared_ptr<Type>				TyPtr;
+		typedef std::shared_ptr<Value>				ValPtr;
+		typedef std::shared_ptr<Use>				UsePtr;
+		typedef std::shared_ptr<Instruction>		InstPtr;
+		typedef std::shared_ptr<BasicBlock>			BBPtr;
+		typedef std::shared_ptr<BinaryOperator>		BOPtr;
+		typedef std::shared_ptr<CmpInst>			CmpInstPtr;
+		typedef std::shared_ptr<AllocaInst>			AllocInstPtr;
+		typedef std::shared_ptr<GetElementPtrInst>	GEPInstPtr;
+		typedef std::shared_ptr<CallInst>			CallInstPtr;
+		typedef std::shared_ptr<FunctionType>		FuncTyPtr;
+		typedef std::shared_ptr<ExtractValueInst>	EVInstPtr;
+		typedef std::shared_ptr<PHINode>			PHINodePtr;
+		typedef std::shared_ptr<ReturnInst>			RetInstPtr;
+		typedef std::shared_ptr<Function>			FuncPtr;
+		typedef std::shared_ptr<ValueSymbolTable>	SymTabPtr;
+		typedef std::shared_ptr<User>				UserPtr;
+		typedef std::shared_ptr<Argument>			ArgPtr;
+		typedef std::shared_ptr<TerminatorInst>		TermiPtr;
 
 		class Value
 		{
@@ -64,19 +97,17 @@ namespace compiler
 				FunctionVal,		// This is an instance of Function
 				GlobalVariableVal	// This is an instance of VlobalVariable
 			};
-			typedef std::shared_ptr<Type> TyPtr;
-			typedef std::shared_ptr<Value> ValPtr;
-			typedef std::shared_ptr<Use> UsePtr;
+			
 		private:
 			// a "use list" that keep track of which other Values are using this value.
 			// -------------------------nonsense for coding---------------------------
 			// PS: LLVM IR中如何定义def-use链的机制没有搞懂。所以暂时实现自己的def-use机制
 			// 使用内置的list将一系列的 'use' object链接起来
 			// -----------------------------------------------------------------------
-			std::list<Use> Uses;
+			std::list<UsePtr> Uses;
 			std::string Name;
 			ValueTy VTy;
-			std::shared_ptr<Type> Ty;
+			TyPtr Ty;
 			void operator=(const Value&) = delete;	// Do not implement
 			Value(const Value&) = delete;			// Do not implement
 

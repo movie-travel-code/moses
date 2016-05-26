@@ -9,9 +9,11 @@
 //===---------------------------------------------------------------------===//
 #ifndef MOSES_IR_FUNCTION_H
 #define MOSES_IR_FUNCTION_H
-#include "ConstantAndGlobal.h"
 #include <list>
+#include <string>
+#include "ConstantAndGlobal.h"
 #include "BasicBlock.h"
+#include "ValueSymbolTable.h"
 
 namespace compiler
 {
@@ -21,28 +23,25 @@ namespace compiler
 
 		class Function : public GlobalValue
 		{
-		public:
-			// argument
-			// symbol table
 		private:
 			// Important things that make up a function!
-			std::list<BasicBlock> BasicBlocks;
-			std::list<Argument> Arguments;
+			std::list<BBPtr> BasicBlocks;
+			std::list<ArgPtr> Arguments;
 
-			SymbolTable *SymTab;
+			SymTabPtr SymTab;
 			// LLVM 1.0 中指令集什么的都是使用链表来索引的
-			Function *Prev, *Next;
-			void setNext(Function *N) { Next = N; }
-			void setPrev(Function* N) { Prev = N; }
+			FuncPtr Prev, Next;
+			void setNext(FuncPtr N) { Next = N; }
+			void setPrev(FuncPtr N) { Prev = N; }
 		public:
-			Function(const FunctionType* Ty, const std::string &N = "");
+			Function(FuncTyPtr Ty, const std::string &N = "");
 			~Function();
 
 			// Specialize setName to handle symbol table majik...
-			virtual void setName(const std::string &name, SymbolTable *ST = 0);
+			virtual void setName(const std::string &name, SymTabPtr ST = nullptr);
 
-			const Type *getReturnType() const;			 // Return the type of the ret val
-			const FunctionType *getFunctionType() const; // Return the FunctionType for me
+			TyPtr getReturnType() const;			 // Return the type of the ret val
+			FuncTyPtr getFunctionType() const; // Return the FunctionType for me
 
 			/// getIntrinsicID - This method returns the ID number of the specified function.
 			/// This value is always defined to be zero to allow easy checking for whether
@@ -54,25 +53,21 @@ namespace compiler
 			// getNext/Prev - Return the next or previous function in the list. These methods
 			// should never be used directly, and are only used to implement the function list
 			// as part of the module.
-			Function *getNext()	{ return Next; }
-			const Function *getNext() const { return Next; }
-			Function *getPrev()	{ return Prev; }
-			const Function *getPrev() const { return Prev; }
+			FuncPtr getNext() { return Next; }
+			FuncPtr getPrev()	{ return Prev; }
 
 			/// Get the underlying elements of the Function... the basic block list is empty
 			/// for external functions.
-			const std::list<Argument> &getArgumentList() const { return Arguments; }
-			std::list<Argument> &getArgumentList() { return Arguments; }
+			const std::list<ArgPtr> &getArgumentList() const { return Arguments; }
+			std::list<ArgPtr> &getArgumentList() { return Arguments; }
 
-			const std::list<BasicBlock> &getBasicBlockList() const { return BasicBlocks; }
-			std::list<BasicBlock> &getBasicBlockList() { return BasicBlocks; }
+			std::list<BBPtr> &getBasicBlockList() { return BasicBlocks; }
 
 			// const BasicBlock &getEntryBlock() const {}
 
 			//===-------------------------------------------------------------------===//
 			// Symbol Table Accessing functions...
-			SymbolTable &getSymbolTable() { return *SymTab; }
-			const SymbolTable &getSymbolTable() const { return *SymTab; }
+			SymTabPtr getSymbolTable() { return SymTab; }
 
 			/// Determine if the function is known not to recurse, directly or
 			/// indirectly.
@@ -81,8 +76,7 @@ namespace compiler
 				return true;
 			}
 
-			static bool classof(const Function*) { return true; }
-			static bool classof(const Value *V)
+			static bool classof(ValPtr V)
 			{
 				return V->getValueType() == Value::ValueTy::FunctionVal;
 			}
@@ -131,9 +125,30 @@ namespace compiler
 		/// called with.
 		class Argument : public Value
 		{
-			void setParent(Function* parent);
-		public:
+			FuncPtr Parent;
+			ArgPtr Prev, Next;
+			void setNext(ArgPtr N) { Next = N; }
+			void setPrev(ArgPtr N) { Prev = N; }
 
+			void setParent(FuncPtr parent);
+		public:
+			/// Argument ctor - If Function argument is specified, this argument is inserted at
+			/// the end of the argument list for the function.
+			Argument(TyPtr Ty, std::string Name = "", FuncPtr F = nullptr);
+
+			/// setName - Specialize setName to handle symbol table majik...
+			virtual void setName(std::string name, SymTabPtr ST = nullptr);
+
+			FuncPtr getParent() { return Parent; }
+
+			// getNext/Prev - Return the next or previous argument in the list.
+			ArgPtr getNext() { return Next; }
+			ArgPtr getPrev() { return Prev; }
+
+			static bool classof(ValPtr V)
+			{
+				return V->getValueType() == Value::ValueTy::ArgumentVal;
+			}
 		};
 	}
 }

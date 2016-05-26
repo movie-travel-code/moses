@@ -19,6 +19,44 @@ namespace compiler
 		/// as they are distinct. The SymbolTable also tracks, separately, a map of
 		/// name/type pairs. This allows types to be named. Types are treated
 		/// distinctly from Values.
+		/// 
+		/// ----------------------------nonsens for coding------------------------
+		/// The LLVM in-memory representation of its IR does not use a symbol table.
+		/// Instruction contain direct memory links to their operands(and their
+		/// users), so if you have an instruction and wants to access its operand, 
+		/// just follow the link, you do not have to perform a lookup in any symbol
+		/// table.
+		///
+		/// There are some lists associated with LLVM contexts, modules, functions 
+		/// and basic blocks, which allow you to access the contained elements, not
+		/// tables associating a name with anything.
+		///
+		/// Of course, if you want to parse a textual IR file(II), you would probably
+		/// need to a symbol table(or something similar) to do so and create the
+		/// above-mentioned links; but there's little reason to do that seeing that 
+		/// LLVM already contains such a parser(and that parser indeed uses some way
+		/// to associate a "name" with a value - see the implementation of 
+		/// BitcodeReader).
+		/// 
+		/// As for LLVM front-ends for generating IR - that is up to you. I'd say
+		/// that if you want to parse a C-like languages, using a symbol table would
+		/// be really useful.
+		/// http://stackoverflow.com/questions/13089015/how-symbol-table-handling-is-done-in-llvm-based-compiler
+		/// ----------------------------nonsense for coding-----------------------
+		/// 但是在创建LLVM IR时，肯定是需要保留以前的symbol info.
+		/// 参见：http://www.llvmpy.org/llvmpy-doc/0.9/doc/kaleidoscope/PythonLangImpl3.html
+		/// 中3.2，
+		/// We will also need to define some global variables which we will be used during code
+		/// generation:
+		/// # The LLVM module, which holds all the IR code.
+		/// g_llvm_module = Module.new('my cool jit')
+		/// 
+		/// # The LLVM instruction builder. Created whenever a new function is entered.
+		/// g_llvm_builder = None
+		/// 
+		/// # A dictonary that keeps track of which values are defined in the current scope
+		/// # and what their LLVM representation is.
+		/// g_named_valued = {}
 		/// ---------------------------nosense for coding--------------------------
 		/// 编译器可能包含几个不同的、专门化的符号表，这里的符号表与语法分析过程中的
 		/// 符号表不同。几乎所有的转换（翻译）过程都需要符号表。
@@ -34,13 +72,14 @@ namespace compiler
 		/// -----------------------------------------------------------------------
 		class ValueSymbolTable
 		{
-			std::map<std::string, std::shared_ptr<Value>> ValueMap;
+			// 用于存储当前current scope的symbol info
+			std::map<std::string, ValPtr> ValueMap;
 		public:
 			/// This method finds the value with the given \p Name in the the symbol
 			/// table.
 			/// @return the value associated with the \p Name.
 			/// @brief Look up a named Value.
-			std::shared_ptr<Value> lookup(std::string Name) const 
+			ValPtr lookup(std::string Name) const 
 			{ 
 				auto iter = ValueMap.find(Name);
 				if (iter == ValueMap.end())
@@ -62,7 +101,7 @@ namespace compiler
 			/// must have a name which is used to place the value in the symbol table.
 			/// If the inserted name conflicts, this renames the value.
 			/// @brief Add a name value to the symbol table.
-			void reinsertValue(Value *V);
+			void reinsertValue(ValPtr);
 
 			/// createValueName - This method attempts to create a value name and insert
 			/// it into the symbol table with the specified name. If it conflicits, it

@@ -25,7 +25,7 @@ namespace compiler
 			// on this value, you can cast to a class defined in DerivedTypes.h.
 			enum TypeID
 			{
-				VoidTyID = 0,
+				VoidTyID,
 				LabelTyID,
 				IntegerTyID,
 				BoolTyID,
@@ -35,7 +35,6 @@ namespace compiler
 			};
 		private:
 			TypeID ID;
-			unsigned SubclassData;
 		protected:
 		public:
 			//===-----------------------------------------------------===//

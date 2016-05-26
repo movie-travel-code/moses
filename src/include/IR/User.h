@@ -25,37 +25,31 @@ namespace compiler
 		{
 			User(const User&) = delete;
 		protected:
-			std::vector<Use> Operands;
+			std::vector<UsePtr> Operands;
 
 			/// Allocate a User with an operand pointer co-allocated.
 			///
 			/// This is used for subclasses which need to allocate a variable number
 			/// of operands, ie, 'hung off uses'.
-			void *operator new(size_t Size);
+			// void *operator new(size_t Size);
 
 			/// allocate a User with the operands co-allocated.
 			///
 			/// This is used for subclasses which have a fixed number of operands.
-			void *operator new(size_t Size, unsigned Us);
+			// void *operator new(size_t Size, unsigned Us);
 		public:
-			User(const Type* Ty, ValueTy vty, const std::string &name = "");
+			User(std::shared_ptr<Type> Ty, ValueTy vty, const std::string &name = "");
 
-			Value* getOperand(unsigned i)
+			UsePtr getOperand(unsigned i)
 			{
 				// Check whether out of range.
 				return Operands[i];
 			}
 
-			const Value* getOperand(unsigned i) const
+			void setOeprand(unsigned i, ValPtr Val)
 			{
 				// Check whether out of range.
-				return Operands[i];
-			}
-
-			void setOeprand(unsigned i, Value *Val)
-			{
-				// Check whether out of range.
-				Operands[i] = Val;
+				// Operands[i] = Val;
 			}
 
 			unsigned getNumOperands() const { return Operands.size(); }
@@ -73,14 +67,12 @@ namespace compiler
 
 			/// replaceUsesofWith - Replaces all references to the "From" definition with
 			/// references to the "To" definition.
-			void replaceUsesOfWith(Value* From, Value* To);
+			void replaceUsesOfWith(ValPtr From, ValPtr To);
 
 			// Methods for support type inquiry through isa, case, and dyn_cast:
-			static bool classof(const User*) { return true; }
-			static bool classof(const Value* V)
-			{
-				return true;
-			}
+			/*static bool classof(ValPtr V)
+			{				
+			}*/
 		};
 	}
 }

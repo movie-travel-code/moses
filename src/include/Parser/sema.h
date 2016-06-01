@@ -179,23 +179,34 @@ namespace compiler
 		private:
 			std::shared_ptr<Scope> scope;
 			std::vector<std::shared_ptr<VariableSymbol>> parms;
+			FunctionDecl* FD;
 		public:
 			FunctionSymbol(std::string name, std::shared_ptr<Type> type, std::shared_ptr<Scope> belongTo, 
 				std::shared_ptr<Scope> scope) : 
 				Symbol(name, belongTo, type), scope(scope) {}
 			std::shared_ptr<Type> getReturnType() { return type; }
 			void setReturnType(std::shared_ptr<Type> type) { this->type = type; }
+
 			void addParmVariableSymbol(std::shared_ptr<VariableSymbol> parm)
 			{
 				parms.push_back(parm);
 			}
+
 			std::shared_ptr<VariableSymbol> operator[] (int index) const
 			{
 				if (index >= parms.size())
 					errorSema("Function parm index out of range");
 				return parms[index];
 			}
+
+			void setFunctionDeclPointer(FunctionDecl* fd)
+			{
+				FD = fd;
+			}
+
 			unsigned getParmNum() { return  parms.size(); }
+
+			const FunctionDecl* getFuncDeclPointer() const { return FD; }
 		};
 
 		/// \brief ClassSymbol - This class represent class decl symbol.
@@ -361,7 +372,7 @@ namespace compiler
 			ExprASTPtr ActOnConstantExpression();
 
 			std::shared_ptr<Type> ActOnCallExpr(std::string calleeName, 
-				std::vector<std::shared_ptr<Type>> Args);
+				std::vector<std::shared_ptr<Type>> Args, const FunctionDecl* &FD);
 
 			ExprASTPtr ActOnUnaryOperator();
 

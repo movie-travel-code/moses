@@ -6,6 +6,7 @@
 #include <iostream>
 #include "../include/Lexer/scanner.h"
 #include "../include/Parser/parser.h"
+#include "../include/IRBuild/IRBuilder.h"
 using namespace compiler::parse;
 using namespace compiler::sema;
 int main()

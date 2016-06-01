@@ -65,7 +65,7 @@ namespace compiler
 		/// \brief ActOnFunctionDecl - Set return type and create new scope.
 		void Sema::ActOnFunctionDecl(std::string name, std::shared_ptr<Type> returnType)
 		{
-			FunctionStack[FunctionStack.size() - 1]->setReturnType(returnType);
+			getFunctionStackTop()->setReturnType(returnType);
 
 			// Create new scope for function body.
 			CurScope = std::make_shared<Scope>("", CurScope->getDepth() + 1, CurScope,
@@ -259,7 +259,7 @@ namespace compiler
 		/// \brief Act on Call Expr.
 		/// Perform name lookup and parm type checking.
 		std::shared_ptr<Type> Sema::ActOnCallExpr(std::string name, 
-			std::vector<std::shared_ptr<Type>> args)
+			std::vector<std::shared_ptr<Type>> args, const FunctionDecl* &FD)
 		{
 			std::shared_ptr<Type> ReturnType = nullptr;
 			if (FunctionSymbol* FuncSym =
@@ -297,6 +297,7 @@ namespace compiler
 						errorReport("Arguments type not match.");
 					}
 				}
+				FD = FuncSym->getFuncDeclPointer();
 			}
 			else
 			{
@@ -438,8 +439,10 @@ namespace compiler
 				}
 				memberType = BaseType->getMemberType(tok.getLexem());
 			}
+
 			return std::make_unique<MemberExpr>(lhs->getLocStart(), lhs->getLocEnd(), memberType,
-				std::move(lhs), tok.getTokenLoc(), tok.getLexem());
+				std::move(lhs), tok.getTokenLoc(), tok.getLexem(), 
+				memberType->getKind() != TypeKind::USERDEFIED);
 		}
 
 		ExprASTPtr Sema::ActOnDecOrIncExpr(ExprASTPtr rhs)

@@ -78,7 +78,7 @@ namespace compiler
 	//	public:
 	//		virtual void visit(ast::StatementAST* root)
 	//		{
-	//			root->Accept(std::shared_ptr<Visitor>(this));
+	//			root->Accept(Visitor*(this));
 	//		}
 
 	//		void func() {}
@@ -110,15 +110,23 @@ namespace compiler
 		using BinaryPtr = std::unique_ptr<BinaryExpr>;
 
 		/// \brief StatementAST - Base class for all statements.
+		//--------------------------nonsense for coding---------------------------
+		// 这里使用std::unique_ptr来包裹AST树，有些鸡肋，因为IR生成的时候，直接将
+		// AST析构掉（还不如直接在AST树中内置 CodeGen() 函数，一边遍历一边生成代码）。
+		//--------------------------nonsense for coding---------------------------
 		class StatementAST
 		{
 		public:
+			// Visitor Pattern，使用override(虚函数) + overload(重载) 来做double dispatch.
+			// 其中关于被访问体（也就是AST node）部分，通过override的 Accept()的方法来实现
+			// 第一层dispatch，第一层dispatch通过override的方式拿到具体的节点类型。
+			// 第二层dispatch使用重载实现（见IRbuilder）。
 			class Visitor
 			{
 			public:
 				virtual void visit(ast::StatementAST* root)
 				{
-					root->Accept(std::shared_ptr<Visitor>(this));
+					root->Accept(this);
 				}
 
 				void func() {}
@@ -142,7 +150,7 @@ namespace compiler
 			// , semantic analysis doesn't use vistor pattern).
 			// When a node accepts a visitor, actions are performed that are appropriate to
 			// both the visitor and the node at hand(double dispatch).
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				// v->visit(this);
 			}
@@ -168,18 +176,31 @@ namespace compiler
 				VK_RValue,
 				VK_LValue
 			};
+			
 		private:
 			// ------------------------nonsense for coding---------------------------
 			// Expr都会有相应的Type，这个很重要，用于进行类型检查。
 			// ------------------------nonsense for coding---------------------------
 			std::shared_ptr<Type> ExprType;
 			ExprValueKind VK;
+			// 用于标识当前Expr是否是可推导出constant的
+			// 例如： 
+			// a = num * 5; /* num * 5 是可推导的 */
+			// var num = {10, num}; /* {10, num} 是可推导的 */
+			// 在moses中默认用户自定义类型是不可推导的。
+			bool CanBeEvaluated;
 		public:
-			Expr() : ExprType(nullptr) {}
-			Expr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, ExprValueKind vk) :
-				StatementAST(start, end), ExprType(type), VK(vk) {}
+			Expr() : ExprType(nullptr), CanBeEvaluated(false) {}
+			Expr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
+				ExprValueKind vk, bool canDoEvaluate) :
+				StatementAST(start, end), ExprType(type), VK(vk), 
+				CanBeEvaluated(canDoEvaluate) 
+			{}
+
 			Expr(const Expr& expr) : 
-				StatementAST(expr.LocStart, expr.LocEnd), ExprType(expr.ExprType) {}
+				StatementAST(expr.LocStart, expr.LocEnd), ExprType(expr.ExprType), 
+				CanBeEvaluated(expr.CanBeEvaluated) {}
+
 			std::shared_ptr<Type> getType() const { return ExprType; }
 
 			/// isLvalue - True if this expression is an "l-value" according to
@@ -191,6 +212,9 @@ namespace compiler
 			bool isLValue() const { return VK == ExprValueKind::VK_LValue; }
 			bool isRValue() const { return VK == ExprValueKind::VK_RValue; }
 
+			void setCanBeEvaluated() { CanBeEvaluated = true; }
+			bool canBeEvaluated() const { return CanBeEvaluated; }			
+
 			void setExprValueKind(ExprValueKind valueKind) { VK = valueKind; }
 
 			virtual ~Expr() {}
@@ -198,9 +222,9 @@ namespace compiler
 			// ---------------------nonsense for coding-------------------------
 			// 注意这里accept与父类的相比不是多余，是通过this的声明类型来实现多态的
 			// -----------------------------------------------------------------
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
-				//v->visit(this);
+				v->visit(this);
 			}
 		};
 
@@ -210,13 +234,15 @@ namespace compiler
 			double Val;
 		public:
 			NumberExpr(SourceLocation start, SourceLocation end, double Val) :
-				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::INT, true), ExprValueKind::VK_RValue),
-				Val(Val) {}
+				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::INT, true), 
+				ExprValueKind::VK_RValue, true), Val(Val) {}
 			virtual ~NumberExpr() {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			double getVal() const { return Val; }
+
+			virtual void Accept(Visitor* v)
 			{
-				// v->visit(this);
+				v->visit(this);
 			}
 		};
 
@@ -227,13 +253,15 @@ namespace compiler
 		public:
 			/// To Do: 此处使用INT来表示CharExpr，也就是两者可以相加减
 			CharExpr(SourceLocation start, SourceLocation end, std::string c) : 
-				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::INT, true), ExprValueKind::VK_RValue),
-				C(c) {}
+				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::INT, true), 
+				ExprValueKind::VK_RValue, true), C(c) 
+			{}
+
 			virtual ~CharExpr() {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
-				// v->visit(this);
+				v->visit(this);
 			}
 		};
 
@@ -243,12 +271,13 @@ namespace compiler
 			std::string str;
 		public:
 			StringLiteral(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-				std::string str) : Expr(start, end, type, ExprValueKind::VK_RValue), str(str) {}
+						std::string str) : 
+				Expr(start, end, type, ExprValueKind::VK_RValue, true), str(str) {}
 			virtual ~StringLiteral() {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
-				// v->visit(this);
+				v->visit(this);
 			}
 		};
 
@@ -258,10 +287,15 @@ namespace compiler
 			bool value;
 		public:
 			BoolLiteral(SourceLocation start, SourceLocation end, bool value) :
-				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::BOOL, true), ExprValueKind::VK_RValue),
-				value(value) {}
+				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::BOOL, true), 
+				ExprValueKind::VK_RValue, true), value(value) {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			bool getVal() const
+			{
+				return value;
+			}
+
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -269,11 +303,12 @@ namespace compiler
 
 		/// @brief DeclRefExprAST - A reference to a declared variable, function, enum, etc.
 		/// This encodes all the information about how a declaration is referenced within an 
-		/// expression
-		/// ------------------------------nonsence for coding------------------------
-		/// 由于AST中的DeclRefExpr几乎可以说是独一无二的，所以没有定义拷贝构造函数，
-		/// 并且使用拷贝语义，所以所有的语法树的节点在堆中只有一份儿存储。
-		/// -------------------------------------------------------------------------
+		/// expression.
+		///-------------------------------nonsense for coding-------------------------------
+		/// moses IR有一个不足（应该说是bug），在语法树中没有直接体现出左侧的DeclRefExpr与右侧的
+		/// DeclRefExpr，类似于Clang dump出的语法树，作为右值表达式的DeclRefExpr会被一个左值转
+		/// 右值的隐式转换类型包裹。
+		///---------------------------------------------------------------------------------
 		class DeclRefExpr final : public Expr
 		{
 			std::string Name;
@@ -283,14 +318,14 @@ namespace compiler
 			// 但是函数调用对应的expression是CallExpr，不是DeclRefExpr.
 			// To Do: 有可能会有潜在的bug
 			DeclRefExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, std::string name,
-				std::unique_ptr<DeclStatement> decl) : 
-				Expr(start, end, type, ExprValueKind::VK_LValue), Name(name), decl(std::move(decl)) {}
+						std::unique_ptr<DeclStatement> decl) : 
+				Expr(start, end, type, ExprValueKind::VK_LValue, true), Name(name), decl(std::move(decl)) {}
 
 			std::string getDeclName() const { return Name; }
 
 			virtual ~DeclRefExpr() {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -305,13 +340,15 @@ namespace compiler
 			// Note: 在moses中不存在指针类型，所以不存在binary为lvalue的情况
 			// 例如: 'int* p = &num;'
 			// 'p + 1'就可以作为左值
+			// Note: BinaryExpr都是可以进行evaluate的
 			BinaryExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-				std::string Op, ExprASTPtr LHS, ExprASTPtr RHS) :
-				Expr(start, end, type, ExprValueKind::VK_RValue), OpName(Op), LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+						std::string Op, ExprASTPtr LHS, ExprASTPtr RHS) :
+				Expr(start, end, type, ExprValueKind::VK_RValue, true), OpName(Op), 
+				LHS(std::move(LHS)), RHS(std::move(RHS)) {}
 
 			virtual ~BinaryExpr() {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -325,13 +362,13 @@ namespace compiler
 		public:
 			UnaryExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, std::string Op,
 				ExprASTPtr subExpr, ExprValueKind vk) :
-				Expr(start, end, type, vk), OpName(Op), SubExpr(std::move(SubExpr)) {}
+				Expr(start, end, type, vk, true), OpName(Op), SubExpr(std::move(SubExpr)) {}
 
 			std::string getOpCodeName() { return OpName; }
 			void setOpCodeName(std::string name) { OpName = name; }
 			virtual ~UnaryExpr() {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -346,13 +383,15 @@ namespace compiler
 			std::vector<std::unique_ptr<Expr> > Args;
 		public:
 			CallExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-				const std::string& Callee, std::vector<std::unique_ptr<Expr>> Args, 
-				ExprValueKind vk, const FunctionDecl* FD) : 
-				Expr(start, end, type, vk), CalleeName(Callee), Args(std::move(Args)), FuncDecl(FD) {}
+					const std::string& Callee, std::vector<std::unique_ptr<Expr>> Args, 
+					ExprValueKind vk, const FunctionDecl* FD, bool canDoEvaluate) : 
+				Expr(start, end, type, vk, canDoEvaluate), CalleeName(Callee), Args(std::move(Args)), 
+				FuncDecl(FD) 
+			{}
 
 			virtual ~CallExpr() {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -375,15 +414,16 @@ namespace compiler
 			SourceLocation OperatorLoc;
 		public:
 			MemberExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-				std::unique_ptr<Expr> base, SourceLocation operatorloc, std::string name) :
-				Expr(start, end, type, ExprValueKind::VK_LValue), Base(std::move(base)), OperatorLoc(operatorloc),
-				name(name) 
+					std::unique_ptr<Expr> base, SourceLocation operatorloc, std::string name, 
+					bool canDoEvaluate) :
+				Expr(start, end, type, ExprValueKind::VK_LValue, canDoEvaluate), 
+				Base(std::move(base)), OperatorLoc(operatorloc), name(name) 
 			{}
 
 			void setBase(ExprASTPtr E) { Base = std::move(E); }
 			ExprASTPtr getBase() const { return nullptr; }
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -398,10 +438,12 @@ namespace compiler
 			std::vector<ExprASTPtr> InitExprs;
 		public:
 			AnonymousInitExpr(SourceLocation start, SourceLocation end, 
-				std::vector<ExprASTPtr> initExprs, std::shared_ptr<Type> type) :
-			Expr(start, end, type, Expr::ExprValueKind::VK_RValue), InitExprs(std::move(initExprs)) {}
+					std::vector<ExprASTPtr> initExprs, std::shared_ptr<Type> type):
+				Expr(start, end, type, Expr::ExprValueKind::VK_RValue, true), 
+				InitExprs(std::move(initExprs)) 
+			{}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -427,7 +469,7 @@ namespace compiler
 			const StatementAST* getSubStmt(unsigned index);
 			unsigned getSize() { return size; }
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -452,7 +494,31 @@ namespace compiler
 
 			virtual ~IfStatement() {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			// To Do: 这样做是不合适的，应该时刻都使用unique_ptr来传递各个节点
+			// 但是这样做的话，太过于复杂
+			const StatementAST* getThen() const
+			{
+				return Then.get();
+			}
+
+			const StatementAST* getElse() const
+			{
+				return Else.get();
+			}
+
+			/// \brief 判断IfStmt中的Condition是否是编译可推断的。
+			/// 例如：
+			///		if true {} else {}
+			///		if false {} else {}
+			///		if (true || func() && flag) {} else {}
+			///		if (false && func()) {} else {}
+			/// 返回-1表示不可编译推断，返回0表示可推断并恒为假，返回1表示可推断并恒为真
+			short CondCompileTimeDeduced()
+			{
+
+			}
+
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -474,7 +540,7 @@ namespace compiler
 				Condition(std::move(condition)), WhileBody(std::move(body)) {}
 			virtual ~WhileStatement() {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -490,7 +556,7 @@ namespace compiler
 		public:
 			BreakStatement(SourceLocation start, SourceLocation end) : StatementAST(start, end) {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -508,7 +574,7 @@ namespace compiler
 				StatementAST(start, end) {}
 			virtual ~ContinueStatement() {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -531,7 +597,7 @@ namespace compiler
 
 			virtual ~ReturnStatement() {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -551,7 +617,7 @@ namespace compiler
 
 			virtual ~ExprStatement() {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -571,7 +637,7 @@ namespace compiler
 			DeclStatement(SourceLocation start, SourceLocation end) : StatementAST(start, end) {}
 			virtual ~DeclStatement() {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -594,7 +660,7 @@ namespace compiler
 				std::shared_ptr<Type> type) : 
 				DeclStatement(start, end), ParaName(name),  type(type) {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -620,7 +686,7 @@ namespace compiler
 			std::vector<std::string> operator[](unsigned index) const;
 			void getDeclNames(std::vector<std::string>& names) const;
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -651,7 +717,7 @@ namespace compiler
 
 			unsigned getParaNum() { return paraNum; }
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -682,7 +748,7 @@ namespace compiler
 			bool isClass();
 			bool isConst() { return IsConst; }
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}
@@ -708,7 +774,7 @@ namespace compiler
 			ClassDecl(SourceLocation start, SourceLocation end, std::string name, StmtASTPtr body) :
 				DeclStatement(start, end), ClassName(name), Body(std::move(body)) {}
 
-			virtual void Accept(std::shared_ptr<Visitor> v)
+			virtual void Accept(Visitor* v)
 			{
 				v->visit(this);
 			}

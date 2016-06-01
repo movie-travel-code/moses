@@ -969,15 +969,22 @@ namespace compiler
 
 			// Perform simple semantic analysis
 			// (Check whether the function is defined or parameter types match).
-			auto returnType = Actions.ActOnCallExpr(funcName, ParmTyps);
+
+			// 查询符号表的时候从中获取到FunctionDecl的地址
+			const FunctionDecl* fd = nullptr;
+			auto returnType = Actions.ActOnCallExpr(funcName, ParmTyps, fd);
+
+			// 检查CallExpr是否是可推导的，CallExpr是否可推导在于return type.
 
 			auto endLoc = scan.getToken().getTokenLoc();
+
 			// Note: 关于设置CallExpr左右值类型有两点需要注意，（1）如果函数返回void，则为rvalue
 			// （2）否则根据return-type来设置valueKind，如果return-type是内置类型则为rvalue，
 			// To Do: moses拟采用内置类型值语义，用户自定义类型引用语义。
 			// 但是目前全部采用值语义（类似于C/C++）
 			return std::make_unique<CallExpr>(startLoc, endLoc, returnType, tok.getLexem(),
-				std::move(Args), Expr::ExprValueKind::VK_RValue, nullptr);
+				std::move(Args), Expr::ExprValueKind::VK_RValue, fd,
+				returnType->getKind() != TypeKind::USERDEFIED);
 		}
 
 		/// \brief ParseVarDefinition - Parse variable declaration.
@@ -1204,7 +1211,7 @@ namespace compiler
 			{
 				initTypes.push_back(initExprs[i]->getType());
 			}
-			std::make_shared<AnonymousType>(initTypes);
+			// std::make_shared<AnonymousType>(initTypes);
 			return std::make_unique<AnonymousInitExpr>(startloc, scan.getToken().getTokenLoc(),
 				std::move(initExprs), std::make_shared<AnonymousType>(initTypes));
 		}
@@ -1272,20 +1279,30 @@ namespace compiler
 				errorReport("Error occured. " + scan.getToken().getLexem() + " isn't type.");
 				syntaxErrorRecovery(ParseContext::context::ReturnType);
 				break;
-			}
-			
+			}			
 
-			// To Do: 这里简单的记录到Funcition Symbol，
+			// 这里简单的记录到Funcition Symbol，
 			// Record return type and create new scope.
 			Actions.ActOnFunctionDecl(name, returnType);
 
-			auto body = ParseFunctionStatementBody();
+			auto body = ParseFunctionStatementBody();			
+
+			CurrentContext = ContextKind::TopLevel;
+
+			auto FuncDecl = std::make_unique<FunctionDecl>(locStart, scan.getToken().getTokenLoc(), name,
+				std::move(parm), std::move(body), returnType);
+
+			// To Do: 这里代码结构不是很合理
+			// 向FunctionSymbol记录FunctionDecl的地址
+			Actions.getFunctionStackTop()->setFunctionDeclPointer(FuncDecl.get());
+
+			// Pop function stack
+			Actions.PopFunctionStack();
 
 			// Pop parm scope.
 			Actions.PopScope();
-			CurrentContext = ContextKind::TopLevel;
-			return std::make_unique<FunctionDecl>(locStart, scan.getToken().getTokenLoc(), name,
-				std::move(parm), std::move(body), returnType);
+
+			return std::move(FuncDecl);
 		}
 
 		/// \brief ParseFunctionStatementBody - Parse function body.
@@ -1297,10 +1314,7 @@ namespace compiler
 		StmtASTPtr Parser::ParseFunctionStatementBody()
 		{
 			// Temporarily call 'ParseCompoundStatement()'
-			auto body = ParseCompoundStatement();
-
-			// Pop function stack
-			Actions.PopFunctionStack();
+			auto body = ParseCompoundStatement();			
 
 			// Pop function body'			
 			Actions.PopScope();

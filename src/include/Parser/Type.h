@@ -58,7 +58,7 @@ namespace compiler
 		public:
 			Type(TypeKind kind, bool isConst) : Kind(kind), IsConst(isConst){}
 			bool operator==(const Type& rhs)
-			{
+			{				
 				if (Kind == rhs.getKind() && IsConst == rhs.isConst())
 				{
 					return true;
@@ -133,7 +133,9 @@ namespace compiler
 			std::vector<std::shared_ptr<Type>> subTypes;
 		public:
 			AnonymousType(std::vector<std::shared_ptr<Type>> types) : 
-				Type(TypeKind::ANONYMOUS, false), subTypes(types) {}
+				Type(TypeKind::ANONYMOUS, false), subTypes(types)
+			{}
+
 			virtual std::string getTypeFingerPrint() const override;
 			virtual std::string getTypeFingerPrintWithNoConst() const override;
 			std::shared_ptr<Type> getSubType(int index)

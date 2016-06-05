@@ -58,6 +58,7 @@ namespace compiler
 	namespace sema
 	{
 		using namespace compiler::ast;
+		using namespace compiler::lex;
 		class Symbol;
 		class VariableSymbol;
 		class ClassSymbol;
@@ -82,8 +83,6 @@ namespace compiler
 
 			// A symbol table is a data structure that tracks the current bindings of identifiers
 			std::vector<std::shared_ptr<Symbol>> SymbolTable;
-			/// SubScopes ? ? ?
-			std::vector<std::pair<std::shared_ptr<Scope>, unsigned>> SubScopes;
 
 			// For function and class.
 			std::string ScopeName;
@@ -164,11 +163,16 @@ namespace compiler
 		class VariableSymbol final: public Symbol
 		{
 			bool IsInitial;
+			VarDecl* VD;
 		public:
-			VariableSymbol(std::string lexem, std::shared_ptr<Scope> beongTo,
-				std::shared_ptr<Type> type, bool initial) : Symbol(lexem, beongTo, type), IsInitial(initial) 
+			VariableSymbol(std::string lexem, std::shared_ptr<Scope> beongTo, 
+						std::shared_ptr<Type> type, bool initial, VarDecl* vd) : 
+				Symbol(lexem, beongTo, type), IsInitial(initial), VD(vd)
 			{}
 
+			const Expr* getInitExpr() const { return VD->getInitExpr(); }
+			bool isConstVarDecl() const { return VD->getDeclType()->isConst(); }
+			VarDecl* getDecl() const { return VD; }
 			std::shared_ptr<Type> getType() const { return type; }
 			void setInitial(bool initial) { IsInitial = initial; }
 			bool isInitial() const { return IsInitial; }
@@ -342,7 +346,7 @@ namespace compiler
 
 			StmtASTPtr ActOnConstDecl(std::string name, std::shared_ptr<Type> type);
 
-			ExprASTPtr ActOnVarDecl(std::string name, std::shared_ptr<Type> type, ExprASTPtr init);
+			void ActOnVarDecl(std::string name, VarDecl* VD);
 
 			void ActOnClassDeclStart(std::string name);
 			void ActOnCompoundStmt();
@@ -380,7 +384,7 @@ namespace compiler
 
 			ExprASTPtr ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs);
 
-			std::shared_ptr<Type> ActOnDeclRefExpr(std::string name);
+			const VarDecl* ActOnDeclRefExpr(std::string name);
 
 			ExprASTPtr ActOnStringLiteral();
 

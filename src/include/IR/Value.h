@@ -114,7 +114,7 @@ namespace compiler
 		public:
 			// Type表示类型，例如int short class等等。
 			// ValueTy表示的是指令的种类.
-			Value(std::shared_ptr<Type> Ty, ValueTy vty, const std::string& name = "");
+			Value(std::shared_ptr<Type> Ty, ValueTy vty, std::string name = "");
 			virtual ~Value();
 
 			// All values are typed, get the type of this value.

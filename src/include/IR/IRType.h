@@ -35,8 +35,9 @@ namespace compiler
 			};
 		private:
 			TypeID ID;
-		protected:
 		public:
+			Type(TypeID id) : ID(id) {}
+
 			//===-----------------------------------------------------===//
 			// Accessors for working with types.
 			TypeID getTypeID() const { return ID; }

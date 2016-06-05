@@ -4,8 +4,8 @@
 // 
 //===---------------------------------------------------------------------===//
 #include "../../include/Lexer/Token.h"
-namespace compiler
-{
+using namespace compiler::lex;
+
 	Token::Token(TokenValue tv, std::string tokenName) : value(tv), lexem(tokenName){}
 
 	Token::Token() :
@@ -26,4 +26,3 @@ namespace compiler
 	// real
 	Token::Token(TokenValue tv, const TokenLocation& location, double realvalue, std::string name) :
 		value(tv), loc(location), intValue(0), realValue(realvalue), strValue(""), lexem(name){}
-}

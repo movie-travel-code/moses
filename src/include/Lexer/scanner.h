@@ -15,7 +15,7 @@ namespace compiler
 {
 	namespace parse
 	{
-		using namespace compiler;
+		using namespace compiler::lex;
 
 		// Scanner - 解析原始文本得到一个token流
 		class Scanner

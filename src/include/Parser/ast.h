@@ -87,6 +87,8 @@ namespace compiler
 
 	namespace ast
 	{
+		using namespace compiler::lex;
+
 		class Expr;
 		class NumberExpr;
 		class BinaryExpr;
@@ -124,7 +126,7 @@ namespace compiler
 			class Visitor
 			{
 			public:
-				virtual void visit(ast::StatementAST* root)
+				virtual void visit(const ast::StatementAST* root)
 				{
 					root->Accept(this);
 				}
@@ -150,9 +152,9 @@ namespace compiler
 			// , semantic analysis doesn't use vistor pattern).
 			// When a node accepts a visitor, actions are performed that are appropriate to
 			// both the visitor and the node at hand(double dispatch).
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
-				// v->visit(this);
+				v->visit(this);
 			}
 
 			SourceLocation getLocStart() const { return LocStart; }
@@ -222,7 +224,7 @@ namespace compiler
 			// ---------------------nonsense for coding-------------------------
 			// 注意这里accept与父类的相比不是多余，是通过this的声明类型来实现多态的
 			// -----------------------------------------------------------------
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -240,7 +242,7 @@ namespace compiler
 
 			double getVal() const { return Val; }
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -259,7 +261,7 @@ namespace compiler
 
 			virtual ~CharExpr() {}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -275,7 +277,7 @@ namespace compiler
 				Expr(start, end, type, ExprValueKind::VK_RValue, true), str(str) {}
 			virtual ~StringLiteral() {}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -295,7 +297,7 @@ namespace compiler
 				return value;
 			}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -312,20 +314,23 @@ namespace compiler
 		class DeclRefExpr final : public Expr
 		{
 			std::string Name;
-			std::unique_ptr<DeclStatement> decl;
+			const VarDecl* VD;
 		public:
 			// Note: 一般情况下，DeclRefExpr都是左值的，但是有一种情况例外，就是函数名字调用
 			// 但是函数调用对应的expression是CallExpr，不是DeclRefExpr.
 			// To Do: 有可能会有潜在的bug
-			DeclRefExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, std::string name,
-						std::unique_ptr<DeclStatement> decl) : 
-				Expr(start, end, type, ExprValueKind::VK_LValue, true), Name(name), decl(std::move(decl)) {}
+			DeclRefExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
+					std::string name, const VarDecl* vd) : 
+				Expr(start, end, type, ExprValueKind::VK_LValue, true), Name(name), VD(vd) 
+			{}
 
 			std::string getDeclName() const { return Name; }
 
+			const VarDecl* getDecl() const { return VD; }
+
 			virtual ~DeclRefExpr() {}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -346,9 +351,15 @@ namespace compiler
 				Expr(start, end, type, ExprValueKind::VK_RValue, true), OpName(Op), 
 				LHS(std::move(LHS)), RHS(std::move(RHS)) {}
 
+			const Expr* getLHS() const { return LHS.get(); }
+
+			const Expr* getRHS() const { return RHS.get(); }
+
+			std::string getOpcode() const { return OpName; }
+
 			virtual ~BinaryExpr() {}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -364,11 +375,15 @@ namespace compiler
 				ExprASTPtr subExpr, ExprValueKind vk) :
 				Expr(start, end, type, vk, true), OpName(Op), SubExpr(std::move(SubExpr)) {}
 
-			std::string getOpCodeName() { return OpName; }
-			void setOpCodeName(std::string name) { OpName = name; }
+			const Expr* getSubExpr() const { return SubExpr.get(); }
+
+			std::string getOpcode() const { return OpName; }
+
+			void setOpcode(std::string name) { OpName = name; }
+
 			virtual ~UnaryExpr() {}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -389,9 +404,16 @@ namespace compiler
 				FuncDecl(FD) 
 			{}
 
+			unsigned getArgsNum() const { return Args.size(); }
+
+			const FunctionDecl* getFuncDecl() const { return FuncDecl; }
+
+			// Note: 这里我们没有对传入的index进行检查
+			const Expr* getArg(unsigned index) const { return Args[index].get(); }
+
 			virtual ~CallExpr() {}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -401,7 +423,7 @@ namespace compiler
 		class MemberExpr final : public Expr
 		{
 			/// Base - the expression for the base pointer or structure references. In
-			/// X.F, this is "X".
+			/// X.F, this is "X". 即DeclRefExpr
 			StmtASTPtr Base;
 
 			/// name - member name
@@ -421,16 +443,24 @@ namespace compiler
 			{}
 
 			void setBase(ExprASTPtr E) { Base = std::move(E); }
+
+			std::string getMemberName() const { return name; }
+
 			ExprASTPtr getBase() const { return nullptr; }
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
 		};
 
 
-		/// \brief
+		/// \brief 匿名类型初始化表达式。
+		///	var start = 0;
+		/// var end = 1;
+		/// 例如： var num = {start, end};
+		/// 
+		/// 另外后面关于用户自定义类型的初始化拟采用这样的方式进行赋值。
 		class AnonymousInitExpr final : public Expr
 		{
 			AnonymousInitExpr() = delete;
@@ -443,7 +473,7 @@ namespace compiler
 				InitExprs(std::move(initExprs)) 
 			{}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -458,18 +488,25 @@ namespace compiler
 		{
 			// The sub-statements of the compound statement.
 			std::vector<StmtASTPtr> SubStmts;
-			// The size of the compound statement(The number of sub-statements)
-			unsigned size;
 		public:
 			CompoundStmt(SourceLocation start, SourceLocation end,
 				std::vector<StmtASTPtr> subStmts) :
 				StatementAST(start, end), SubStmts(std::move(subStmts)) {}
-			virtual ~CompoundStmt() {}
-			void addSubStmt(StmtASTPtr stmt);
-			const StatementAST* getSubStmt(unsigned index);
-			unsigned getSize() { return size; }
 
-			virtual void Accept(Visitor* v)
+			virtual ~CompoundStmt() {}
+
+			void addSubStmt(StmtASTPtr stmt);
+
+			const StatementAST* getSubStmt(unsigned index) const;
+
+			const StatementAST* operator[](unsigned index) const;
+
+			unsigned getSize() const 
+			{
+				return SubStmts.size();
+			}
+
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -506,19 +543,12 @@ namespace compiler
 				return Else.get();
 			}
 
-			/// \brief 判断IfStmt中的Condition是否是编译可推断的。
-			/// 例如：
-			///		if true {} else {}
-			///		if false {} else {}
-			///		if (true || func() && flag) {} else {}
-			///		if (false && func()) {} else {}
-			/// 返回-1表示不可编译推断，返回0表示可推断并恒为假，返回1表示可推断并恒为真
-			short CondCompileTimeDeduced()
+			const Expr* getCondition() const
 			{
-
+				return Condition.get();
 			}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -540,7 +570,7 @@ namespace compiler
 				Condition(std::move(condition)), WhileBody(std::move(body)) {}
 			virtual ~WhileStatement() {}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -556,7 +586,7 @@ namespace compiler
 		public:
 			BreakStatement(SourceLocation start, SourceLocation end) : StatementAST(start, end) {}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -574,7 +604,7 @@ namespace compiler
 				StatementAST(start, end) {}
 			virtual ~ContinueStatement() {}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -597,7 +627,9 @@ namespace compiler
 
 			virtual ~ReturnStatement() {}
 
-			virtual void Accept(Visitor* v)
+			const Expr* getSubExpr() const { return ReturnExpr.get(); }
+
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -617,7 +649,7 @@ namespace compiler
 
 			virtual ~ExprStatement() {}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -637,7 +669,7 @@ namespace compiler
 			DeclStatement(SourceLocation start, SourceLocation end) : StatementAST(start, end) {}
 			virtual ~DeclStatement() {}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -660,7 +692,9 @@ namespace compiler
 				std::shared_ptr<Type> type) : 
 				DeclStatement(start, end), ParaName(name),  type(type) {}
 
-			virtual void Accept(Visitor* v)
+			std::string getParmName() const { return ParaName; }
+
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -686,7 +720,7 @@ namespace compiler
 			std::vector<std::string> operator[](unsigned index) const;
 			void getDeclNames(std::vector<std::string>& names) const;
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -708,16 +742,26 @@ namespace compiler
 			unsigned paraNum;
 			StmtASTPtr funcBody;
 			std::shared_ptr<Type> returnType;
+			
 		public:
 			FunctionDecl(SourceLocation start, SourceLocation end, const std::string& name,
 				std::vector<ParmDeclPtr> Args, StmtASTPtr body, std::shared_ptr<Type> returnType) :
 				DeclStatement(start, end), FDName(name), parameters(std::move(Args)),
 				funcBody(std::move(body)), paraNum(parameters.size()), returnType(returnType) {}
+
 			virtual ~FunctionDecl() {}
 
 			unsigned getParaNum() { return paraNum; }
 
-			virtual void Accept(Visitor* v)
+			std::string getParmName(unsigned index) const { return parameters[index].get()->getParmName(); }
+
+			// 用于标识该函数能否constant-evaluator. 
+			// 对于函数来说，能进行constant-evaluator的标准是只能有一条return语句，且返回类型是内置类型.
+			// 例如：
+			//	func add() -> int  { return 10; }
+			const StatementAST* isEvalCandiateAndGetReturnStmt() const;
+
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -739,16 +783,41 @@ namespace compiler
 			std::string name;
 			std::shared_ptr<Type> declType;
 			ExprASTPtr InitExpr;
+
+			// 丑陋的代码架构，对于moses来说，const变量可初始化，也可不初始化（亦即通过二元赋值进行初始化）
+			//						VarDecl
+			//					   /       \
+			//					name	 InitExpr
+			//					/			  \
+			//				  num			nullptr
+			//
+			//						   BE
+			//						/  |  \
+			//					  lhs  =   rhs
+			//					 /            \
+			//					num			  10
+			// 不能直接使用InitExr -> 指向rhs，因为moses AST使用 std::unique_ptr<> ，所以不可能同时在AST
+			// 树上两个地方指向同一个unique_ptr，会出现double free
+
+			Expr* BEInit;
 		public:
 			VarDecl(SourceLocation start, SourceLocation end, std::string name, 
 				std::shared_ptr<Type> type, bool isConst, ExprASTPtr init) :
 				DeclStatement(start, end), name(name), declType(type), IsConst(isConst), 
 				InitExpr(std::move(init)) {}
 			std::string getName() { return name; }
-			bool isClass();
-			bool isConst() { return IsConst; }
 
-			virtual void Accept(Visitor* v)
+			std::shared_ptr<Type> getDeclType() const { return declType; }
+
+			void setInitExpr(Expr* B) { BEInit = B; }
+
+			const Expr* getInitExpr() const { return InitExpr.get(); }
+
+			bool isClass() const { return declType->getKind() == TypeKind::USERDEFIED; }
+
+			bool isConst() const { return IsConst; }
+
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
@@ -774,13 +843,11 @@ namespace compiler
 			ClassDecl(SourceLocation start, SourceLocation end, std::string name, StmtASTPtr body) :
 				DeclStatement(start, end), ClassName(name), Body(std::move(body)) {}
 
-			virtual void Accept(Visitor* v)
+			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
 		};
-	}
-
-	
+	}	
 }
 #endif

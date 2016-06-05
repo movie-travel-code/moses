@@ -15,6 +15,8 @@ namespace compiler
 	{
 		using namespace compiler::ast;
 		using namespace compiler::sema;
+		using namespace compiler::lex;
+
 		namespace OperatorPrec
 		{
 			/// \brief PrecedenceLevels - These are precedences for the binary operators in moses's 

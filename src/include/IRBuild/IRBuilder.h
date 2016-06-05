@@ -18,6 +18,8 @@
 #include <memory>
 #include "../Parser/ast.h"
 #include "../IR/Value.h"
+#include "../Parser/constant-evaluator.h"
+#include "../IR/BasicBlock.h"
 
 namespace compiler
 {
@@ -55,148 +57,53 @@ namespace compiler
 
 			/// \brief 当前函数是总控性函数，可以通过遍历AST每个节点，调用相应的visitor
 			/// 使用unique_ptr的作用就是在IR生成之后，AST被析构掉。
-			void VisitChildren(std::vector<std::unique_ptr<StatementAST>> AST)
-			{
-				unsigned ASTSize = AST.size();
-				for (int i = 0; i < ASTSize; i++)
-				{
-					// 在遍历AST的过程中，会根据AST的具体节点来选择对应的Accept函数。
-					// 例如：如果这里是 "IfStmt" 的话，会选择IfStmt的Accept()函数
-					AST[i].get()->Accept(this);
-				}
-			}
+			void VisitChildren(std::vector<std::unique_ptr<StatementAST>> AST);
 
 			//===----------------------------------------------------------------------===//
 			// 下面的一系列的visit()函数通过重载实现第二层的dispatch
-			//===---------------------------------------------------------------------===//
-			
+			//===---------------------------------------------------------------------===//			
 			/// \brief IR gen for NumberExpr
-			void visit(ExprStatement* exprstmt)
-			{
-				// 由于 virtual void Accept() 的原因，AST所有类型节点都有对应的RTTI信息，
-				// 我们可以根据具体的type info来进行不同的操作。
-				if (const NumberExpr* NE = dynamic_cast<NumberExpr*>(exprstmt))
-				{
+			void visit(const ExprStatement* exprstmt);
 
-				}
-				else if (const CharExpr* CE = dynamic_cast<CharExpr*>(exprstmt))
-				{
+			/// \brief Generate code for CompoundStmt.
+			void visit(const CompoundStmt* comstmt);
 
-				}
-				else if (const StringLiteral* SL = dynamic_cast<StringLiteral*>(exprstmt))
-				{
+			/// \brief Generate code for IfStatement.
+			void visit(const IfStatement* ifstmt);
 
-				}
-				else if (const BoolLiteral* BL = dynamic_cast<BoolLiteral*>(exprstmt))
-				{
+			void visit(const WhileStatement* whilestmt);
 
-				}
-				else if (const DeclRefExpr* DRE = dynamic_cast<DeclRefExpr*>(exprstmt))
-				{
+			void visit(const DeclStatement* declstmt);
 
-				}
-				else if (const BinaryExpr* BE = dynamic_cast<BinaryExpr*>(exprstmt))
-				{
+			void visit(const VarDecl* VD);
 
-				}
-				else if (const UnaryExpr* UE = dynamic_cast<UnaryExpr*>(exprstmt))
-				{
+			void visit(const ClassDecl* CD);
 
-				}
-				else if (const CallExpr* call = dynamic_cast<CallExpr*>(exprstmt))
-				{
+			void visit(const FunctionDecl* FD);
 
-				}
-				else if (const MemberExpr* ME = dynamic_cast<MemberExpr*>(exprstmt))
-				{
+			void visit(const UnpackDecl* UD);
 
-				}
-				else if (const AnonymousInitExpr* AIE = dynamic_cast<AnonymousInitExpr*>(exprstmt))
-				{
+			/// \brief
+			void visit(const Expr* expr);
 
-				}
-				else
-				{
+			/// \brief
+			void visit(const BinaryExpr* B);
 
+			/// \brief
+			void visit(const CallExpr* Call);
 
-				}
-			}
+			void EmitCall();
 
-			void visit(CompoundStmt* comstmt)
-			{
-				// 由RTTI判断不同的节点，来进行不同的操作
-			}
+			void EmitCallArg();
 
-			void visit(IfStatement* ifstmt)
-			{
-				// If the condition constant folds and can be elided, try to avoid emitting
-				// the condition and the dead arm of the if/else
-				bool CondConstant;
-				/// \brief condAttr用于表示IfStmt的属性信息
-				/// 1表示编译可推断且恒为真，0表示编译可推断且恒为假，-1表示编译不可推断
-				short condAttr = ifstmt->CondCompileTimeDeduced();
-				
-				/// ConditionExpr恒为真，删除else分支（如果有的话）
-				if (condAttr != -1)
-				{
-					const StatementAST *Executed = ifstmt->getThen();
-					const StatementAST *Skipped = ifstmt->getElse();
-					/// ConditionExpr恒为假，则删除true分支
-					/// （如果没有else分支的话，删除整个IfStmt的生成）
-					if (condAttr == 0)
-						std::swap(Executed, Skipped);
-
-					/// 注意在C/C++中存在一种情况需要注意，就是省略的block中有可能有goto的目标
-					/// label，所以Clang需要检查block中是否有label。
-					/// 但是moses没有goto，也就是说不可能存在上述情况。
-					if (Executed)
-						//EmitStmt();
-						return;
-				}
-
-				
-
-				// Cond->CodeGen()
-
-				// 中间要穿插些跳转指令
-				// 进行一些简单的优化判断，如果condition expr是定值，则删除假分支部分代码
-
-				// Then->CodeGen()
-
-				// Else->CodeGen()
-			}
-
-			void visit(WhileStatement* whilestmt)
-			{
-				// Cond->CodeGen()
-
-				// 中间要穿插些跳转指令
-
-				// 这中间生成的是BasicBlock
-
-				// CompoumdStmt->CodeGen()
-			}
-
-			void visit(DeclStatement* declstmt)
-			{
-				// 根据具体的DeclStatement的类型来选择相应的IRBuilder
-				// 例如：FunctionDecl、VarDecl、ClassDecl以及UnpackDecl
-				if (const VarDecl* VD = dynamic_cast<VarDecl*>(declstmt))
-				{
-				}
-				else if (const FunctionDecl* FD = dynamic_cast<FunctionDecl*>(declstmt))
-				{
-
-				}
-				else if (const ClassDecl* CD = dynamic_cast<ClassDecl*>(declstmt))
-				{
-
-				}
-				else
-				{
-					// IR error
-				}
-			}
+			/// EmitBranchOnBoolExpr - Emit a branch on a boolean condition(e.g for an
+			/// if statement) to the specified blocks. Based on the condition, this might
+			/// try to simplify the codegen of the conditional based on the branch.
+			/// -- 该函数是专门为IfStmt的生成而创建的。
+			/// (TrueCount should be the number of times we expect the condition to
+			/// evaluate to true based on PGO data.)
+			/// -- Clang中的版本为了利用Profile data，记录了true分支的采用次数。
+			void EmitBranchOnBoolExpr(const Expr* Cond, BBPtr TrueB, BBPtr FalseBlock/*, unsigned TrueCount*/);
 		};
 
 		/// \brief FunctionBodyBuilder - This class for Function Body generation.

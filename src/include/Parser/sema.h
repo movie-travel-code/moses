@@ -154,7 +154,11 @@ namespace compiler
 		public:
 			Symbol(std::string lexem, std::shared_ptr<Scope> belongTo, std::shared_ptr<Type> type) :
 				Lexem(lexem), BelongTo(belongTo), type(type) {}
+
+			std::shared_ptr<Type> getType() const { return type; }
+
 			virtual std::string getLexem() { return Lexem; }
+
 			virtual ~Symbol() {};
 		};
 
@@ -163,27 +167,39 @@ namespace compiler
 		class VariableSymbol final: public Symbol
 		{
 			bool IsInitial;
-			VarDecl* VD;
+			VarDeclPtr VD;
 		public:
 			VariableSymbol(std::string lexem, std::shared_ptr<Scope> beongTo, 
-						std::shared_ptr<Type> type, bool initial, VarDecl* vd) : 
+				std::shared_ptr<Type> type, bool initial, VarDeclPtr vd) :
 				Symbol(lexem, beongTo, type), IsInitial(initial), VD(vd)
 			{}
 
-			const Expr* getInitExpr() const { return VD->getInitExpr(); }
+			ExprASTPtr getInitExpr() const { return VD->getInitExpr(); }
 			bool isConstVarDecl() const { return VD->getDeclType()->isConst(); }
-			VarDecl* getDecl() const { return VD; }
-			std::shared_ptr<Type> getType() const { return type; }
+			VarDeclPtr getDecl() const { return VD; }
 			void setInitial(bool initial) { IsInitial = initial; }
 			bool isInitial() const { return IsInitial; }
+		};
+
+		/// \brief ParmDeclSymbol - This class represent parm decl.
+		class ParmDeclSymbol final : public Symbol
+		{
+			ParmDeclPtr PD;
+		public:
+			ParmDeclSymbol(std::string lexem, std::shared_ptr<Scope> beongTo,
+				std::shared_ptr<Type> type, bool initial, ParmDeclPtr pd) :
+				Symbol(lexem, beongTo, type), PD(pd)
+			{}
+
+			ParmDeclPtr getDecl() const { return PD; }
 		};
 
 		class FunctionSymbol final : public Symbol
 		{
 		private:
 			std::shared_ptr<Scope> scope;
-			std::vector<std::shared_ptr<VariableSymbol>> parms;
-			FunctionDecl* FD;
+			std::vector<std::shared_ptr<ParmDeclSymbol>> parms;
+			FunctionDeclPtr FD;
 		public:
 			FunctionSymbol(std::string name, std::shared_ptr<Type> type, std::shared_ptr<Scope> belongTo, 
 				std::shared_ptr<Scope> scope) : 
@@ -191,26 +207,26 @@ namespace compiler
 			std::shared_ptr<Type> getReturnType() { return type; }
 			void setReturnType(std::shared_ptr<Type> type) { this->type = type; }
 
-			void addParmVariableSymbol(std::shared_ptr<VariableSymbol> parm)
+			void addParmVariableSymbol(std::shared_ptr<ParmDeclSymbol> parm)
 			{
 				parms.push_back(parm);
 			}
 
-			std::shared_ptr<VariableSymbol> operator[] (int index) const
+			std::shared_ptr<ParmDeclSymbol> operator[] (int index) const
 			{
 				if (index >= parms.size())
 					errorSema("Function parm index out of range");
 				return parms[index];
 			}
 
-			void setFunctionDeclPointer(FunctionDecl* fd)
+			void setFunctionDeclPointer(FunctionDeclPtr fd)
 			{
 				FD = fd;
 			}
 
 			unsigned getParmNum() { return  parms.size(); }
 
-			const FunctionDecl* getFuncDeclPointer() const { return FD; }
+			FunctionDeclPtr getFuncDeclPointer() const { return FD; }
 		};
 
 		/// \brief ClassSymbol - This class represent class decl symbol.
@@ -237,8 +253,7 @@ namespace compiler
 				// 但是由于type本来就是UserDefinedType的，初始化后就不为空
 				// 同时外部接触不到type，不可能将其修改为nullptr，所以暂且算是安全的用法。
 				(dynamic_cast<UserDefinedType*>(type.get()))->addSubType(subType, name); 
-			}
-			std::shared_ptr<Type> getType() const { return type; }
+			}			
 		};
 
 		/// \brief Represents the results of name lookup.
@@ -342,11 +357,11 @@ namespace compiler
 
 			StmtASTPtr ActOnFunctionDeclEnd(std::string name);
 
-			void ActOnParmDecl(std::string name, std::shared_ptr<Type> type);
+			void ActOnParmDecl(std::string name, ParmDeclPtr parm);
 
 			StmtASTPtr ActOnConstDecl(std::string name, std::shared_ptr<Type> type);
 
-			void ActOnVarDecl(std::string name, VarDecl* VD);
+			void ActOnVarDecl(std::string name, VarDeclPtr VD);
 
 			void ActOnClassDeclStart(std::string name);
 			void ActOnCompoundStmt();
@@ -376,7 +391,7 @@ namespace compiler
 			ExprASTPtr ActOnConstantExpression();
 
 			std::shared_ptr<Type> ActOnCallExpr(std::string calleeName, 
-				std::vector<std::shared_ptr<Type>> Args, const FunctionDecl* &FD);
+				std::vector<std::shared_ptr<Type>> Args, FunctionDeclPtr &FD);
 
 			ExprASTPtr ActOnUnaryOperator();
 
@@ -384,7 +399,7 @@ namespace compiler
 
 			ExprASTPtr ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs);
 
-			const VarDecl* ActOnDeclRefExpr(std::string name);
+			DeclASTPtr ActOnDeclRefExpr(std::string name);
 
 			ExprASTPtr ActOnStringLiteral();
 

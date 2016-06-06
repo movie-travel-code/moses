@@ -20,16 +20,44 @@
 #include "../IR/Value.h"
 #include "../Parser/constant-evaluator.h"
 #include "../IR/BasicBlock.h"
+#include "../Parser/sema.h"
 
 namespace compiler
 {
 	namespace IR
 	{
 		using namespace ast;
+		using namespace sema;
 		/// \brief IRBuilder - This class inherit Visitor
 		class IRBuilder : public StatementAST::Visitor
 		{
+		private:
+			// This is the Symbol Tree.
+			// 由于在IR code gen的时候，需要symbol table，所以我们就复用了
+			// sema中的symbol table(其实是顶层的scope，我们可以通过顶层scope来获取到
+			// 所有的symbol信息).
+			// 例如：
+			//		func add(lhs : int, rhs : int) -> int
+			//		{
+			//			return lhs + rhs * 2 - 40 + lhs * (rhs - rhs / 10);
+			//		}
+			//		const global = 10;
+			//		var num = add(global, 20) + 23;
+			// 在编译完之后，我们就只剩下了顶层的scope，如下图所示：
+			//  ------ -------- -----
+			// | add  | global | num |
+			//  ------ -------- -----
+			//     |
+			//     |
+			//    \|/
+			//  ------- -----
+			// |  lhs  | rhs |
+			//  ------- -----
+			// 我最终得到的symbol table信息，就是以scope tree的形式展现的。
+			std::shared_ptr<Scope> SymbolTree;
 		public:
+			IRBuilder(std::shared_ptr<Scope> SymbolInfo) : SymbolTree(SymbolInfo) {}
+
 			virtual void visit()
 			{
 				
@@ -49,15 +77,17 @@ namespace compiler
 		class ModuleBuilder : public IRBuilder
 		{
 		private:
+			// 最终得到的 IR info，在遍历语法树的过程中会不断的添加。
 			std::list<std::shared_ptr<Value>> IRs;
 		public:
+			ModuleBuilder(std::shared_ptr<Scope> SymbolInfo) : IRBuilder(SymbolInfo) {}
 			// Emit IR for Module.
 			// 对于moses IR来说，最外层的有变量声明（使用ValueSymbolTable存储），instruction
 			// BasicBlock，也就是说最外层是value-list。使用visit进行single dispatch
 
 			/// \brief 当前函数是总控性函数，可以通过遍历AST每个节点，调用相应的visitor
 			/// 使用unique_ptr的作用就是在IR生成之后，AST被析构掉。
-			void VisitChildren(std::vector<std::unique_ptr<StatementAST>> AST);
+			void VisitChildren(std::vector<std::shared_ptr<StatementAST>> AST);
 
 			//===----------------------------------------------------------------------===//
 			// 下面的一系列的visit()函数通过重载实现第二层的dispatch
@@ -103,7 +133,7 @@ namespace compiler
 			/// (TrueCount should be the number of times we expect the condition to
 			/// evaluate to true based on PGO data.)
 			/// -- Clang中的版本为了利用Profile data，记录了true分支的采用次数。
-			void EmitBranchOnBoolExpr(const Expr* Cond, BBPtr TrueB, BBPtr FalseBlock/*, unsigned TrueCount*/);
+			void EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueB, BBPtr FalseBlock/*, unsigned TrueCount*/);
 		};
 
 		/// \brief FunctionBodyBuilder - This class for Function Body generation.

@@ -82,6 +82,14 @@ namespace compiler
 {
 	namespace ast
 	{
+		/// 暂时实现了如下的constant-evaluator
+		/// func add(lhs : int, rhs : int) -> int
+		/// {
+		///		return lhs + rhs * 2 - 40 + lhs * (rhs - rhs / 10);
+		/// }
+		/// const global = 10;
+		/// var num = add(global, 20) + 23;
+		/// moses可以将num evaluate得到213.
 		class ConstantEvaluator
 		{
 			/// https://akrzemi1.wordpress.com/2011/05/06/compile-time-computations/ 
@@ -98,17 +106,17 @@ namespace compiler
 			/// 这里应该仿照Clang实现EvaluateAsRValue()函数，该函数非常强大
 			///--------------------------------------------------------------------
 			// To Do: 没有实现
-			bool EvaluateAsRValue(const Expr *Exp, EvalInfo &Result) const;
+			bool EvaluateAsRValue(ExprASTPtr Exp, EvalInfo &Result) const;
 
-			bool EvaluateAsInt(const Expr *Exp, int &Result) const;
+			bool EvaluateAsInt(ExprASTPtr Exp, int &Result) const;
 
 			/// EvaluateAsBooleanCondition - Return true if this is a boolean constant 
 			/// which we can fold. 
-			bool EvaluateAsBooleanCondition(const Expr *Exp, bool &Result) const;
+			bool EvaluateAsBooleanCondition(ExprASTPtr Exp, bool &Result) const;
 
-			static bool FastEvaluateAsRValue(const Expr *Exp, EvalInfo &Result);
+			static bool FastEvaluateAsRValue(ExprASTPtr Exp, EvalInfo &Result);
 
-			static bool Evaluate(const Expr* Exp, EvalInfo &Result);
+			static bool Evaluate(ExprASTPtr Exp, EvalInfo &Result);
 
 			/// \brief 判断当前表达式是否有sideeffects.
 			bool HasSideEffects(const Expr* Exp) const;

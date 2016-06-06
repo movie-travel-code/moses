@@ -19,8 +19,8 @@ void ModuleBuilder::visit(const IfStatement* ifstmt)
 	/// ConditionExpr恒为真，删除else分支（如果有的话）
 	if (CondCanBeFold)
 	{
-		const StatementAST *Executed = ifstmt->getThen();
-		const StatementAST *Skipped = ifstmt->getElse();
+		StmtASTPtr Executed = ifstmt->getThen();
+		StmtASTPtr Skipped = ifstmt->getElse();
 		/// ConditionExpr恒为假，则删除true分支
 		/// （如果没有else分支的话，删除整个IfStmt的生成）
 		if (!CondConstant)

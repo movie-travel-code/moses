@@ -28,6 +28,7 @@
 
 #ifndef EVALUATED_EXPR_VISITOR_H
 #define EVALUATED_EXPR_VISITOR_H
+#include <iostream>
 #include <utility>
 #include <typeinfo>
 #include "ast.h"
@@ -171,7 +172,7 @@ namespace compiler
 
 			typedef EvalInfo::EvaluationMode EvaluationMode;
 		public:
-			virtual bool Evaluate(const Expr* expr, EvalInfo& info);
+			virtual bool Evaluate(ExprASTPtr expr, EvalInfo& info);
 
 			virtual bool EvalBinaryExpr(const BinaryExpr* B, EvalInfo &info, EvalInfo &lhs, 
 				EvalInfo &rhs) = 0;
@@ -180,7 +181,7 @@ namespace compiler
 			virtual void handleEvalCallTail();
 
 			/// \brief 该函数用于在EvalCall之前进行检查
-			virtual const StatementAST* handleEvalCallStart(const CallExpr* CE);
+			virtual const ReturnStatement* handleEvalCallStart(const CallExpr* CE);
 
 			virtual bool EvalUnaryExpr(const UnaryExpr* U, EvalInfo &info, EvalInfo &subVal) = 0;
 
@@ -212,7 +213,7 @@ namespace compiler
 		};
 
 		/// \brief 遍历Expression用于Bool值的evaluate.
-		class BoolExpeEvaluator final : public EvaluatedExprVisitorBase
+		class BoolExprEvaluator final : public EvaluatedExprVisitorBase
 		{
 		private:
 		public:

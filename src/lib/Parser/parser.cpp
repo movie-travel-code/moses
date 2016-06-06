@@ -121,7 +121,7 @@ ASTPtr& Parser::parse()
 		default:
 			// Handle syntax error.
 			// For example,break unlikely appear in Top-Level.
-			errorReport("Illegal token.");
+			errorReport("Illegal token '" + scan.getToken().getLexem() + "'.");
 			syntaxErrorRecovery(ParseContext::context::Statement);
 			break;
 		}
@@ -203,8 +203,7 @@ StmtASTPtr Parser::ParseIfStatement()
 	}
 	auto locEnd = scan.getToken().getTokenLoc();
 
-	return std::make_unique<IfStatement>(locStart, locEnd, std::move(condition),
-		std::move(thenPart), std::move(elsePart));
+	return std::make_shared<IfStatement>(locStart, locEnd, condition, thenPart, elsePart);
 }
 
 /// \brief ParseNumberExpr - 这个函数用于解析number literal.
@@ -219,7 +218,7 @@ ExprASTPtr Parser::ParseNumberExpr()
 	// Get the number value.
 	double numVal = strtod(curTok.getLexem().c_str(), nullptr);
 	auto locEnd = scan.getToken().getTokenLoc();
-	return std::make_unique<NumberExpr>(locStart, locEnd, numVal);
+	return std::make_shared<NumberExpr>(locStart, locEnd, numVal);
 }
 
 /// \brief ParseCharLiteral - 这个函数用于解析char literal.
@@ -233,7 +232,7 @@ ExprASTPtr Parser::ParseCharLiteral()
 	auto locStart = curTok.getTokenLoc();
 	// Get the number value.
 	auto locEnd = scan.getToken().getTokenLoc();
-	return std::make_unique<CharExpr>(locStart, locEnd, curTok.getLexem());
+	return std::make_shared<CharExpr>(locStart, locEnd, curTok.getLexem());
 }
 
 
@@ -273,7 +272,7 @@ ExprASTPtr Parser::ParseParenExpr()
 	{
 		syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
 	}
-	return std::move(expr);
+	return expr;
 }
 
 /// \brief ParseIdentifierExpr - 这个函数用于解析标识符，identifier.
@@ -303,9 +302,9 @@ ExprASTPtr Parser::ParseIdentifierExpr()
 	{
 		// Semantic analysis.(Identifier只能是VariableSymbol)
 		// 在解析DeclRefExpr时，获取InitExpr.
-		const VarDecl* VD = Actions.ActOnDeclRefExpr(IdName);
+		DeclASTPtr D = Actions.ActOnDeclRefExpr(IdName);
 		auto locEnd = scan.getToken().getTokenLoc();
-		return std::make_unique<DeclRefExpr>(locStart, locEnd, VD->getDeclType(), IdName, VD);
+		return std::make_shared<DeclRefExpr>(locStart, locEnd, D ? D->getDeclType() : nullptr, IdName, D);
 	}
 }
 
@@ -330,7 +329,7 @@ StmtASTPtr Parser::ParseDeclStmt()
 	}
 	// 实行简单的错误恢复策略，假装';'存在
 	expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true);
-	return std::move(curStmt);
+	return curStmt;
 }
 
 /// \brief ParseCompoundStatement - Parse {} statement.
@@ -421,8 +420,7 @@ StmtASTPtr Parser::ParseCompoundStatementBody()
 	{
 		syntaxErrorRecovery(ParseContext::context::CompoundStatement);
 	}
-	return std::make_unique<CompoundStmt>(locStart, scan.getToken().getTokenLoc(),
-		std::move(bodyStmts));
+	return std::make_shared<CompoundStmt>(locStart, scan.getToken().getTokenLoc(), bodyStmts);
 }
 
 /// \brief ParseWhileStatement - 该函数用于解析while语句.
@@ -462,8 +460,7 @@ StmtASTPtr Parser::ParseWhileStatement()
 	CurrentContext = oldContext;
 
 	auto locEnd = scan.getToken().getTokenLoc();
-	return std::make_unique<WhileStatement>(locStart, locEnd, std::move(condition),
-		std::move(compoundStmt));
+	return std::make_shared<WhileStatement>(locStart, locEnd, condition, compoundStmt);
 }
 
 /// \brief ParseBreakStatement - 解析break statement.
@@ -480,7 +477,7 @@ StmtASTPtr Parser::ParseBreakStatement()
 		syntaxErrorRecovery(ParseContext::context::Statement);
 	}
 	auto locEnd = scan.getToken().getTokenLoc();
-	return std::make_unique<BreakStatement>(locStart, locEnd);
+	return std::make_shared<BreakStatement>(locStart, locEnd);
 }
 
 /// \brief ParseContinueStatement - 解析continue statement.
@@ -500,7 +497,7 @@ StmtASTPtr Parser::ParseContinueStatement()
 		syntaxErrorRecovery(ParseContext::context::Statement);
 	}
 	auto locEnd = scan.getToken().getTokenLoc();
-	return std::make_unique<ContinueStatement>(locStart, locEnd);
+	return std::make_shared<ContinueStatement>(locStart, locEnd);
 }
 
 /// \brief ParsereturnStatement() - 解析return statement.
@@ -520,7 +517,7 @@ StmtASTPtr Parser::ParsereturnStatement()
 	// 如果是"return;"，则直接返回
 	if (validateToken(TokenValue::PUNCTUATOR_Semicolon))
 	{
-		return std::make_unique<ReturnStatement>(locStart, scan.getToken().getTokenLoc(),
+		return std::make_shared<ReturnStatement>(locStart, scan.getToken().getTokenLoc(),
 			nullptr);
 	}
 
@@ -546,8 +543,7 @@ StmtASTPtr Parser::ParsereturnStatement()
 	{
 		syntaxErrorRecovery(ParseContext::context::Statement);
 	}
-	return std::make_unique<ReturnStatement>(locStart, scan.getToken().getTokenLoc(),
-		std::move(returnExpr));
+	return std::make_shared<ReturnStatement>(locStart, scan.getToken().getTokenLoc(), returnExpr);
 }
 
 /// \brief ParseStringLiteral - parse string literal.
@@ -558,7 +554,7 @@ ExprASTPtr Parser::ParseStringLiteral()
 	{
 		syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
 	}
-	return std::make_unique<StringLiteral>(locStart, scan.getToken().getTokenLoc(), nullptr,
+	return std::make_shared<StringLiteral>(locStart, scan.getToken().getTokenLoc(), nullptr,
 		scan.getToken().getLexem());
 }
 
@@ -568,7 +564,7 @@ ExprASTPtr Parser::ParseBoolLiteral(bool isTrue)
 	auto locStart = scan.getToken().getTokenLoc();
 	// consume bool literal token
 	scan.getNextToken();
-	return std::make_unique<BoolLiteral>(locStart, scan.getToken().getTokenLoc(), isTrue);
+	return std::make_shared<BoolLiteral>(locStart, scan.getToken().getTokenLoc(), isTrue);
 }
 
 /// \brief ParseExpression - Parse the expression.
@@ -620,7 +616,7 @@ ExprASTPtr Parser::ParseExpression()
 	// 将结果返回并降下来，将优先级高的一个子表达式作为一个新的RHS并和以前的合并为新的LHS，然后继续
 	// 在原有的层级上解析。
 	// ------------------------nonsense for coding--------------------------------
-	return ParseBinOpRHS(OperatorPrec::Level::Assignment, std::move(LHS));
+	return ParseBinOpRHS(OperatorPrec::Level::Assignment, LHS);
 }
 
 /// \brief ParseWrappedUnaryExpression - 用于parse UnaryExpression
@@ -649,9 +645,9 @@ ExprASTPtr Parser::ParseWrappedUnaryExpression()
 		{
 			errorReport("Error occured in left hand expression.");
 		}
-		RHS = Actions.ActOnUnarySubExpr(std::move(RHS));
-		RHS = std::make_unique<UnaryExpr>(locStart, scan.getToken().getTokenLoc(),
-			RHS->getType(), tok.getLexem(), std::move(RHS), Expr::ExprValueKind::VK_RValue);
+		RHS = Actions.ActOnUnarySubExpr(RHS);
+		RHS = std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(),
+			RHS->getType(), tok.getLexem(), RHS, Expr::ExprValueKind::VK_RValue);
 	}
 	else if (tokKind == TokenValue::UO_Exclamatory)
 	{
@@ -662,9 +658,9 @@ ExprASTPtr Parser::ParseWrappedUnaryExpression()
 		{
 			errorReport("Error occured in left hand expression.");
 		}
-		RHS = Actions.ActOnUnarySubExpr(std::move(RHS));
-		RHS = std::make_unique<UnaryExpr>(locStart, scan.getToken().getTokenLoc(),
-			RHS->getType(), tok.getLexem(), std::move(RHS), Expr::ExprValueKind::VK_RValue);
+		RHS = Actions.ActOnUnarySubExpr(RHS);
+		RHS = std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(),
+			RHS->getType(), tok.getLexem(), RHS, Expr::ExprValueKind::VK_RValue);
 	}
 	else if (tokKind == TokenValue::UO_Dec || tokKind == TokenValue::UO_Dec)
 	{
@@ -675,16 +671,16 @@ ExprASTPtr Parser::ParseWrappedUnaryExpression()
 		{
 			errorReport("Error occured in left hand expression.");
 		}
-		RHS = Actions.ActOnDecOrIncExpr(std::move(RHS));
+		RHS = Actions.ActOnDecOrIncExpr(RHS);
 		// 前置++ --得到的运算表达式是LValue
-		RHS = std::make_unique<UnaryExpr>(locStart, scan.getToken().getTokenLoc(),
-			RHS->getType(), tok.getLexem(), std::move(RHS), Expr::ExprValueKind::VK_LValue);
+		RHS = std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(),
+			RHS->getType(), tok.getLexem(), RHS, Expr::ExprValueKind::VK_LValue);
 	}
 	else
 	{
 		RHS = ParsePostfixExpression();
 	}
-	return std::move(RHS);
+	return RHS;
 }
 
 /// \brief ParsePostfixExpression - 用于parse PostfixExpression
@@ -713,7 +709,7 @@ ExprASTPtr Parser::ParsePostfixExpression()
 	// Second we parse the suffix of the postfix-expression, for example '.' '++'
 	ExprASTPtr LHS = ParsePrimaryExpr();
 	// These can be followed by postfix-expr pieces.
-	return ParsePostfixExpressionSuffix(std::move(LHS));
+	return ParsePostfixExpressionSuffix(LHS);
 }
 
 /// \brief Once the leading part of a postfix-expression is parsed, this method
@@ -752,21 +748,21 @@ ExprASTPtr Parser::ParsePostfixExpressionSuffix(ExprASTPtr LHS)
 				syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
 			}
 
-			LHS = Actions.ActOnMemberAccessExpr(std::move(LHS), scan.getToken());
+			LHS = Actions.ActOnMemberAccessExpr(LHS, scan.getToken());
 			scan.getNextToken();
 			break;
 		case TokenValue::UO_Inc: // postfix-expression: postfix-expression '++'
 		case TokenValue::UO_Dec: // postfix-expression: postfix-expression '--'					
 			// moses中的自定义类型暂时不支持运算符重载，所以能够进行++ --的只能是int类型
 			OpName = scan.getToken().getLexem();
-			LHS = Actions.ActOnDecOrIncExpr(std::move(LHS));
+			LHS = Actions.ActOnDecOrIncExpr(LHS);
 			// Consume the '++' or '--'
 			scan.getNextToken();
 			// To Do: Handle Type
-			return std::make_unique<UnaryExpr>(locStart, scan.getToken().getTokenLoc(), nullptr,
-				OpName, std::move(LHS), Expr::ExprValueKind::VK_RValue);
+			return std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(), nullptr,
+				OpName, LHS, Expr::ExprValueKind::VK_RValue);
 		default:	// Not a postfix-expression suffix.
-			return std::move(LHS);
+			return LHS;
 		}
 	}
 }
@@ -782,7 +778,7 @@ StmtASTPtr Parser::ParseExpressionStatement()
 	{
 		syntaxErrorRecovery(ParseContext::context::Statement);
 	}
-	return std::move(Expr);
+	return Expr;
 }
 
 /// \brief ParseBinOpRHS - Parse the expression-tail.
@@ -792,9 +788,8 @@ StmtASTPtr Parser::ParseExpressionStatement()
 /// Note: Anonymous type need specially handled.
 ExprASTPtr Parser::ParseBinOpRHS(OperatorPrec::Level MinPrec, ExprASTPtr lhs)
 {
-	auto curTok = scan.getToken();
-	auto locStart = curTok.getTokenLoc();
-	OperatorPrec::Level NextTokPrec = getBinOpPrecedence(curTok.getKind());
+	auto locStart = scan.getToken().getTokenLoc();
+	OperatorPrec::Level NextTokPrec = getBinOpPrecedence(scan.getToken().getKind());
 	while (1)
 	{
 		// --------------------annotation from clang-------------------------------
@@ -807,8 +802,8 @@ ExprASTPtr Parser::ParseBinOpRHS(OperatorPrec::Level MinPrec, ExprASTPtr lhs)
 		// lowest precedence.
 		// The initial precedence is "="
 		if (NextTokPrec < MinPrec)
-			return std::move(lhs);
-		Token OpToken = curTok;
+			return lhs;
+		Token OpToken = scan.getToken();
 
 		if (!OpToken.isBinaryOp())
 		{
@@ -824,8 +819,7 @@ ExprASTPtr Parser::ParseBinOpRHS(OperatorPrec::Level MinPrec, ExprASTPtr lhs)
 			if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false))
 			{
 				ExprASTPtr RHS = ParseAnonymousInitExpr();
-				return Actions.ActOnAnonymousTypeVariableAssignment(std::move(lhs),
-					std::move(RHS));
+				return Actions.ActOnAnonymousTypeVariableAssignment(lhs, RHS);
 			}
 		}
 
@@ -862,17 +856,16 @@ ExprASTPtr Parser::ParseBinOpRHS(OperatorPrec::Level MinPrec, ExprASTPtr lhs)
 		// 结合性只用于表达式中出现两个以上相同优先级的操作符的情况，用于消除歧义
 		if (ThisPrec < NextTokPrec || (ThisPrec == NextTokPrec && isRightAssoc))
 		{
-			RHS = ParseBinOpRHS(static_cast<OperatorPrec::Level>(ThisPrec + !isRightAssoc),
-				std::move(RHS));
+			RHS = ParseBinOpRHS(static_cast<OperatorPrec::Level>(ThisPrec + !isRightAssoc), RHS);
 			// 当从ParseBinOpRHS()返回的时候，下一个Op的优先级未知
 			NextTokPrec = getBinOpPrecedence(scan.getToken().getKind());
 		}
 		// 如果没有递归调用ParseBinOpRHS()的话，NextTokPrec的优先级是固定的
 		// Perform semantic and combine the LHS and RHS into LHS (e.g. build AST)
-		lhs = Actions.ActOnBinaryOperator(std::move(lhs), OpToken, std::move(RHS));
+		lhs = Actions.ActOnBinaryOperator(lhs, OpToken, RHS);
 
 	}
-	return std::move(lhs);
+	return lhs;
 }
 
 /// \brief This function for parsing PrimaryExpr.
@@ -962,14 +955,14 @@ ExprASTPtr Parser::ParseCallExpr(Token tok)
 			return nullptr;
 		}
 		ParmTyps.push_back(arg->getType());
-		Args.push_back(std::move(arg));
+		Args.push_back(arg);
 	}
 
 	// Perform simple semantic analysis
 	// (Check whether the function is defined or parameter types match).
 
 	// 查询符号表的时候从中获取到FunctionDecl的地址
-	const FunctionDecl* fd = nullptr;
+	FunctionDeclPtr fd = nullptr;
 	auto returnType = Actions.ActOnCallExpr(funcName, ParmTyps, fd);
 
 	// 检查CallExpr是否是可推导的，CallExpr是否可推导在于return type.
@@ -982,9 +975,13 @@ ExprASTPtr Parser::ParseCallExpr(Token tok)
 	// 因为函数的返回值的本质就是一个临时变量，在实现机制上是stack frame上的一块临时内存。
 	// To Do: moses拟采用内置类型值语义，用户自定义类型引用语义。
 	// 但是目前全部采用值语义（类似于C/C++）
-	return std::make_unique<CallExpr>(startLoc, endLoc, returnType, tok.getLexem(),
-		std::move(Args), Expr::ExprValueKind::VK_RValue, fd,
-		returnType->getKind() != TypeKind::USERDEFIED);
+	if (returnType)
+	{
+		return std::make_shared<CallExpr>(startLoc, endLoc, returnType, tok.getLexem(), Args,
+			Expr::ExprValueKind::VK_RValue, fd, returnType->getKind() != TypeKind::USERDEFIED);
+	}
+	// 如果returnType为空
+	return nullptr;
 }
 
 /// \brief ParseVarDefinition - Parse variable declaration.
@@ -1037,7 +1034,7 @@ DeclASTPtr Parser::ParseVarDecl()
 		auto initexpr = ParseIdentifierExpr();
 
 		/// (3) 进行简单的语义分析，进行类型检查
-		return Actions.ActOnUnpackDecl(std::move(unpackDecl), initexpr->getType());
+		return Actions.ActOnUnpackDecl(unpackDecl, initexpr->getType());
 	}
 
 	if (!validateToken(TokenValue::IDENTIFIER, false))
@@ -1098,6 +1095,7 @@ DeclASTPtr Parser::ParseVarDecl()
 			// Normal initial expression.
 			InitExpr = ParseExpression();
 		}
+		DeclType = InitExpr->getType();
 	}
 	else
 	{
@@ -1106,14 +1104,14 @@ DeclASTPtr Parser::ParseVarDecl()
 		syntaxErrorRecovery(ParseContext::context::Statement);
 	}
 
-	auto decl = std::make_unique<VarDecl>(locStart, scan.getToken().getTokenLoc(),
-		curTok.getLexem(), DeclType, isConst, std::move(InitExpr));
+	auto decl = std::make_shared<VarDecl>(locStart, scan.getToken().getTokenLoc(), 
+		curTok.getLexem(), DeclType, isConst, InitExpr);
 
 	// Perform simple semantic analysis(Create New Symbol
 	// Note: DeclType包含const属性.
-	Actions.ActOnVarDecl(curTok.getLexem(), decl.get());
+	Actions.ActOnVarDecl(curTok.getLexem(), decl);
 
-	return std::move(decl);
+	return decl;
 }
 
 
@@ -1137,13 +1135,13 @@ UnpackDeclPtr Parser::ParseUnpackDecl()
 	{
 		if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false))
 		{
-			decls.push_back(std::move(ParseUnpackDecl()));
+			decls.push_back(ParseUnpackDecl());
 		}
 		else if (validateToken(TokenValue::IDENTIFIER, false))
 		{
 			Actions.ActOnUnpackDeclElement(scan.getToken().getLexem());
 			/// 注意unpack decl的type只能通过右侧的匿名类型变量来设置。
-			decls.push_back(std::make_unique<VarDecl>(startloc, scan.getToken().getTokenLoc(),
+			decls.push_back(std::make_shared<VarDecl>(startloc, scan.getToken().getTokenLoc(),
 				scan.getToken().getLexem(), nullptr, true, nullptr));
 			scan.getNextToken();
 		}
@@ -1158,8 +1156,7 @@ UnpackDeclPtr Parser::ParseUnpackDecl()
 		}
 		expectToken(TokenValue::PUNCTUATOR_Comma, ",", true);
 	}
-	return std::make_unique<UnpackDecl>(startloc, scan.getToken().getTokenLoc(),
-		std::move(decls));
+	return std::make_shared<UnpackDecl>(startloc, scan.getToken().getTokenLoc(), decls);
 }
 
 
@@ -1214,8 +1211,8 @@ ExprASTPtr Parser::ParseAnonymousInitExpr()
 		initTypes.push_back(initExprs[i]->getType());
 	}
 	// std::make_shared<AnonymousType>(initTypes);
-	return std::make_unique<AnonymousInitExpr>(startloc, scan.getToken().getTokenLoc(),
-		std::move(initExprs), std::make_shared<AnonymousType>(initTypes));
+	return std::make_shared<AnonymousInitExpr>(startloc, scan.getToken().getTokenLoc(), initExprs, 
+		std::make_shared<AnonymousType>(initTypes));
 }
 
 /// \brief ParseFunctionDecl - Parse function declaration.
@@ -1291,12 +1288,12 @@ StmtASTPtr Parser::ParseFunctionDefinition()
 
 	CurrentContext = ContextKind::TopLevel;
 
-	auto FuncDecl = std::make_unique<FunctionDecl>(locStart, scan.getToken().getTokenLoc(), name,
-		std::move(parm), std::move(body), returnType);
+	auto FuncDecl = std::make_shared<FunctionDecl>(locStart, scan.getToken().getTokenLoc(), name, 
+		parm, body, returnType);
 
 	// To Do: 这里代码结构不是很合理
 	// 向FunctionSymbol记录FunctionDecl的地址
-	Actions.getFunctionStackTop()->setFunctionDeclPointer(FuncDecl.get());
+	Actions.getFunctionStackTop()->setFunctionDeclPointer(FuncDecl);
 
 	// Pop function stack
 	Actions.PopFunctionStack();
@@ -1304,7 +1301,7 @@ StmtASTPtr Parser::ParseFunctionDefinition()
 	// Pop parm scope.
 	Actions.PopScope();
 
-	return std::move(FuncDecl);
+	return FuncDecl;
 }
 
 /// \brief ParseFunctionStatementBody - Parse function body.
@@ -1321,7 +1318,7 @@ StmtASTPtr Parser::ParseFunctionStatementBody()
 	// Pop function body'			
 	Actions.PopScope();
 
-	return std::move(body);
+	return body;
 }
 
 /// \brief ParseParameterList - Parse function parameter list.
@@ -1364,7 +1361,7 @@ std::vector<ParmDeclPtr> Parser::ParseParameterList()
 			syntaxErrorRecovery(ParseContext::context::ParmDecl);
 		}
 	}
-	return std::move(parms);
+	return parms;
 }
 
 /// \brief ParseParmDecl - Parse parameter declaration.
@@ -1426,10 +1423,12 @@ ParmDeclPtr Parser::ParseParmDecl()
 	{
 		errorReport("variable declaration error.");
 	}
-	// simple semantic analysis.
-	Actions.ActOnParmDecl(name, DeclType);
 
-	return std::make_unique<ParameterDecl>(locStart, scan.getToken().getTokenLoc(), name, DeclType);
+	auto parm = std::make_shared<ParameterDecl>(locStart, scan.getToken().getTokenLoc(), name, DeclType);
+	// simple semantic analysis.
+	Actions.ActOnParmDecl(name, parm);
+
+	return parm;
 }
 
 /// \brief ParseClassDecl - Parse class declaration.
@@ -1514,9 +1513,8 @@ DeclASTPtr Parser::ParseClassDecl()
 	// Pop class scope.
 	Actions.PopScope();
 	CurrentContext = ContextKind::TopLevel;
-	return std::make_unique<ClassDecl>(locStart, scan.getToken().getTokenLoc(), className,
-		std::make_unique<CompoundStmt>(classBodyStart, scan.getToken().getTokenLoc(),
-		std::move(classBody)));
+	return std::make_shared<ClassDecl>(locStart, scan.getToken().getTokenLoc(), className,
+		std::make_shared<CompoundStmt>(classBodyStart, scan.getToken().getTokenLoc(), classBody));
 }
 
 /// \brief 解析匿名类型

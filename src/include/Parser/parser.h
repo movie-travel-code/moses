@@ -250,8 +250,8 @@ namespace compiler
 			std::shared_ptr<AnonymousType> ParseAnony();
 			
 		public:
-			std::shared_ptr<Scope> getCurScope() { Actions.getCurScope(); }
-
+			std::shared_ptr<Scope> getCurScope() const { Actions.getCurScope(); }
+			std::vector<StmtASTPtr> getAST() const { return AST; }
 		private:
 			// Helper Functions.
 			bool expectToken(tok::TokenValue value, const std::string& lexem, bool advanceToNextToken) const;

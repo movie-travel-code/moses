@@ -2,7 +2,7 @@
 #include "../../include/IRBuild/IRBuilder.h"
 using namespace compiler::IR;
 
-void ModuleBuilder::VisitChildren(std::vector<std::unique_ptr<StatementAST>> AST)
+void ModuleBuilder::VisitChildren(std::vector<std::shared_ptr<StatementAST>> AST)
 {
 	unsigned ASTSize = AST.size();
 	for (int i = 0; i < ASTSize; i++)

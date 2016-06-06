@@ -101,19 +101,21 @@ namespace compiler
 		class VarDecl;	
 		class UnpackDecl;
 
-		using ASTPtr = std::vector<std::unique_ptr<StatementAST>>;
-		using StmtASTPtr = std::unique_ptr<StatementAST>;
-		using ExprASTPtr = std::unique_ptr<Expr>;
-		using CallExprPtr = std::unique_ptr<CallExpr>;
-		using DeclASTPtr = std::unique_ptr<DeclStatement>;
-		using CompoundStmtPtr = std::unique_ptr<CompoundStmt>;
-		using ParmDeclPtr = std::unique_ptr<ParameterDecl>;
-		using UnpackDeclPtr = std::unique_ptr<UnpackDecl>;
-		using BinaryPtr = std::unique_ptr<BinaryExpr>;
+		using ASTPtr = std::vector<std::shared_ptr<StatementAST>>;
+		using StmtASTPtr = std::shared_ptr<StatementAST>;
+		using ExprASTPtr = std::shared_ptr<Expr>;
+		using CallExprPtr = std::shared_ptr<CallExpr>;
+		using DeclASTPtr = std::shared_ptr<DeclStatement>;
+		using CompoundStmtPtr = std::shared_ptr<CompoundStmt>;
+		using VarDeclPtr = std::shared_ptr<VarDecl>;
+		using ParmDeclPtr = std::shared_ptr<ParameterDecl>;
+		using UnpackDeclPtr = std::shared_ptr<UnpackDecl>;
+		using FunctionDeclPtr = std::shared_ptr<FunctionDecl>;
+		using BinaryPtr = std::shared_ptr<BinaryExpr>;
 
 		/// \brief StatementAST - Base class for all statements.
 		//--------------------------nonsense for coding---------------------------
-		// 这里使用std::unique_ptr来包裹AST树，有些鸡肋，因为IR生成的时候，直接将
+		// 这里使用std::shared_ptr来包裹AST树，有些鸡肋，因为IR生成的时候，直接将
 		// AST析构掉（还不如直接在AST树中内置 CodeGen() 函数，一边遍历一边生成代码）。
 		//--------------------------nonsense for coding---------------------------
 		class StatementAST
@@ -126,7 +128,7 @@ namespace compiler
 			class Visitor
 			{
 			public:
-				virtual void visit(const ast::StatementAST* root)
+				virtual void visit(const StatementAST* root)
 				{
 					root->Accept(this);
 				}
@@ -314,19 +316,19 @@ namespace compiler
 		class DeclRefExpr final : public Expr
 		{
 			std::string Name;
-			const VarDecl* VD;
+			DeclASTPtr D;
 		public:
 			// Note: 一般情况下，DeclRefExpr都是左值的，但是有一种情况例外，就是函数名字调用
 			// 但是函数调用对应的expression是CallExpr，不是DeclRefExpr.
 			// To Do: 有可能会有潜在的bug
 			DeclRefExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-					std::string name, const VarDecl* vd) : 
-				Expr(start, end, type, ExprValueKind::VK_LValue, true), Name(name), VD(vd) 
+					std::string name, DeclASTPtr d) : 
+				Expr(start, end, type, ExprValueKind::VK_LValue, true), Name(name), D(d) 
 			{}
 
 			std::string getDeclName() const { return Name; }
 
-			const VarDecl* getDecl() const { return VD; }
+			DeclASTPtr getDecl() const { return D; }
 
 			virtual ~DeclRefExpr() {}
 
@@ -348,12 +350,12 @@ namespace compiler
 			// Note: BinaryExpr都是可以进行evaluate的
 			BinaryExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
 						std::string Op, ExprASTPtr LHS, ExprASTPtr RHS) :
-				Expr(start, end, type, ExprValueKind::VK_RValue, true), OpName(Op), 
-				LHS(std::move(LHS)), RHS(std::move(RHS)) {}
+				Expr(start, end, type, ExprValueKind::VK_RValue, true), OpName(Op), LHS(LHS), RHS(RHS) 
+			{}
 
-			const Expr* getLHS() const { return LHS.get(); }
+			ExprASTPtr getLHS() const { return LHS; }
 
-			const Expr* getRHS() const { return RHS.get(); }
+			ExprASTPtr getRHS() const { return RHS; }
 
 			std::string getOpcode() const { return OpName; }
 
@@ -373,9 +375,9 @@ namespace compiler
 		public:
 			UnaryExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, std::string Op,
 				ExprASTPtr subExpr, ExprValueKind vk) :
-				Expr(start, end, type, vk, true), OpName(Op), SubExpr(std::move(SubExpr)) {}
+				Expr(start, end, type, vk, true), OpName(Op), SubExpr(SubExpr) {}
 
-			const Expr* getSubExpr() const { return SubExpr.get(); }
+			ExprASTPtr getSubExpr() const { return SubExpr; }
 
 			std::string getOpcode() const { return OpName; }
 
@@ -394,22 +396,22 @@ namespace compiler
 		{
 			std::string CalleeName;
 			// To Do: FunctionDecl*
-			const FunctionDecl* FuncDecl;
-			std::vector<std::unique_ptr<Expr> > Args;
+			FunctionDeclPtr FuncDecl;
+			std::vector<std::shared_ptr<Expr> > Args;
 		public:
 			CallExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-					const std::string& Callee, std::vector<std::unique_ptr<Expr>> Args, 
-					ExprValueKind vk, const FunctionDecl* FD, bool canDoEvaluate) : 
-				Expr(start, end, type, vk, canDoEvaluate), CalleeName(Callee), Args(std::move(Args)), 
+					const std::string& Callee, std::vector<std::shared_ptr<Expr>> Args, 
+					ExprValueKind vk, FunctionDeclPtr FD, bool canDoEvaluate) :
+				Expr(start, end, type, vk, canDoEvaluate), CalleeName(Callee), Args(Args), 
 				FuncDecl(FD) 
 			{}
 
 			unsigned getArgsNum() const { return Args.size(); }
 
-			const FunctionDecl* getFuncDecl() const { return FuncDecl; }
+			FunctionDeclPtr getFuncDecl() const { return FuncDecl; }
 
 			// Note: 这里我们没有对传入的index进行检查
-			const Expr* getArg(unsigned index) const { return Args[index].get(); }
+			ExprASTPtr getArg(unsigned index) const { return Args[index]; }
 
 			virtual ~CallExpr() {}
 
@@ -436,13 +438,12 @@ namespace compiler
 			SourceLocation OperatorLoc;
 		public:
 			MemberExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-					std::unique_ptr<Expr> base, SourceLocation operatorloc, std::string name, 
-					bool canDoEvaluate) :
-				Expr(start, end, type, ExprValueKind::VK_LValue, canDoEvaluate), 
-				Base(std::move(base)), OperatorLoc(operatorloc), name(name) 
+				std::shared_ptr<Expr> base, SourceLocation operatorloc, std::string name, bool canDoEvaluate) :
+				Expr(start, end, type, ExprValueKind::VK_LValue, canDoEvaluate), Base(base), 
+				OperatorLoc(operatorloc), name(name) 
 			{}
 
-			void setBase(ExprASTPtr E) { Base = std::move(E); }
+			void setBase(ExprASTPtr E) { Base = E; }
 
 			std::string getMemberName() const { return name; }
 
@@ -469,8 +470,7 @@ namespace compiler
 		public:
 			AnonymousInitExpr(SourceLocation start, SourceLocation end, 
 					std::vector<ExprASTPtr> initExprs, std::shared_ptr<Type> type):
-				Expr(start, end, type, Expr::ExprValueKind::VK_RValue, true), 
-				InitExprs(std::move(initExprs)) 
+				Expr(start, end, type, Expr::ExprValueKind::VK_RValue, true), InitExprs(initExprs) 
 			{}
 
 			virtual void Accept(Visitor* v) const
@@ -490,16 +490,15 @@ namespace compiler
 			std::vector<StmtASTPtr> SubStmts;
 		public:
 			CompoundStmt(SourceLocation start, SourceLocation end,
-				std::vector<StmtASTPtr> subStmts) :
-				StatementAST(start, end), SubStmts(std::move(subStmts)) {}
+				std::vector<StmtASTPtr> subStmts) : StatementAST(start, end), SubStmts(subStmts) {}
 
 			virtual ~CompoundStmt() {}
 
 			void addSubStmt(StmtASTPtr stmt);
 
-			const StatementAST* getSubStmt(unsigned index) const;
+			StmtASTPtr getSubStmt(unsigned index) const;
 
-			const StatementAST* operator[](unsigned index) const;
+			StmtASTPtr operator[](unsigned index) const;
 
 			unsigned getSize() const 
 			{
@@ -519,33 +518,31 @@ namespace compiler
 		/// ----------------------------------------------------------------------------
 		class IfStatement : public StatementAST
 		{
-			std::unique_ptr<Expr> Condition;
-			std::unique_ptr<StatementAST> Then;
-			std::unique_ptr<StatementAST> Else;
+			std::shared_ptr<Expr> Condition;
+			std::shared_ptr<StatementAST> Then;
+			std::shared_ptr<StatementAST> Else;
 		public:
-			IfStatement(SourceLocation start, SourceLocation end,
-				std::unique_ptr<Expr> Condition,
-				std::unique_ptr<StatementAST> Then,
-				std::unique_ptr<StatementAST> Else) : StatementAST(start, end),
-				Condition(std::move(Condition)), Then(std::move(Then)), Else(std::move(Else)) {}
+			IfStatement(SourceLocation start, SourceLocation end, ExprASTPtr Condition, StmtASTPtr Then,
+				StmtASTPtr Else) : 
+				StatementAST(start, end), Condition(Condition), Then(Then), Else(Else) {}
 
 			virtual ~IfStatement() {}
 
 			// To Do: 这样做是不合适的，应该时刻都使用unique_ptr来传递各个节点
 			// 但是这样做的话，太过于复杂
-			const StatementAST* getThen() const
+			StmtASTPtr getThen() const
 			{
-				return Then.get();
+				return Then;
 			}
 
-			const StatementAST* getElse() const
+			StmtASTPtr getElse() const
 			{
-				return Else.get();
+				return Else;
 			}
 
-			const Expr* getCondition() const
+			ExprASTPtr getCondition() const
 			{
-				return Condition.get();
+				return Condition;
 			}
 
 			virtual void Accept(Visitor* v) const
@@ -561,13 +558,14 @@ namespace compiler
 		/// ---------------------------------------------------------
 		class WhileStatement : public StatementAST
 		{
-			std::unique_ptr<Expr> Condition;
-			std::unique_ptr<StatementAST> WhileBody;
+			std::shared_ptr<Expr> Condition;
+			std::shared_ptr<StatementAST> WhileBody;
 		public:
-			WhileStatement(SourceLocation start, SourceLocation end,
-				std::unique_ptr<Expr> condition,
-				std::unique_ptr<StatementAST> body) :StatementAST(start, end),
-				Condition(std::move(condition)), WhileBody(std::move(body)) {}
+			WhileStatement(SourceLocation start, SourceLocation end, ExprASTPtr condition, 
+					StmtASTPtr body) : 
+				StatementAST(start, end), Condition(condition), WhileBody(body) 
+			{}
+
 			virtual ~WhileStatement() {}
 
 			virtual void Accept(Visitor* v) const
@@ -619,15 +617,15 @@ namespace compiler
 		/// ---------------------------------------------
 		class ReturnStatement : public StatementAST
 		{
-			std::unique_ptr<Expr> ReturnExpr;
+			std::shared_ptr<Expr> ReturnExpr;
 		public:
-			ReturnStatement(SourceLocation start, SourceLocation end,
-				std::unique_ptr<Expr> returnExpr) : StatementAST(start, end),
-				ReturnExpr(std::move(ReturnExpr)) {}
+			ReturnStatement(SourceLocation start, SourceLocation end, ExprASTPtr returnExpr) : 
+				StatementAST(start, end), ReturnExpr(returnExpr) 
+			{}
 
 			virtual ~ReturnStatement() {}
 
-			const Expr* getSubExpr() const { return ReturnExpr.get(); }
+			ExprASTPtr getSubExpr() const { return ReturnExpr; }
 
 			virtual void Accept(Visitor* v) const
 			{
@@ -642,10 +640,10 @@ namespace compiler
 		/// ----------------------------------------
 		class ExprStatement : public StatementAST
 		{
-			std::unique_ptr<Expr> expr;
+			std::shared_ptr<Expr> expr;
 		public:
-			ExprStatement(SourceLocation start, SourceLocation end,
-				std::unique_ptr<Expr> expr) : StatementAST(start, end), expr(std::move(expr)) {}
+			ExprStatement(SourceLocation start, SourceLocation end, ExprASTPtr expr) : 
+				StatementAST(start, end), expr(expr) {}
 
 			virtual ~ExprStatement() {}
 
@@ -665,9 +663,15 @@ namespace compiler
 		/// -----------------------------------------------
 		class DeclStatement : public StatementAST
 		{
+		protected:
+			std::shared_ptr<Type> declType;
 		public:
-			DeclStatement(SourceLocation start, SourceLocation end) : StatementAST(start, end) {}
+			DeclStatement(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type) :
+				StatementAST(start, end), declType(type) {}
+
 			virtual ~DeclStatement() {}
+
+			std::shared_ptr<Type> getDeclType() const { return declType; }
 
 			virtual void Accept(Visitor* v) const
 			{
@@ -686,11 +690,10 @@ namespace compiler
 		{
 		private:
 			std::string ParaName;
-			std::shared_ptr<Type> type;
 		public:
 			ParameterDecl(SourceLocation start, SourceLocation end, std::string name, 
 				std::shared_ptr<Type> type) : 
-				DeclStatement(start, end), ParaName(name),  type(type) {}
+				DeclStatement(start, end, type), ParaName(name) {}
 
 			std::string getParmName() const { return ParaName; }
 
@@ -709,15 +712,19 @@ namespace compiler
 		{
 		private:
 			std::vector<DeclASTPtr> decls;
-			std::shared_ptr<Type> type;
 		public:
 			UnpackDecl(SourceLocation start, SourceLocation end, std::vector<DeclASTPtr> decls)
-				: DeclStatement(start, end), decls(std::move(decls)) {}
+				: DeclStatement(start, end, nullptr), decls(decls) {}
+
 			bool TypeCheckingAndTypeSetting(AnonymousType* type);
+
 			// To Do: Shit code!
 			void setCorrespondingType(std::shared_ptr<Type> type);
+
 			unsigned getDeclNumber() const { return decls.size(); };
+
 			std::vector<std::string> operator[](unsigned index) const;
+
 			void getDeclNames(std::vector<std::string>& names) const;
 
 			virtual void Accept(Visitor* v) const
@@ -746,8 +753,9 @@ namespace compiler
 		public:
 			FunctionDecl(SourceLocation start, SourceLocation end, const std::string& name,
 				std::vector<ParmDeclPtr> Args, StmtASTPtr body, std::shared_ptr<Type> returnType) :
-				DeclStatement(start, end), FDName(name), parameters(std::move(Args)),
-				funcBody(std::move(body)), paraNum(parameters.size()), returnType(returnType) {}
+				DeclStatement(start, end, nullptr), FDName(name), parameters(Args), funcBody(body), 
+				paraNum(parameters.size()), returnType(returnType) 
+			{}
 
 			virtual ~FunctionDecl() {}
 
@@ -759,7 +767,9 @@ namespace compiler
 			// 对于函数来说，能进行constant-evaluator的标准是只能有一条return语句，且返回类型是内置类型.
 			// 例如：
 			//	func add() -> int  { return 10; }
-			const StatementAST* isEvalCandiateAndGetReturnStmt() const;
+			// To Do: 这里我们强制要求，能够进行constant-evaluate的函数只能有一条return语句
+			// 如果后面需要加强推导能力，就需要返回这个函数体了。
+			const ReturnStatement* isEvalCandiateAndGetReturnStmt() const;
 
 			virtual void Accept(Visitor* v) const
 			{
@@ -781,7 +791,6 @@ namespace compiler
 		{
 			bool IsConst;
 			std::string name;
-			std::shared_ptr<Type> declType;
 			ExprASTPtr InitExpr;
 
 			// 丑陋的代码架构，对于moses来说，const变量可初始化，也可不初始化（亦即通过二元赋值进行初始化）
@@ -796,22 +805,22 @@ namespace compiler
 			//					  lhs  =   rhs
 			//					 /            \
 			//					num			  10
-			// 不能直接使用InitExr -> 指向rhs，因为moses AST使用 std::unique_ptr<> ，所以不可能同时在AST
+			// 不能直接使用InitExr -> 指向rhs，因为moses AST使用 std::shared_ptr<> ，所以不可能同时在AST
 			// 树上两个地方指向同一个unique_ptr，会出现double free
 
-			Expr* BEInit;
+			ExprASTPtr BEInit;
 		public:
 			VarDecl(SourceLocation start, SourceLocation end, std::string name, 
 				std::shared_ptr<Type> type, bool isConst, ExprASTPtr init) :
-				DeclStatement(start, end), name(name), declType(type), IsConst(isConst), 
-				InitExpr(std::move(init)) {}
+				DeclStatement(start, end, type), name(name), IsConst(isConst), 
+				InitExpr(init) {}
 			std::string getName() { return name; }
 
 			std::shared_ptr<Type> getDeclType() const { return declType; }
 
-			void setInitExpr(Expr* B) { BEInit = B; }
+			void setInitExpr(ExprASTPtr B) { BEInit = B; }
 
-			const Expr* getInitExpr() const { return InitExpr.get(); }
+			ExprASTPtr getInitExpr() const { return InitExpr; }
 
 			bool isClass() const { return declType->getKind() == TypeKind::USERDEFIED; }
 
@@ -836,12 +845,12 @@ namespace compiler
 		/// To Do: class通过数据成员的重排以充分利用内存空间。
 		class ClassDecl : public DeclStatement
 		{
-			// std::unique_ptr<UserDefinedType> classType;
+			// std::shared_ptr<UserDefinedType> classType;
 			std::string ClassName;
 			StmtASTPtr Body;
 		public:
 			ClassDecl(SourceLocation start, SourceLocation end, std::string name, StmtASTPtr body) :
-				DeclStatement(start, end), ClassName(name), Body(std::move(body)) {}
+				DeclStatement(start, end, nullptr), ClassName(name), Body(body) {}
 
 			virtual void Accept(Visitor* v) const
 			{

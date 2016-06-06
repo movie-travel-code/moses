@@ -15,14 +15,14 @@ void CompoundStmt::addSubStmt(StmtASTPtr stmt)
 		SubStmts.push_back(std::move(stmt));
 }
 
-const StatementAST* CompoundStmt::getSubStmt(unsigned index) const
+StmtASTPtr CompoundStmt::getSubStmt(unsigned index) const
 {
-	return SubStmts[index].get();
+	return SubStmts[index];
 }
 
-const StatementAST* CompoundStmt::operator[](unsigned index) const
+StmtASTPtr CompoundStmt::operator[](unsigned index) const
 {
-	return SubStmts[index].get();
+	return SubStmts[index];
 }
 
 //===---------------------------UnpackDecl-----------------------------===//
@@ -102,27 +102,27 @@ void UnpackDecl::getDeclNames(std::vector<std::string>& names) const
 
 void UnpackDecl::setCorrespondingType(std::shared_ptr<Type> type)
 {
-	this->type = type;
+	declType = type;
 }
 
 //===--------------------------FunctionDecl--------------------------===//
 //
-const StatementAST* FunctionDecl::isEvalCandiateAndGetReturnStmt() const
+const ReturnStatement* FunctionDecl::isEvalCandiateAndGetReturnStmt() const
 {
-	if (returnType->getKind() != TypeKind::INT ||
+	if (returnType->getKind() != TypeKind::INT &&
 		returnType->getKind() != TypeKind::BOOL)
 	{
 		return nullptr;
 	}
 	// (1) 函数体是否只有一条 return stmt
-	if (const CompoundStmt* body = dynamic_cast<CompoundStmt*>(funcBody.get()))
+	if (const CompoundStmt* body = dynamic_cast<const CompoundStmt*>(funcBody.get()))
 	{
 		if (body->getSize() != 1)
 			return false;
 		if (const ReturnStatement* returnStmt =
-			dynamic_cast<const ReturnStatement*>(body->getSubStmt(0)))
+			dynamic_cast<const ReturnStatement*>(body->getSubStmt(0).get()))
 		{
-			return body;
+			return returnStmt;
 		}
 		return nullptr;
 	}

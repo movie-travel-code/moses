@@ -7,6 +7,7 @@
 #include "../include/Lexer/scanner.h"
 #include "../include/Parser/parser.h"
 #include "../include/IRBuild/IRBuilder.h"
+#include "../include//Parser/constant-evaluator.h"
 using namespace compiler::parse;
 using namespace compiler::sema;
 int main()
@@ -15,6 +16,10 @@ int main()
 	Sema sema;
 	Parser parse(scanner, sema);
 	parse.parse();
+	ConstantEvaluator evaluator;
+
+	// ≤‚ ‘evaluator
+	auto AST = parse.getAST();
 	system("pause");
 	return 0;
 }

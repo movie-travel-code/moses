@@ -81,8 +81,7 @@ StmtASTPtr Sema::ActOnIfStmt(SourceLocation start, SourceLocation end,
 	{
 		// To Do: 报错
 	}
-	return std::make_unique<IfStatement>(start, end, std::move(condition),
-		std::move(ThenPart), std::move(ElsePart));
+	return std::make_shared<IfStatement>(start, end, condition, ThenPart, ElsePart);
 }
 
 /// \brief Action routines about CompoundStatement.
@@ -132,7 +131,7 @@ std::shared_ptr<Type> Sema::ActOnReturnType(const std::string& name) const
 	}
 }
 
-void Sema::ActOnParmDecl(std::string name, std::shared_ptr<Type> DeclType)
+void Sema::ActOnParmDecl(std::string name, ParmDeclPtr parm)
 {
 	// Check redefinition.
 	if (CurScope->CheckWhetherInCurScope(name))
@@ -141,8 +140,7 @@ void Sema::ActOnParmDecl(std::string name, std::shared_ptr<Type> DeclType)
 
 	}
 	// Note: moses中FunctionDefinition中的const形参，默认都是通过函数调用中的实参初始化的
-	std::shared_ptr<VariableSymbol> vsym = std::make_shared<VariableSymbol>
-		(name, CurScope, DeclType, true, nullptr);
+	auto vsym = std::make_shared<ParmDeclSymbol>(name, CurScope, parm->getDeclType(), true, parm);
 
 	CurScope->addDef(vsym);
 	getFunctionStackTop()->addParmVariableSymbol(vsym);
@@ -158,8 +156,8 @@ void Sema::ActOnClassDeclStart(std::string name)
 	}
 
 	// Create new scope.
-	std::shared_ptr<Scope> ClassBodyScope = std::make_shared<Scope>(name,
-		CurScope->getDepth() + 1, CurScope, Scope::ScopeKind::SK_Class);
+	auto ClassBodyScope = std::make_shared<Scope>(name, CurScope->getDepth() + 1, 
+		CurScope, Scope::ScopeKind::SK_Class);
 
 	// Create class symbol.
 	std::shared_ptr<ClassSymbol> CurSym =
@@ -174,13 +172,13 @@ void Sema::ActOnClassDeclStart(std::string name)
 }
 
 /// \brief Create new variable symbol.
-void Sema::ActOnVarDecl(std::string name, VarDecl* VD/*, std::shared_ptr<Type> declType, ExprASTPtr InitExpr*/)
+void Sema::ActOnVarDecl(std::string name, VarDeclPtr VD/*, std::shared_ptr<Type> declType, ExprASTPtr InitExpr*/)
 {
-	const Expr* Init = VD->getInitExpr();
+	ExprASTPtr Init = VD->getInitExpr();
 	auto declType = VD->getDeclType();
 	CurScope->addDef(std::make_shared<VariableSymbol>(name, CurScope,
 		declType ? declType : VD->getInitExpr()->getType(),
-		declType ? false : true, VD));
+		declType ? true : false, VD));
 
 	// To Do: moses采用的是结构类型等价的结构，需要记录Class Type的子Type
 	if (ClassStack.size() != 0)
@@ -242,14 +240,15 @@ bool Sema::ActOnReturnStmt(std::shared_ptr<Type> type) const
 
 /// \brief Act on declaration reference.
 /// Perferm name lookup and type checking.
-const VarDecl* Sema::ActOnDeclRefExpr(std::string name)
+DeclASTPtr Sema::ActOnDeclRefExpr(std::string name)
 {
-	if (VariableSymbol* sym = dynamic_cast<VariableSymbol*>(CurScope->Resolve(name).get()))
+	if (VariableSymbol* vsym = dynamic_cast<VariableSymbol*>(CurScope->Resolve(name).get()))
 	{
-		// 虽然std::shared_ptr中有使用某种类型指针作为参数的构造函数
-		// 但是该构造函数是explicit标注的，所以需要使用static_cast<>转换一下
-		return sym->getDecl();
-
+		return vsym->getDecl();
+	}
+	else if (ParmDeclSymbol* psym = dynamic_cast<ParmDeclSymbol*>(CurScope->Resolve(name).get()))
+	{
+		return psym->getDecl();
 	}
 	else
 	{
@@ -262,7 +261,7 @@ const VarDecl* Sema::ActOnDeclRefExpr(std::string name)
 /// \brief Act on Call Expr.
 /// Perform name lookup and parm type checking.
 std::shared_ptr<Type> Sema::ActOnCallExpr(std::string name,
-	std::vector<std::shared_ptr<Type>> args, const FunctionDecl* &FD)
+	std::vector<std::shared_ptr<Type>> args, FunctionDeclPtr &FD)
 {
 	std::shared_ptr<Type> ReturnType = nullptr;
 	if (FunctionSymbol* FuncSym =
@@ -353,7 +352,7 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
 					else
 					{
 						sym->setInitial(true);
-						sym->getDecl()->setInitExpr(rhs.get());
+						sym->getDecl()->setInitExpr(rhs);
 					}
 				}
 				else
@@ -402,10 +401,10 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
 	}
 
 	// Note: 为了简化设计，BinaryOperator默认是rvalue
-	auto BE = std::make_unique<BinaryExpr>(lhs->getLocStart(), rhs->getLocEnd(), type, tok.getLexem(),
-		std::move(lhs), std::move(rhs));
+	auto BE = std::make_shared<BinaryExpr>(lhs->getLocStart(), rhs->getLocEnd(), type, 
+		tok.getLexem(), lhs, rhs);
 
-	return std::move(BE);
+	return BE;
 }
 
 /// \brief Perform simple semantic analysis for member access expr.
@@ -446,13 +445,16 @@ ExprASTPtr Sema::ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok)
 		memberType = BaseType->getMemberType(tok.getLexem());
 	}
 
-	return std::make_unique<MemberExpr>(lhs->getLocStart(), lhs->getLocEnd(), memberType,
-		std::move(lhs), tok.getTokenLoc(), tok.getLexem(),
-		memberType->getKind() != TypeKind::USERDEFIED);
+	return std::make_shared<MemberExpr>(lhs->getLocStart(), lhs->getLocEnd(), memberType, lhs, 
+		tok.getTokenLoc(), tok.getLexem(), memberType->getKind() != TypeKind::USERDEFIED);
 }
 
 ExprASTPtr Sema::ActOnDecOrIncExpr(ExprASTPtr rhs)
 {
+	if (!rhs->getType())
+	{
+		return nullptr;
+	}
 	// (1) rhs 必须是int类型
 	if (rhs->getType()->getKind() != TypeKind::INT)
 	{
@@ -465,7 +467,7 @@ ExprASTPtr Sema::ActOnDecOrIncExpr(ExprASTPtr rhs)
 	{
 		errorReport("Operator '++' '--' need operand is lvalue");
 	}
-	return std::move(rhs);
+	return rhs;
 }
 
 ExprASTPtr Sema::ActOnUnaryExclamatoryExpr(ExprASTPtr rhs)
@@ -475,7 +477,7 @@ ExprASTPtr Sema::ActOnUnaryExclamatoryExpr(ExprASTPtr rhs)
 	{
 		errorReport("Operator '!' need operand is bool type.");
 	}
-	return std::move(rhs);
+	return rhs;
 }
 
 /// \brief 用于对单目求负值运算进行检查
@@ -486,7 +488,7 @@ ExprASTPtr Sema::ActOnUnarySubExpr(ExprASTPtr rhs)
 	{
 		errorReport("Operator '-' need operand is int type");
 	}
-	return std::move(rhs);
+	return rhs;
 }
 
 /// \brief 对unpack decl进行语义分析，主要是类型检查
@@ -506,7 +508,7 @@ UnpackDeclPtr Sema::ActOnUnpackDecl(UnpackDeclPtr unpackDecl, std::shared_ptr<Ty
 			return nullptr;
 		}
 
-		return unpackDeclTypeChecking(std::move(unpackDecl), type);
+		return unpackDeclTypeChecking(unpackDecl, type);
 	}
 	errorReport("Left hand expression isn's unpack declaration.");
 	// To Do: 此处直接返回nullptr太过激进，需要更合适的处理方式。
@@ -529,8 +531,7 @@ BinaryPtr Sema::ActOnAnonymousTypeVariableAssignment(ExprASTPtr lhs, ExprASTPtr 
 	{
 		errorReport("Error occured in anonymous type variable assigning.");
 	}
-	return std::make_unique<BinaryExpr>(lhs->getLocStart(), rhs->getLocEnd(),
-		lhs->getType(), "=", std::move(lhs), std::move(rhs));
+	return std::make_shared<BinaryExpr>(lhs->getLocStart(), rhs->getLocEnd(), lhs->getType(), "=", lhs, rhs);
 }
 
 
@@ -583,6 +584,7 @@ std::shared_ptr<FunctionSymbol> Sema::getFunctionStackTop() const
 	if (FunctionStack.size() == 0)
 	{
 		errorReport("Now in top-level scope and we can't get current function symbol.");
+		return nullptr;
 	}
 	return FunctionStack[FunctionStack.size() - 1];
 }
@@ -592,6 +594,7 @@ std::shared_ptr<ClassSymbol> Sema::getClassStackTop() const
 	if (ClassStack.size() == 0)
 	{
 		errorReport("Now in top-level scope and we can't get current class symbol");
+		return nullptr;
 	}
 	return ClassStack[ClassStack.size() - 1];
 }
@@ -673,7 +676,7 @@ UnpackDeclPtr Sema::unpackDeclTypeChecking(UnpackDeclPtr decl, std::shared_ptr<T
 		errorReport("Unpack declaration type error.");
 		return nullptr;
 	}
-	return std::move(decl);
+	return decl;
 }
 /// \brief 用于sema的报错
 void Sema::errorReport(const std::string& msg) const

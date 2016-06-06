@@ -8,9 +8,9 @@ using namespace compiler::ast;
 
 //===-----------------------------------------------------------------------------------===//
 // EvaluatedExprVisitorBase's Impletation
-bool EvaluatedExprVisitorBase::Evaluate(const Expr* expr, EvalInfo& info)
+bool EvaluatedExprVisitorBase::Evaluate(ExprASTPtr expr, EvalInfo& info)
 {
-	if (const BinaryExpr *B = dynamic_cast<const BinaryExpr*>(expr))
+	if (const BinaryExpr *B = dynamic_cast<const BinaryExpr*>(expr.get()))
 	{
 		EvalInfo LhsVal(ValueKind::IntKind, EvaluationMode::EM_ConstantFold);
 		EvalInfo RhsVal(ValueKind::IntKind, EvaluationMode::EM_ConstantFold);
@@ -22,7 +22,7 @@ bool EvaluatedExprVisitorBase::Evaluate(const Expr* expr, EvalInfo& info)
 		return EvalBinaryExpr(B, info, LhsVal, RhsVal);
 	}
 
-	if (const UnaryExpr *U = dynamic_cast<const UnaryExpr*>(expr))
+	if (const UnaryExpr *U = dynamic_cast<const UnaryExpr*>(expr.get()))
 	{
 		EvalInfo subVal(ValueKind::IntKind, EvaluationMode::EM_ConstantFold);
 
@@ -31,29 +31,29 @@ bool EvaluatedExprVisitorBase::Evaluate(const Expr* expr, EvalInfo& info)
 		return EvalUnaryExpr(U, info, subVal);
 	}
 
-	if (const MemberExpr *M = dynamic_cast<const MemberExpr*>(expr))
+	if (const MemberExpr *M = dynamic_cast<const MemberExpr*>(expr.get()))
 	{
 		return EvalMemberExpr(M, info);
 	}
 
-	if (const DeclRefExpr *DRE = dynamic_cast<const DeclRefExpr*>(expr))
+	if (const DeclRefExpr *DRE = dynamic_cast<const DeclRefExpr*>(expr.get()))
 	{
 		return EvalDeclRefExpr(DRE, info);
 	}
 
-	if (const CallExpr* CE = dynamic_cast<const CallExpr*>(expr))
+	if (const CallExpr* CE = dynamic_cast<const CallExpr*>(expr.get()))
 	{
 		return EvalCallExpr(CE, info);
 	}
 
-	if (const BoolLiteral* BL = dynamic_cast<const BoolLiteral*>(expr))
+	if (const BoolLiteral* BL = dynamic_cast<const BoolLiteral*>(expr.get()))
 	{
 		info.evalstatus.kind = ValueKind::BoolKind;
 		info.evalstatus.boolVal = BL->getVal();
 		return true;
 	}
 
-	if (const NumberExpr* Num = dynamic_cast<const NumberExpr*>(expr))
+	if (const NumberExpr* Num = dynamic_cast<const NumberExpr*>(expr.get()))
 	{
 		info.evalstatus.kind = ValueKind::IntKind;
 		info.evalstatus.intVal = Num->getVal();
@@ -73,9 +73,9 @@ void EvaluatedExprVisitorBase::handleEvalCallTail()
 }
 
 /// \brief 判断FunctionDecl能否evaluate，并检查是否超出eval call的层数（当前一层）。
-const StatementAST* EvaluatedExprVisitorBase::handleEvalCallStart(const CallExpr* CE)
+const ReturnStatement* EvaluatedExprVisitorBase::handleEvalCallStart(const CallExpr* CE)
 {
-	const StatementAST* returnStmt = CE->getFuncDecl()->isEvalCandiateAndGetReturnStmt();
+	const ReturnStatement* returnStmt = CE->getFuncDecl()->isEvalCandiateAndGetReturnStmt();
 
 	if (ActiveBookingInfo.size() >= 1)
 	{
@@ -94,35 +94,31 @@ const StatementAST* EvaluatedExprVisitorBase::handleEvalCallStart(const CallExpr
 /// （3） 最终，将得到的结果值作为CallExpr的evaluate得到的constant.
 bool EvaluatedExprVisitorBase::EvalCallExpr(const CallExpr* CE, EvalInfo &info)
 {
-	// Note: 代码结构有问题，每次添加一个ExprEvaluator都要修改代码，需要修改.
-	ValueKind vk;
-	if (typeid(*this).name() == "IntExprEvaluator")
-	{
-		if (CE->getType()->getKind() != TypeKind::INT)
-			return false;
-		vk = ValueKind::IntKind;
-	}
-
-	if (typeid(*this).name() == "BoolExpeEvaluator")
-	{
-		if (CE->getType()->getKind() != TypeKind::BOOL)
-			return false;
-		vk = ValueKind::BoolKind;
-	}
-
 	// (0) 首先判断FunctionDecl能否evaluate，检查是否超出eval call的层数（当前一层）。
-	const StatementAST* returnStmt = handleEvalCallStart(CE);
-
+	const ReturnStatement* returnStmt = handleEvalCallStart(CE);
 	if (!returnStmt)
 	{
 		return false;
 	}
 
+	ValueKind vk;
 	// (1) 对实参值进行evaluate
 	unsigned num = CE->getArgsNum();
 	for (int i = 0; i < num; i++)
 	{
-		const Expr* Arg = CE->getArg(i);
+		ExprASTPtr Arg = CE->getArg(i);
+		if (Arg->getType()->getKind() == TypeKind::INT)
+		{
+			vk = ValueKind::IntKind;
+		}
+		else if (Arg->getType()->getKind() == TypeKind::BOOL)
+		{
+			vk = ValueKind::BoolKind;
+		}
+		else
+		{
+			return false;
+		}
 
 		// 对Arg进行evaluate
 		EvalInfo info(vk, EvaluationMode::EM_ConstantFold);
@@ -137,11 +133,8 @@ bool EvaluatedExprVisitorBase::EvalCallExpr(const CallExpr* CE, EvalInfo &info)
 
 	// (2) 获取CallExpr对应函数体中的ReturnStmt，然后执行运算，得到constant值，然后返回.
 	EvalInfo returnInfo(vk, EvaluationMode::EM_ConstantFold);
-	if (const ReturnStatement* rstmt = dynamic_cast<const ReturnStatement*>(returnStmt))
-	{
-		const Expr* rexpr = rstmt->getSubExpr();
-		Evaluate(rexpr, returnInfo);
-	}
+	ExprASTPtr rexpr = returnStmt->getSubExpr();
+	Evaluate(rexpr, returnInfo);
 
 	// (3) 对EvalCall进行收尾处理
 	handleEvalCallTail();
@@ -154,34 +147,47 @@ bool EvaluatedExprVisitorBase::EvalCallExpr(const CallExpr* CE, EvalInfo &info)
 /// \brief 用于对DeclRefExpr进行evaluate.
 bool EvaluatedExprVisitorBase::EvalDeclRefExpr(const DeclRefExpr* DRE, EvalInfo &info)
 {
-	// Note: 代码结构有问题，每次添加一个ExprEvaluator都要修改代码，需要修改.
-	ValueKind vk;
-	if (typeid(*this).name() == "IntExprEvaluator")
-	{
-		if (DRE->getType()->getKind() != TypeKind::INT)
-			return false;
-		vk = ValueKind::IntKind;
-	}
-
-	if (typeid(*this).name() == "BoolExpeEvaluator")
-	{
-		if (DRE->getType()->getKind() != TypeKind::BOOL)
-			return false;
-		vk = ValueKind::BoolKind;
-	}
-
+	auto decl = DRE->getDecl();
 	// 检查DeclRefExpr引用的变量是否是const，不是const返回不进行constant-evaluator.
-	if (!DRE->getDecl()->isConst())
-		return false;
-	EvalInfo declInfo(vk, EvaluationMode::EM_ConstantFold);
-	if (!Evaluate(DRE->getDecl()->getInitExpr(), declInfo))
+	if (const VarDecl* VD = dynamic_cast<const VarDecl*>(decl.get()))
 	{
-		return false;
+		if (!VD->isConst())
+			return false;
+		EvalInfo declInfo(info.evalstatus.kind, EvaluationMode::EM_ConstantFold);
+		if (!Evaluate(VD->getInitExpr(), declInfo))
+		{
+			return false;
+		}
+		info = declInfo;
+		return true;
 	}
-	info = declInfo;
-	return true;
+	// 如果是ParmDecl，则检查ParmDecl是否是已经被推导出来了
+	else if (const ParameterDecl* PD = dynamic_cast<const ParameterDecl*>(decl.get()))
+	{
+		// 检查当前的parmdecl对应的实参，是否已经evaluate出来
+		// 例如：
+		// func add(lhs : int, rhs : int) -> int 
+		// {
+		//		return lhs + rhs;
+		// }
+		// add(10, 20);      <----------------evaluated
+		// 我们已经得到了 <lhs, 10> <rhs, 20>，所以evaluate "return lhs + rhs;"
+		auto bookkeeping = ActiveBookingInfo.back();
+		auto num = bookkeeping.second;
+		auto stackSize = ActiveStack.size();
+		// ActiveStack 尾部开始检查是否存在parm，不存在，则直接返回。
+		// <start, Evalinfo> <lhs, EvalInfo> <rhs, EvalInfo>
+		for (int i = stackSize - 1; i >= 0; i--)
+		{
+			if (ActiveStack[i].first == PD->getParmName())
+			{
+				info = ActiveStack[i].second;
+				return true;
+			}
+		}
+	}	
+	return false;;
 }
-
 
 //===-----------------------------------------------------------------------------------===//
 // IntExprEvaluator's Impletation
@@ -252,8 +258,8 @@ bool IntExprEvaluator::EvalMemberExpr(const MemberExpr* ME, EvalInfo &info)
 }
 
 //===-----------------------------------------------------------------------------------===//
-// BoolExpeEvaluator's Impletation
-bool BoolExpeEvaluator::EvalBinaryExpr(const BinaryExpr* B, EvalInfo &info,
+// BoolExprEvaluator's Impletation
+bool BoolExprEvaluator::EvalBinaryExpr(const BinaryExpr* B, EvalInfo &info,
 	EvalInfo &lhs, EvalInfo &rhs)
 {
 	std::string OpName = B->getOpcode();
@@ -302,14 +308,14 @@ bool BoolExpeEvaluator::EvalBinaryExpr(const BinaryExpr* B, EvalInfo &info,
 }
 
 /// \brief 对于bool类型来说，单目运算符只有!
-bool BoolExpeEvaluator::EvalUnaryExpr(const UnaryExpr* U, EvalInfo &info, EvalInfo &subVal)
+bool BoolExprEvaluator::EvalUnaryExpr(const UnaryExpr* U, EvalInfo &info, EvalInfo &subVal)
 {
 	info.evalstatus.boolVal = !subVal.evalstatus.boolVal;
 	return false;
 }
 
 // To Do: 过于复杂，咱不实现
-bool BoolExpeEvaluator::EvalMemberExpr(const MemberExpr* ME, EvalInfo &info)
+bool BoolExprEvaluator::EvalMemberExpr(const MemberExpr* ME, EvalInfo &info)
 {
 	return false;
 }

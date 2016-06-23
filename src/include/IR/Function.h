@@ -19,8 +19,6 @@ namespace compiler
 {
 	namespace IR
 	{
-		class FunctionType;
-
 		class Function : public GlobalValue
 		{
 		private:
@@ -34,14 +32,14 @@ namespace compiler
 			void setNext(FuncPtr N) { Next = N; }
 			void setPrev(FuncPtr N) { Prev = N; }
 		public:
-			Function(FuncTyPtr Ty, const std::string &N = "");
+			Function(FuncTypePtr Ty, const std::string &N = "");
 			~Function();
 
 			// Specialize setName to handle symbol table majik...
 			virtual void setName(const std::string &name, SymTabPtr ST = nullptr);
 
 			TyPtr getReturnType() const;			 // Return the type of the ret val
-			FuncTyPtr getFunctionType() const; // Return the FunctionType for me
+			FuncTypePtr getFunctionType() const; // Return the FunctionType for me
 
 			/// getIntrinsicID - This method returns the ID number of the specified function.
 			/// This value is always defined to be zero to allow easy checking for whether

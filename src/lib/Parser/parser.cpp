@@ -54,7 +54,7 @@ static Level getBinOpPrecedence(TokenValue Kind)
 /// Get the first token and start parse	tokens.
 /// Note: 虽然moses采用了类型推导，但是moses仍然是静态类型语言
 /// 在moses中，每个变量的类型在编译期间都是可以唯一确定的
-Parser::Parser(Scanner& scan, Sema& sema) : scan(scan), Actions(sema)
+Parser::Parser(Scanner& scan, Sema& sema, ASTContext& Ctx) : scan(scan), Actions(sema), Ctx(Ctx)
 {
 	scan.getNextToken();
 	Actions.getScannerPointer(&(this->scan));
@@ -218,7 +218,9 @@ ExprASTPtr Parser::ParseNumberExpr()
 	// Get the number value.
 	double numVal = strtod(curTok.getLexem().c_str(), nullptr);
 	auto locEnd = scan.getToken().getTokenLoc();
-	return std::make_shared<NumberExpr>(locStart, locEnd, numVal);
+	auto NumE = std::make_shared<NumberExpr>(locStart, locEnd, numVal);
+	NumE->setIntType(Ctx.Int);
+	return NumE;
 }
 
 /// \brief ParseCharLiteral - 这个函数用于解析char literal.
@@ -232,7 +234,9 @@ ExprASTPtr Parser::ParseCharLiteral()
 	auto locStart = curTok.getTokenLoc();
 	// Get the number value.
 	auto locEnd = scan.getToken().getTokenLoc();
-	return std::make_shared<CharExpr>(locStart, locEnd, curTok.getLexem());
+	auto CharE = std::make_shared<CharExpr>(locStart, locEnd, curTok.getLexem());
+	CharE->setCharType(Ctx.Int);
+	return CharE;
 }
 
 
@@ -302,9 +306,10 @@ ExprASTPtr Parser::ParseIdentifierExpr()
 	{
 		// Semantic analysis.(Identifier只能是VariableSymbol)
 		// 在解析DeclRefExpr时，获取InitExpr.
-		DeclASTPtr D = Actions.ActOnDeclRefExpr(IdName);
+		VarDeclPtr var = Actions.ActOnDeclRefExpr(IdName);
 		auto locEnd = scan.getToken().getTokenLoc();
-		return std::make_shared<DeclRefExpr>(locStart, locEnd, D ? D->getDeclType() : nullptr, IdName, D);
+		return std::make_shared<DeclRefExpr>(locStart, locEnd, 
+			var ? var->getDeclType() : nullptr, IdName, var);
 	}
 }
 
@@ -435,7 +440,8 @@ StmtASTPtr Parser::ParseWhileStatement()
 	auto oldContext = CurrentContext;
 	CurrentContext = ContextKind::While;
 
-
+	// consume 'while'.
+	scan.getNextToken();
 	auto condition = ParsePrimaryExpr();
 
 	if (!condition || !(condition->getType()))
@@ -564,7 +570,9 @@ ExprASTPtr Parser::ParseBoolLiteral(bool isTrue)
 	auto locStart = scan.getToken().getTokenLoc();
 	// consume bool literal token
 	scan.getNextToken();
-	return std::make_shared<BoolLiteral>(locStart, scan.getToken().getTokenLoc(), isTrue);
+	auto BoolL = std::make_shared<BoolLiteral>(locStart, scan.getToken().getTokenLoc(), isTrue);
+	BoolL->setBoolType(Ctx.Bool);
+	return BoolL;
 }
 
 /// \brief ParseExpression - Parse the expression.
@@ -1053,11 +1061,11 @@ DeclASTPtr Parser::ParseVarDecl()
 		// check whether the built-in type.
 		if (validateToken(TokenValue::KEYWORD_int))
 		{
-			DeclType = std::make_shared<BuiltinType>(TypeKind::INT, isConst);
+			DeclType = Ctx.Int;
 		}
 		else if (validateToken(TokenValue::KEYWORD_bool))
 		{
-			DeclType = std::make_shared<BuiltinType>(TypeKind::BOOL, isConst);
+			DeclType = Ctx.Bool;
 		}
 		else if (validateToken(TokenValue::IDENTIFIER, false))
 		{
@@ -1070,6 +1078,7 @@ DeclASTPtr Parser::ParseVarDecl()
 		else if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false))
 		{
 			DeclType = ParseAnony();
+			scan.getNextToken();
 		}
 		else
 		{
@@ -1089,13 +1098,16 @@ DeclASTPtr Parser::ParseVarDecl()
 		{
 			// Class initial expression.
 			InitExpr = ParseAnonymousInitExpr();
+			DeclType = InitExpr->getType();
 		}
 		else
 		{
 			// Normal initial expression.
 			InitExpr = ParseExpression();
+			DeclType = InitExpr->getType();
 		}
-		DeclType = InitExpr->getType();
+		// 由于InitExpr是右值，默认const类型，在对左侧类型进行推导时，例如："lhs = rhs + 10;"，应该丢掉const属性
+		// DeclType = Type::const_remove(InitExpr->getType());
 	}
 	else
 	{
@@ -1256,15 +1268,15 @@ StmtASTPtr Parser::ParseFunctionDefinition()
 	switch (scan.getToken().getKind())
 	{
 	case TokenValue::KEYWORD_int:
-		returnType = std::make_shared<BuiltinType>(TypeKind::INT, false);
+		returnType = Ctx.Int;
 		scan.getNextToken();
 		break;
 	case TokenValue::KEYWORD_bool:
-		returnType = std::make_shared<BuiltinType>(TypeKind::BOOL, false);
+		returnType = Ctx.Bool;
 		scan.getNextToken();
 		break;
 	case TokenValue::KEYWORD_void:
-		returnType = std::make_shared<BuiltinType>(TypeKind::VOID, false);
+		returnType = Ctx.Void;
 		scan.getNextToken();
 		break;
 	case TokenValue::IDENTIFIER:
@@ -1273,6 +1285,7 @@ StmtASTPtr Parser::ParseFunctionDefinition()
 		break;
 	case TokenValue::PUNCTUATOR_Left_Brace:
 		returnType = ParseAnony();
+		scan.getNextToken();
 		break;
 	default:
 		errorReport("Error occured. " + scan.getToken().getLexem() + " isn't type.");
@@ -1366,9 +1379,9 @@ std::vector<ParmDeclPtr> Parser::ParseParameterList()
 
 /// \brief ParseParmDecl - Parse parameter declaration.
 /// parm decl's Grammar as below.
-/// para-declaration -> identifier type-annotation
-/// type-annotation -> : type
-/// type -> int | bool
+/// para-declaration -> const ? identifier type-annotation
+/// type-annotation -> “:” type
+/// type -> “int” | “bool” | identifier | anonymous
 /// To Do: handle const keyword.
 /// Note: 函数定义参照swift，parm声明时不需要'var'关键字.
 ParmDeclPtr Parser::ParseParmDecl()
@@ -1399,18 +1412,18 @@ ParmDeclPtr Parser::ParseParmDecl()
 	// Handle decl type.
 	if (validateToken(TokenValue::KEYWORD_int))
 	{
-		DeclType = std::make_shared<BuiltinType>(TypeKind::INT, isConst);
+		DeclType = Ctx.Int;
 	}
 	else if (validateToken(TokenValue::KEYWORD_bool))
 	{
-		DeclType = std::make_shared<BuiltinType>(TypeKind::BOOL, isConst);
+		DeclType = Ctx.Bool;
 	}
 	else if (validateToken(TokenValue::IDENTIFIER, false))
 	{
 		// 用户自定义类型形参
 		// Type checking.
 		DeclType = Actions.ActOnParmDeclUserDefinedType(scan.getToken());
-		DeclType->setConst(isConst);
+		// DeclType->setConst(isConst);
 		// consume user defined type(identifier).
 		scan.getNextToken();
 	}
@@ -1418,13 +1431,14 @@ ParmDeclPtr Parser::ParseParmDecl()
 	{
 		// 匿名类型形参
 		DeclType = ParseAnony();
+		scan.getNextToken();
 	}
 	else
 	{
 		errorReport("variable declaration error.");
 	}
 
-	auto parm = std::make_shared<ParameterDecl>(locStart, scan.getToken().getTokenLoc(), name, DeclType);
+	auto parm = std::make_shared<ParameterDecl>(locStart, scan.getToken().getTokenLoc(), name, isConst, DeclType);
 	// simple semantic analysis.
 	Actions.ActOnParmDecl(name, parm);
 
@@ -1439,8 +1453,6 @@ ParmDeclPtr Parser::ParseParmDecl()
 /// class-member -> declaration-statement class-member | 
 ///			function-definition class-member | EPSILON
 /// ---------------------------------------------------------
-/// Note: 类似于ClassDecl以及VarDecl等都是不会真正产生code的
-/// 最主要的作用是填充符号表信息
 DeclASTPtr Parser::ParseClassDecl()
 {
 	auto locStart = scan.getToken().getTokenLoc();
@@ -1508,13 +1520,19 @@ DeclASTPtr Parser::ParseClassDecl()
 		syntaxErrorRecovery(ParseContext::context::ClassBody);
 	}
 
-	// Pop Class Stack.
+	// (1) get Class Stack Top.
+	auto ClassSym = Actions.getClassStackTop();
+
+	// (2) Pop Class Stack.
 	Actions.PopClassStack();
+
 	// Pop class scope.
 	Actions.PopScope();
 	CurrentContext = ContextKind::TopLevel;
-	return std::make_shared<ClassDecl>(locStart, scan.getToken().getTokenLoc(), className,
+	auto ClassD = std::make_shared<ClassDecl>(locStart, scan.getToken().getTokenLoc(), className,
 		std::make_shared<CompoundStmt>(classBodyStart, scan.getToken().getTokenLoc(), classBody));
+	Ctx.UDTypes.insert(std::dynamic_pointer_cast<UserDefinedType>(ClassSym->getType()));
+	return ClassD;
 }
 
 /// \brief 解析匿名类型
@@ -1532,10 +1550,10 @@ std::shared_ptr<AnonymousType> Parser::ParseAnony()
 		switch (scan.getToken().getKind())
 		{
 		case TokenValue::KEYWORD_int:
-			types.push_back(std::make_shared<BuiltinType>(TypeKind::INT, true));
+			types.push_back(Ctx.Int);
 			break;
 		case TokenValue::KEYWORD_bool:
-			types.push_back(std::make_shared<BuiltinType>(TypeKind::BOOL, true));
+			types.push_back(Ctx.Bool);
 			break;
 		case TokenValue::PUNCTUATOR_Left_Brace:
 			types.push_back(ParseAnony());
@@ -1544,7 +1562,7 @@ std::shared_ptr<AnonymousType> Parser::ParseAnony()
 			errorReport("Parameter declaration anonymous type error.");
 		}
 		scan.getNextToken();
-		if (validateToken(TokenValue::PUNCTUATOR_Right_Brace))
+		if (validateToken(TokenValue::PUNCTUATOR_Right_Brace, false))
 		{
 			break;
 		}
@@ -1554,7 +1572,9 @@ std::shared_ptr<AnonymousType> Parser::ParseAnony()
 			errorReport("Expected ','.");
 		}
 	}
-	return std::make_shared<AnonymousType>(types);
+	auto anony = std::make_shared<AnonymousType>(types);
+	Ctx.AnonTypes.insert(anony);
+	return anony;
 }
 
 
@@ -1601,6 +1621,7 @@ bool Parser::validateToken(TokenValue value, bool advanceToNextToken) const
 
 void Parser::errorReport(const std::string& msg) const
 {
+	Ctx.isParseOrSemaSuccess = false;
 	errorParser(scan.getLastToken().getTokenLoc().toString() + " --- " + msg);
 }
 

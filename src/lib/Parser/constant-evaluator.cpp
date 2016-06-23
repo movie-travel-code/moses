@@ -61,7 +61,7 @@ bool ConstantEvaluator::FastEvaluateAsRValue(ExprASTPtr Exp, EvalInfo &Result)
 {
 	if (Result.evalstatus.kind == EvalStatus::ValueKind::IntKind)
 	{
-		if (const NumberExpr* Num = dynamic_cast<const NumberExpr*>(Exp.get()))
+		if (std::shared_ptr<NumberExpr> Num = std::dynamic_pointer_cast<NumberExpr>(Exp))
 		{
 			Result.evalstatus.intVal = Num->getVal();
 			Result.evalstatus.result = EvalStatus::Result::Constant;
@@ -71,7 +71,7 @@ bool ConstantEvaluator::FastEvaluateAsRValue(ExprASTPtr Exp, EvalInfo &Result)
 
 	if (Result.evalstatus.kind == EvalStatus::ValueKind::BoolKind)
 	{
-		if (const BoolLiteral* BL = dynamic_cast<const BoolLiteral*>(Exp.get()))
+		if (std::shared_ptr<BoolLiteral> BL = std::dynamic_pointer_cast<BoolLiteral>(Exp))
 		{
 			Result.evalstatus.boolVal = BL->getVal();
 			Result.evalstatus.result = EvalStatus::Result::Constant;

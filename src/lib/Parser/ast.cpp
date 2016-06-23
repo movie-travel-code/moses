@@ -30,7 +30,7 @@ StmtASTPtr CompoundStmt::operator[](unsigned index) const
 /// \brief 主要进行类型的检查和设置
 /// 例如： var {num, {lhs, rhs}} 和 type
 /// To Do: 代码设计有问题，指针暴露
-bool UnpackDecl::TypeCheckingAndTypeSetting(AnonymousType* type)
+bool UnpackDecl::TypeCheckingAndTypeSetting(AnonTyPtr type)
 {
 	unsigned size = decls.size();
 	// (1) 检查unpack decl的size与Anonymous type的子type是否相同
@@ -44,9 +44,9 @@ bool UnpackDecl::TypeCheckingAndTypeSetting(AnonymousType* type)
 	// 使用同一个原生指针初始化两个智能指针，有可能会出现悬空指针。
 	for (int index = 0; index < size; index++)
 	{
-		if (UnpackDecl* unpackd = dynamic_cast<UnpackDecl*>(decls[index].get()))
+		if (UnpackDeclPtr unpackd = std::dynamic_pointer_cast<UnpackDecl>(decls[index]))
 		{
-			if (AnonymousType* anonyt = dynamic_cast<AnonymousType*>(type->getSubType(index).get()))
+			if (AnonTyPtr anonyt = std::dynamic_pointer_cast<AnonymousType>(type->getSubType(index)))
 			{
 				return unpackd->TypeCheckingAndTypeSetting(anonyt);
 			}
@@ -57,7 +57,7 @@ bool UnpackDecl::TypeCheckingAndTypeSetting(AnonymousType* type)
 		}
 		else
 		{
-			if (AnonymousType* anonyt = dynamic_cast<AnonymousType*>(type->getSubType(index).get()))
+			if (AnonTyPtr anonyt = std::dynamic_pointer_cast<AnonymousType>(type->getSubType(index)))
 			{
 				return false;
 			}
@@ -70,12 +70,12 @@ bool UnpackDecl::TypeCheckingAndTypeSetting(AnonymousType* type)
 std::vector<std::string> UnpackDecl::operator[](unsigned index) const
 {
 	std::vector<std::string> names;
-	if (UnpackDecl* unpackd = dynamic_cast<UnpackDecl*>(decls[index].get()))
+	if (UnpackDeclPtr unpackd = std::dynamic_pointer_cast<UnpackDecl>(decls[index]))
 	{
 		unpackd->getDeclNames(names);
 	}
 
-	if (VarDecl* var = dynamic_cast<VarDecl*>(decls[index].get()))
+	if (VarDeclPtr var = std::dynamic_pointer_cast<VarDecl>(decls[index]))
 	{
 		names.push_back(var->getName());
 	}
@@ -88,12 +88,12 @@ void UnpackDecl::getDeclNames(std::vector<std::string>& names) const
 	unsigned size = decls.size();
 	for (int index = 0; index < size; index++)
 	{
-		if (UnpackDecl* unpackd = dynamic_cast<UnpackDecl*>(decls[index].get()))
+		if (UnpackDeclPtr unpackd = std::dynamic_pointer_cast<UnpackDecl>(decls[index]))
 		{
 			unpackd->getDeclNames(names);
 		}
 
-		if (VarDecl* var = dynamic_cast<VarDecl*>(decls[index].get()))
+		if (VarDeclPtr var = std::dynamic_pointer_cast<VarDecl>(decls[index]))
 		{
 			names.push_back(var->getName());
 		}
@@ -107,7 +107,7 @@ void UnpackDecl::setCorrespondingType(std::shared_ptr<Type> type)
 
 //===--------------------------FunctionDecl--------------------------===//
 //
-const ReturnStatement* FunctionDecl::isEvalCandiateAndGetReturnStmt() const
+ReturnStmtPtr FunctionDecl::isEvalCandiateAndGetReturnStmt() const
 {
 	if (returnType->getKind() != TypeKind::INT &&
 		returnType->getKind() != TypeKind::BOOL)
@@ -115,12 +115,12 @@ const ReturnStatement* FunctionDecl::isEvalCandiateAndGetReturnStmt() const
 		return nullptr;
 	}
 	// (1) 函数体是否只有一条 return stmt
-	if (const CompoundStmt* body = dynamic_cast<const CompoundStmt*>(funcBody.get()))
+	if (CompoundStmtPtr body = std::dynamic_pointer_cast<CompoundStmt>(funcBody))
 	{
 		if (body->getSize() != 1)
 			return false;
-		if (const ReturnStatement* returnStmt =
-			dynamic_cast<const ReturnStatement*>(body->getSubStmt(0).get()))
+		if (ReturnStmtPtr returnStmt =
+			std::dynamic_pointer_cast<ReturnStatement>(body->getSubStmt(0)))
 		{
 			return returnStmt;
 		}

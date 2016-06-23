@@ -49,9 +49,10 @@
 #define SEMA_INCLUDE
 #include <string>
 #include <memory>
-#include "Type.h"
+#include "ASTContext.h"
+#include "../Support/Hasing.h"
 #include "../Lexer/scanner.h"
-#include "ast.h"
+#include "../Support/SymbolTable.h"
 
 namespace compiler
 {
@@ -59,230 +60,8 @@ namespace compiler
 	{
 		using namespace compiler::ast;
 		using namespace compiler::lex;
-		class Symbol;
-		class VariableSymbol;
-		class ClassSymbol;
-		class FunctionSymbol;
-
-		/// Scope - A scope is a "transient data structure" that is used while parsing the 
-		/// program. It assits with resolving identifiers to the appropriate declaration.
-		class Scope
-		{
-		public:
-			// Scope Kind.
-			enum ScopeKind
-			{
-				SK_Function,
-				SK_Block,
-				SK_While,
-				SK_Branch,
-				SK_Class,
-				SK_TopLevel
-			};
-		private:
-
-			// A symbol table is a data structure that tracks the current bindings of identifiers
-			std::vector<std::shared_ptr<Symbol>> SymbolTable;
-
-			// For function and class.
-			std::string ScopeName;
-
-			/// The parent scope for this scope. This is null for the translation-unit scope.
-			std::shared_ptr<Scope> Parent;
-
-			/// Flags - This contains a set of ScopeFlags, which indicates how the scope 
-			/// interrelates with other control flow statements.
-			ScopeKind Flags;
-
-			/// Depth - This is the depth of this scope. The translation-unit has depth 0.
-			unsigned short Depth;
-
-			/// BelongTo - Only for ClassScope.
-			/// For Userdefined Type(Class), we need to add subType for class type, so we
-			/// using BelongTo to get ClassSymbol for CurScope.
-			std::shared_ptr<ClassSymbol> BelongTo;			
-		public:
-			Scope(std::string name, unsigned depth, std::shared_ptr<Scope> paren, ScopeKind kind) :
-				ScopeName(name), Parent(paren), Depth(depth), Flags(kind) {}
-
-			/// getFlags - Return the flags for this scope.
-			unsigned getFlags() const { return Flags; }
-
-			/// \brief Add symbol.
-			void addDef(std::shared_ptr<Symbol> sym) { SymbolTable.push_back(sym); };
-
-			/// \brief  Perform name lookup on the given name, classifying it based on 
-			/// the results of name look up and following token.
-			/// This routine is used by the parser to resolve identifiers and help direct
-			/// parsing. When the identifier cannot be found, this routine will attempt 
-			/// to correct the typo and classify based on the resulting name.
-			std::shared_ptr<Symbol> Resolve(std::string name) const;
-			
-			/// \brief Perform name lookup in current scope.
-			// std::shared_ptr<Symbol> LookupName(std::string name);
-			std::shared_ptr<Symbol> CheckWhetherInCurScope(std::string name);
-
-			bool isAnonymous() const { return ScopeName == ""; }	
-
-			std::string getScopeName() const { return ScopeName; }
-
-			void setFlags(ScopeKind F) { Flags = F; }
-
-			unsigned short getDepth() const { return Depth; }
-
-			std::shared_ptr<Scope> getParent() const { return Parent; }
-
-			std::shared_ptr<ClassSymbol> getTheSymbolBelongTo() const { return BelongTo; }
-
-			void setBelongToSymbolForClassScope(std::shared_ptr<ClassSymbol> belongto) 
-			{
-				BelongTo = belongto;
-			}
-		};
-
-		/// \brief symbol - This class is the base class for the identifiers.
-		class Symbol
-		{
-		protected:
-			std::string Lexem;
-			std::shared_ptr<Scope> BelongTo;
-			
-			/// \brief 对于Variable来说，type表示变量声明类型
-			/// 对于ClassSymbol来说，type表示Class对应的type.
-			/// 对于FunctionSymbol来说，type表示Function的返回类型.
-			std::shared_ptr<Type> type;
-		public:
-			Symbol(std::string lexem, std::shared_ptr<Scope> belongTo, std::shared_ptr<Type> type) :
-				Lexem(lexem), BelongTo(belongTo), type(type) {}
-
-			std::shared_ptr<Type> getType() const { return type; }
-
-			virtual std::string getLexem() { return Lexem; }
-
-			virtual ~Symbol() {};
-		};
-
-		/// \brief VariableSymbol - This class represent variable, 
-		/// like 'var a = 10;' or 'var b = true', the 'a' and 'b'.
-		class VariableSymbol final: public Symbol
-		{
-			bool IsInitial;
-			VarDeclPtr VD;
-		public:
-			VariableSymbol(std::string lexem, std::shared_ptr<Scope> beongTo, 
-				std::shared_ptr<Type> type, bool initial, VarDeclPtr vd) :
-				Symbol(lexem, beongTo, type), IsInitial(initial), VD(vd)
-			{}
-
-			ExprASTPtr getInitExpr() const { return VD->getInitExpr(); }
-			bool isConstVarDecl() const { return VD->getDeclType()->isConst(); }
-			VarDeclPtr getDecl() const { return VD; }
-			void setInitial(bool initial) { IsInitial = initial; }
-			bool isInitial() const { return IsInitial; }
-		};
-
-		/// \brief ParmDeclSymbol - This class represent parm decl.
-		class ParmDeclSymbol final : public Symbol
-		{
-			ParmDeclPtr PD;
-		public:
-			ParmDeclSymbol(std::string lexem, std::shared_ptr<Scope> beongTo,
-				std::shared_ptr<Type> type, bool initial, ParmDeclPtr pd) :
-				Symbol(lexem, beongTo, type), PD(pd)
-			{}
-
-			ParmDeclPtr getDecl() const { return PD; }
-		};
-
-		class FunctionSymbol final : public Symbol
-		{
-		private:
-			std::shared_ptr<Scope> scope;
-			std::vector<std::shared_ptr<ParmDeclSymbol>> parms;
-			FunctionDeclPtr FD;
-		public:
-			FunctionSymbol(std::string name, std::shared_ptr<Type> type, std::shared_ptr<Scope> belongTo, 
-				std::shared_ptr<Scope> scope) : 
-				Symbol(name, belongTo, type), scope(scope) {}
-			std::shared_ptr<Type> getReturnType() { return type; }
-			void setReturnType(std::shared_ptr<Type> type) { this->type = type; }
-
-			void addParmVariableSymbol(std::shared_ptr<ParmDeclSymbol> parm)
-			{
-				parms.push_back(parm);
-			}
-
-			std::shared_ptr<ParmDeclSymbol> operator[] (int index) const
-			{
-				if (index >= parms.size())
-					errorSema("Function parm index out of range");
-				return parms[index];
-			}
-
-			void setFunctionDeclPointer(FunctionDeclPtr fd)
-			{
-				FD = fd;
-			}
-
-			unsigned getParmNum() { return  parms.size(); }
-
-			FunctionDeclPtr getFuncDeclPointer() const { return FD; }
-		};
-
-		/// \brief ClassSymbol - This class represent class decl symbol.
-		/// like 'Class A {}'
-		class ClassSymbol : public Symbol
-		{
-		private:
-			std::shared_ptr<Scope> scope;
-		public:
-			ClassSymbol(std::string name, std::shared_ptr<Scope> belongTo, 
-				std::shared_ptr<Scope> scope) : 
-				Symbol(name, belongTo, nullptr), scope(scope)
-			{
-				type = std::make_shared<UserDefinedType>(TypeKind::USERDEFIED, false, name);
-			}
-			
-			/// ---------------------nonsense for coding----------------------------
-			/// moses采用结构类型等价，所以需要在pase的过程中，不断收集UserDefined所含有
-			/// 的SubType.
-			/// ---------------------nonsense for coding----------------------------
-			void addSubType(std::shared_ptr<Type> subType, std::string name) 
-			{
-				// Note: 这段代码没有对转换是否成功进行判断，存在问题！
-				// 但是由于type本来就是UserDefinedType的，初始化后就不为空
-				// 同时外部接触不到type，不可能将其修改为nullptr，所以暂且算是安全的用法。
-				(dynamic_cast<UserDefinedType*>(type.get()))->addSubType(subType, name); 
-			}			
-		};
-
-		/// \brief Represents the results of name lookup.
-		/// An instance of the LookupResult class capture the results of a
-		/// single name lookup, which can return no result(nothing found),
-		/// a single declaration. Use the getKind() method to determine which
-		/// of these results occurred for a given lookup.
-		///
-		/// The result maybe VarDecl, FunctionDec, ClassDecl or ParmDecl.
-		class LookupResult
-		{
-		public:
-			/// \brief The king of entity found by name lookup.
-			enum LookupKind
-			{
-				/// \brief No entity found met the criteria.
-				NotFound = 0,
-				Found
-			};
-		private:
-			DeclStatement* resultDecl;
-		public:
-			LookupResult(DeclStatement* DS = nullptr) {}
-
-			LookupKind getKind() const;
-			/// \brief Determine whether the lookup found something.
-			operator bool() const { return getKind() != NotFound; }		
-			DeclStatement* getDeclStatement() const { return resultDecl; }
-		};
+		using namespace compiler::Hashing;
+		using namespace compiler::Support;
 
 		/// sema - This implements sematic analysis and AST building for moses.
 		/// ------------------------nonsense for coding------------------------
@@ -294,6 +73,7 @@ namespace compiler
 			Sema(const Sema&) = delete;
 			void operator=(const Sema&) = delete;
 			parse::Scanner* scan;
+			ASTContext &Ctx;
 		private:
 			std::shared_ptr<Scope> CurScope;
 
@@ -325,7 +105,7 @@ namespace compiler
 			// 其中“一个”表示处于Top-Level的函数定义，而“零个”表示处于Top-Level
 			std::vector<std::shared_ptr<FunctionSymbol>> FunctionStack;
 		public:
-			Sema() {}
+			Sema(ASTContext &Ctx) : Ctx(Ctx) {}
 		public:
 			// The functions for handling scope.
 			// Shit Code!
@@ -399,7 +179,7 @@ namespace compiler
 
 			ExprASTPtr ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs);
 
-			DeclASTPtr ActOnDeclRefExpr(std::string name);
+			VarDeclPtr ActOnDeclRefExpr(std::string name);
 
 			ExprASTPtr ActOnStringLiteral();
 
@@ -432,6 +212,8 @@ namespace compiler
 			// To Do: implement RAII
 			class FunctionScopeRAII
 			{};
+
+			std::shared_ptr<Scope> getScopeStackBottom() const;
 		private:
 			std::shared_ptr<Scope> getScopeStackTop() const;
 

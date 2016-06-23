@@ -174,26 +174,26 @@ namespace compiler
 		public:
 			virtual bool Evaluate(ExprASTPtr expr, EvalInfo& info);
 
-			virtual bool EvalBinaryExpr(const BinaryExpr* B, EvalInfo &info, EvalInfo &lhs, 
+			virtual bool EvalBinaryExpr(BinaryPtr B, EvalInfo &info, EvalInfo &lhs, 
 				EvalInfo &rhs) = 0;
 
 			/// \brief 该函数用于在EvalCall()的结尾处理bookkeeping info
 			virtual void handleEvalCallTail();
 
 			/// \brief 该函数用于在EvalCall之前进行检查
-			virtual const ReturnStatement* handleEvalCallStart(const CallExpr* CE);
+			virtual ReturnStmtPtr handleEvalCallStart(CallExprPtr CE);
 
-			virtual bool EvalUnaryExpr(const UnaryExpr* U, EvalInfo &info, EvalInfo &subVal) = 0;
+			virtual bool EvalUnaryExpr(UnaryPtr U, EvalInfo &info, EvalInfo &subVal) = 0;
 
 			// virtual bool EvalAnonymousInitExpr(const AnonymousInitExpr* Exp, EvalInfo &info) = 0;
-			virtual bool EvalMemberExpr(const MemberExpr* ME, EvalInfo &info) = 0;
+			virtual bool EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) = 0;
 
 			/// \brief 对于CallExpr，要求被调用函数只能有一个return语句.
-			virtual bool EvalCallExpr(const CallExpr* CE, EvalInfo &info);
+			virtual bool EvalCallExpr(CallExprPtr CE, EvalInfo &info);
 
 			/// \brief 暂时moses的constant-evaluator机制还不是很强大，只支持const变量的eval。
 			/// 不会沿途收集对num的赋值信息。
-			virtual bool EvalDeclRefExpr(const DeclRefExpr* DRE, EvalInfo &info);
+			virtual bool EvalDeclRefExpr(DeclRefExprPtr DRE, EvalInfo &info);
 		};
 
 		/// \biref 遍历Expression用于Int值的evaluate.
@@ -202,14 +202,14 @@ namespace compiler
 		public:
 			/// \brief 递归遍历 LHS 和 RHS，执行运算符对应的操作。
 			/// 基本的语义分析已经完成（例如TypeChecking等），不会出现类型错误
-			bool EvalBinaryExpr(const BinaryExpr* B, EvalInfo &info, EvalInfo &lhs, EvalInfo &rhs) override;
+			bool EvalBinaryExpr(BinaryPtr B, EvalInfo &info, EvalInfo &lhs, EvalInfo &rhs) override;
 
 			/// \brief 用于Evaluate Unary Expression.
 			/// 例如： -num.
-			bool EvalUnaryExpr(const UnaryExpr* U, EvalInfo &info, EvalInfo &subVal) override;
+			bool EvalUnaryExpr(UnaryPtr U, EvalInfo &info, EvalInfo &subVal) override;
 
 			/// \brief 如果MemberExpr中的成员声明时const类型，则可以直接使用相应的值作为constant值.
-			bool EvalMemberExpr(const MemberExpr* ME, EvalInfo &info) override;
+			bool EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) override;
 		};
 
 		/// \brief 遍历Expression用于Bool值的evaluate.
@@ -218,13 +218,13 @@ namespace compiler
 		private:
 		public:
 			/// \brief 对于boolean类型的推导，对应的BinaryExpr只能是逻辑运算符。
-			bool EvalBinaryExpr(const BinaryExpr* B, EvalInfo &info, EvalInfo &lhs, EvalInfo &rhs) override;
+			bool EvalBinaryExpr(BinaryPtr B, EvalInfo &info, EvalInfo &lhs, EvalInfo &rhs) override;
 
 			/// \brief 对于boolean类型来说，单目运算符只有!
-			bool EvalUnaryExpr(const UnaryExpr* U, EvalInfo &info, EvalInfo &subVal) override;
+			bool EvalUnaryExpr(UnaryPtr U, EvalInfo &info, EvalInfo &subVal) override;
 
 			/// \brief 如果MemberExpr中的成员声明时const类型，则可以直接使用相应的值作为constant值.
-			bool EvalMemberExpr(const MemberExpr* ME, EvalInfo &info) override;
+			bool EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) override;
 		};
 	}
 }

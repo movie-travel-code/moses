@@ -6,7 +6,10 @@
 #include "../../include/Parser/Type.h"
 using namespace compiler::ast;
 using namespace compiler::tok;
+typedef std::shared_ptr<Type> TyPtr;
 
+//===---------------------------------------------------------------------===//
+// Implements Type class.
 TypeKind Type::checkTypeKind(TokenValue kind)
 {
 	switch (kind)
@@ -20,55 +23,31 @@ TypeKind Type::checkTypeKind(TokenValue kind)
 	}
 }
 
-std::string BuiltinType::getTypeFingerPrint() const
+// remove const attribute.
+TyPtr Type::const_remove() const 
 {
-	std::string fingerPrint;
-	if (IsConst)
-		fingerPrint = TypeFingerPrint::ConstFingerPrint;
-	else
-		fingerPrint = "";
-
-	switch (Kind)
-	{
-	case compiler::ast::TypeKind::INT:
-		fingerPrint += TypeFingerPrint::IntFingerPrint;
-		break;
-	case compiler::ast::TypeKind::BOOL:
-		fingerPrint += TypeFingerPrint::BoolFingerPrint;
-		break;
-	case compiler::ast::TypeKind::VOID:
-		fingerPrint += TypeFingerPrint::VoidFingerPrint;
-		break;
-	default:
-		break;
-	}
-	return fingerPrint;
+	return std::make_shared<Type>(Kind);
 }
 
-std::string BuiltinType::getTypeFingerPrintWithNoConst() const
+bool Type::operator == (const Type& rhs) const
 {
-	std::string fingerPrint = "";
-
-	switch (Kind)
+	if (Kind == rhs.getKind())
 	{
-	case compiler::ast::TypeKind::INT:
-		fingerPrint += TypeFingerPrint::IntFingerPrint;
-		break;
-	case compiler::ast::TypeKind::BOOL:
-		fingerPrint += TypeFingerPrint::BoolFingerPrint;
-		break;
-	case compiler::ast::TypeKind::VOID:
-		fingerPrint += TypeFingerPrint::VoidFingerPrint;
-		break;
-	default:
-		break;
+		return true;
 	}
-	return fingerPrint;
+	return false;
 }
 
+//===---------------------------------------------------------------------===//
+// Implement class BuiltinType.
+
+//===---------------------------------------------------------------------===//
+// Implement class UserDefinedType.
+
+/// \brief 根据Member Name获取对象子类型信息
 std::shared_ptr<Type> UserDefinedType::getMemberType(std::string name) const
 {
-	auto getType = [&]() -> std::shared_ptr<Type>
+	auto getType = [&]() -> TyPtr
 	{
 		for (auto item : subTypes)
 		{
@@ -81,6 +60,13 @@ std::shared_ptr<Type> UserDefinedType::getMemberType(std::string name) const
 	};
 	return getType();
 }
+
+/// \brief 获取subtypes.
+std::vector<std::pair<std::shared_ptr<Type>, std::string>> UserDefinedType::getMemberTypes() const
+{
+	return subTypes;
+}
+
 
 bool UserDefinedType::HaveMember(std::string name) const
 {
@@ -118,68 +104,19 @@ bool UserDefinedType::operator==(const Type& rhs) const
 	return false;
 }
 
-std::string UserDefinedType::getTypeFingerPrint() const
-{
-	if (IsConst)
-	{
-		return TypeFingerPrint::ConstFingerPrint + getTypeFingerPrintWithNoConst();
-	}
-	else
-	{
-		return getTypeFingerPrintWithNoConst();
-	}
-
-}
-
-std::string UserDefinedType::getTypeFingerPrintWithNoConst() const
-{
-	std::string fingerPrint = "";
-	for (auto item : subTypes)
-	{
-		if (!(item.first.get()))
-		{
-			continue;
-		}
-		// (1) 记录结构信息，判断当前子类型是否为user defined type.
-		if (UserDefinedType* udt = dynamic_cast<UserDefinedType*>(item.first.get()))
-		{
-			fingerPrint += TypeFingerPrint::StructuralFingerPrint;
-		}
-		// (2) Type fingerprint的拼接
-		fingerPrint += item.first.get()->getTypeFingerPrint();
-	}
-	return fingerPrint;
-}
+//===---------------------------------------------------------------------===//
+// Implement class AnonymousType.
 
 /// Note: 对于匿名类型来说，{int, {int, int}} 和 {int, int, int}
 /// 是不同的，需要区别对待，所以记录结构信息
-std::string AnonymousType::getTypeFingerPrint() const
+std::shared_ptr<Type> AnonymousType::getSubType(int index) const
 {
-	// AnonymousType默认是const的
-	std::string fingerPrint = "";
-	for (auto item : subTypes)
-	{
-		if (!(item.get()))
-		{
-			continue;
-		}
-
-		// (1) 需要记录结构类型信息
-		// Note: AnonymousType是不允许存在user defined type的
-		if (AnonymousType* anony = dynamic_cast<AnonymousType*>(item.get()))
-		{
-			fingerPrint += TypeFingerPrint::StructuralFingerPrint;
-		}
-		// (2) finger print的拼接
-		fingerPrint += item.get()->getTypeFingerPrintWithNoConst();
-	}
-	return fingerPrint;
+	return subTypes[index];
 }
 
-/// \brief AnonymousType类型的变量都是只读的，只能被解包。
-std::string AnonymousType::getTypeFingerPrintWithNoConst() const
+std::vector<std::shared_ptr<Type>> AnonymousType::getSubTypes() const
 {
-	return getTypeFingerPrint();
+	return subTypes;
 }
 
 void AnonymousType::getTypes(std::vector<std::shared_ptr<Type>>& types) const
@@ -187,7 +124,7 @@ void AnonymousType::getTypes(std::vector<std::shared_ptr<Type>>& types) const
 	unsigned size = subTypes.size();
 	for (int index = 0; index < size; index++)
 	{
-		if (AnonymousType* type = dynamic_cast<AnonymousType*>(subTypes[index].get()))
+		if (std::shared_ptr<AnonymousType> type = std::dynamic_pointer_cast<AnonymousType>(subTypes[index]))
 		{
 			type->getTypes(types);
 		}

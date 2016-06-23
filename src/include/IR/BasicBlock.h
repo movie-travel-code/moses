@@ -45,7 +45,7 @@ namespace compiler
 		public:
 			/// BasicBlock ctor - If the function parameter is specified, the basic block
 			/// is automatically inserted at the end of the function.
-			BasicBlock(std::string Name = "", FuncPtr Parent = nullptr, BBPtr = nullptr);
+			BasicBlock(std::string Name = "", FuncPtr Parent = nullptr, BBPtr InsertBefore = nullptr);
 			~BasicBlock() {}
 
 			/// \brief Creates a new BasicBlock.
@@ -90,11 +90,14 @@ namespace compiler
 			//===--------------------------------------------------------------------===//
 			std::list<InstPtr> &getInstList() { return InstList; }
 
+			void Insert(Iterator InsertP, InstPtr I);
+
+			Iterator getIterator(InstPtr I);
+
+			std::list<InstPtr>::iterator end();
+
 			// methods for support type inquiry thorough isa, cast, and dyn_cast
-			static bool classof(ValPtr V)
-			{
-				return V->getValueType() == Value::ValueTy::BasicBlockVal;
-			}
+			static bool classof(ValPtr V) { return V->getValueType() == Value::ValueTy::BasicBlockVal; }
 		};
 	}
 }

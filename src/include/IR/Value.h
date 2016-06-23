@@ -58,18 +58,25 @@ namespace compiler
 		class User;
 		class Argument;
 		class TerminatorInst;
+		class Constant;
+		class ConstantBool;
+		class ConstantInt;
+		class BranchInst;
+		class UnaryOperator;
+		class LoadInst;
+		class StoreInst;
+		class GetElementPtrInst;
+		class StructType;
 
 		typedef std::shared_ptr<Type>				TyPtr;
 		typedef std::shared_ptr<Value>				ValPtr;
 		typedef std::shared_ptr<Use>				UsePtr;
 		typedef std::shared_ptr<Instruction>		InstPtr;
 		typedef std::shared_ptr<BasicBlock>			BBPtr;
-		typedef std::shared_ptr<BinaryOperator>		BOPtr;
+		typedef std::shared_ptr<BinaryOperator>		BOInstPtr;
 		typedef std::shared_ptr<CmpInst>			CmpInstPtr;
-		typedef std::shared_ptr<AllocaInst>			AllocInstPtr;
 		typedef std::shared_ptr<GetElementPtrInst>	GEPInstPtr;
 		typedef std::shared_ptr<CallInst>			CallInstPtr;
-		typedef std::shared_ptr<FunctionType>		FuncTyPtr;
 		typedef std::shared_ptr<ExtractValueInst>	EVInstPtr;
 		typedef std::shared_ptr<PHINode>			PHINodePtr;
 		typedef std::shared_ptr<ReturnInst>			RetInstPtr;
@@ -78,7 +85,20 @@ namespace compiler
 		typedef std::shared_ptr<User>				UserPtr;
 		typedef std::shared_ptr<Argument>			ArgPtr;
 		typedef std::shared_ptr<TerminatorInst>		TermiPtr;
+		typedef std::shared_ptr<ReturnInst>			ReturnInstPtr;
+		typedef std::shared_ptr<ConstantBool>		ConstantBoolPtr;
+		typedef std::shared_ptr<ConstantInt>		ConstantIntPtr;
+		typedef std::shared_ptr<BranchInst>			BrInstPtr;
+		typedef std::shared_ptr<UnaryOperator>		UOInstPtr;
+		typedef std::shared_ptr<AllocaInst>			AllocaInstPtr;
+		typedef std::shared_ptr<LoadInst>			LoadInstPtr;
+		typedef std::shared_ptr<StoreInst>			StoreInstPtr;
+		typedef std::shared_ptr<GetElementPtrInst>	GEPInstPtr;
+		typedef std::shared_ptr<FunctionType>		FuncTypePtr;
+		typedef std::shared_ptr<StructType>			StructTypePtr;
 
+		// Iterator表示instruction在BasicBlock中的迭代器
+		typedef std::list<InstPtr>::iterator Iterator;
 		class Value
 		{
 		public:
@@ -104,7 +124,7 @@ namespace compiler
 			// PS: LLVM IR中如何定义def-use链的机制没有搞懂。所以暂时实现自己的def-use机制
 			// 使用内置的list将一系列的 'use' object链接起来
 			// -----------------------------------------------------------------------
-			std::list<UsePtr> Uses;
+			std::vector<UsePtr> Uses;
 			std::string Name;
 			ValueTy VTy;
 			TyPtr Ty;

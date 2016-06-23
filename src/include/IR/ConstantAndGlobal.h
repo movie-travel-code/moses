@@ -11,6 +11,7 @@
 #ifndef MOSES_IR_CONSTANT_AND_GLOBAL_H
 #define MOSES_IR_CONSTANT_AND_GLOBAL_H
 #include "User.h"
+// #include "Instruction.h"
 
 namespace compiler
 {
@@ -19,6 +20,9 @@ namespace compiler
 		class ArrayType;
 		class StructType;
 		class PointerType;
+		class Constant;
+
+		using ConstantPtr = std::shared_ptr<Constant>;
 
 		/// All constants share the capabilities provided in this class. All constants
 		/// can have a null value. They can have an operand list. Constants can be
@@ -42,12 +46,6 @@ namespace compiler
 		public:
 			// setName - Specialize setName to handle symbol table majik...(把戏)
 			// virtual void setName(const std::string &name, SymbolTable* ST = 0);
-
-			/// staic construtor to get a '0' constant of arbitrary type...
-			static Constant* getNullValue(const Type* Ty);
-
-			/// Return true if this is the value that would be returned by getNullValue.
-			virtual bool isNullValue() const = 0;
 
 			/// isConstantExpr - Return true if this is a ConstantExpr
 			virtual bool isConstantExpr() const { return false; }
@@ -181,12 +179,8 @@ namespace compiler
 		{
 			ConstantIntegral(const ConstantIntegral&) = delete;
 		protected:
-			ConstantIntegral(TyPtr Ty) : Constant(Ty) {}
+			ConstantIntegral() : Constant(std::make_shared<Type>(Type::IntegerTy)) {}
 		public:
-			/// isNullValue - Return true if this is the value that would be returned
-			/// by getNullValue.
-			virtual bool isNullValue() const = 0;
-			
 			/// Methods for support type inquiry through isa, cast, and dyn_cast:
 			static bool classof(const ConstantIntegral *) { return true; }
 			static bool classof(const Constant *CPV);	// defined in Constants.cpp
@@ -201,20 +195,24 @@ namespace compiler
 		// ConsrantBool - Boolean Values
 		class ConstantBool final : public ConstantIntegral
 		{
+		private:
 			bool Val;
-			ConstantBool(bool V) = delete;
-		public:
+		public:			
+			ConstantBool(bool val) : Val(val) {}
 			static ConstantBool *True, *False;
 			
-			/// get() - Static factory methods - Return objects of the specified value
-			static ConstantBool *get(bool Value) { return Value ? True : False; }
-			
+			/// getTrue() - static factory methods - Return objects of the specified value.
+			static ConstantBoolPtr getTrue() { return std::make_shared<ConstantBool>(true); }
+
+			/// getFalse() - static factory methods - Return objects of the specified value.
+			static ConstantBoolPtr getFalse() { return std::make_shared<ConstantBool>(false); }
+
 			/// inverted - Return the opposite value of the current value.
 			ConstantBool * inverted() const { return (this == True) ? False : True; }
 
-			/// getValue - return the boolean value of this constant.
-			bool getValue() const { return Val; }
-			
+			/// getVal - return the boolean value of this constant.
+			bool getVal() const { return Val; }		
+
 			/// Methods for support type inquiry through isa, cast, and dyn_cast:
 			static bool classof(const ConstantBool *) { return true; }
 
@@ -230,20 +228,32 @@ namespace compiler
 		};
 
 		// 在moses中，暂时只有int和bool类型，int类型可以使用i32表示。
-		class ConstantInt final : ConstantIntegral
+		class ConstantInt final : public ConstantIntegral
 		{
+			int Val;
 			ConstantInt(const ConstantInt&) = delete;
 		public:
-			/// equalsInt - Provide a helper method that can be used to determine if 
-			/// the constant contained within is equal to a constant. This only works
-			/// for very small values, because this is all that can be represented with
-			/// all types.
-			bool equalsInt() const
-			{
+			ConstantInt(int val) : Val(val) {}
 
+			/// \brief Get a ConstantInt for a specific value.
+			static ConstantIntPtr get(int value) { return std::make_shared<ConstantInt>(value);}
+
+			/// equalsInt - 提供一个工具方法来判断当前值是否等于某个特定的值
+			bool equalsInt(int v) const { return Val == v; }
+
+			/// 获取constant val.
+			int getVal() const { return Val; }
+
+			static ConstantIntPtr getZeroValueForNegative()
+			{
+				return std::make_shared<ConstantInt>(0);
+			}
+
+			static bool classof(ValPtr V)
+			{
+				return V->getValueType() == Value::ValueTy::ConstantVal;
 			}
 		};
-
 		
 		//===----------------------------------------------------------------===//
 		// ConstantSturct - Constant Struct Declarations
@@ -263,20 +273,8 @@ namespace compiler
 				return nullptr;
 			}
 
-			/// isNullValue - Return true if this is the value that would be returned by
-			/// getNullValue.
-			virtual bool isNullValue() const
-			{
-				// 循环检查都是Null的
-			}
-
 			// Methods for support type inquiry through isa, cast, and dyn_cast:
-			static bool classof(const ConstantStruct*) { return true; }
-			static bool classof(const Constant *CPV);		// defined in Constants.cpp
-			static bool classof(const Value* V)
-			{
-
-			}
+			static bool classof(std::shared_ptr<ConstantStruct>) { return true; }
 
 			/// getValues - Return a vector of the component constants that make up
 			/// this structure.
@@ -285,13 +283,9 @@ namespace compiler
 
 
 		// ConstantExpr - a constant value that is initialized with an expression using
-		// other constant values. This is only used to represent values that cannot be
-		// evaluated at compile-time (e.g., something derived from an address) because 
-		// it does not have a mechanism to store the actual value.???
-		// Use the approprite Constant subclass above for known constants.
-		class ConstantExpr : public Constant
+		// other constant values.
+		class ConstantExpr
 		{
-
 		};
 	}
 }

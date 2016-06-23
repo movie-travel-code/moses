@@ -10,12 +10,35 @@
 using namespace compiler::IR;
 
 BasicBlock::BasicBlock(std::string Name, FuncPtr Parent, BBPtr InsertBefore)
-: Value(std::make_shared<Type>(Type::TypeID::LabelTyID), Value::ValueTy::BasicBlockVal, Name)
+: Value(std::make_shared<Type>(Type::TypeID::LabelTy), Value::ValueTy::BasicBlockVal, Name)
 {}
 
 BBPtr BasicBlock::Create(std::string Name, FuncPtr Parent, BBPtr InsertBefore)
 {
 	return std::make_shared<BasicBlock>(Name, Parent, InsertBefore);
+}
+
+void BasicBlock::Insert(Iterator InsertP, InstPtr I)
+{
+	InstList.insert(InsertP, I);
+}
+
+Iterator BasicBlock::getIterator(InstPtr I)
+{
+	for (Iterator begin = InstList.begin(), end = InstList.end();
+		begin != end; begin++)
+	{
+		if (*begin == I)
+		{
+			return begin;
+		}
+	}
+	return InstList.end();
+}
+
+std::list<InstPtr>::iterator BasicBlock::end()
+{
+	return InstList.end();
 }
 
 void BasicBlock::setParent(FuncPtr parent)

@@ -21,70 +21,6 @@ namespace compiler
 	/// syntax tree后，再遍历syntax tree并执行代码生成部分。
 	///---------------------------nonsense for coding------------------------------///
 
-	//namespace visitor
-	//{
-	//	// The visitor pattern achieves a form of double dispath for languages
-	//	// that offer only single dispatch. The visitor pattern enables phase- 
-	//	// and node-specific code to be invoked clealy.
-	//	// Every phase extends the Visitor class, so that it inherits the
-	//	// visit(AbstractNode n) method.
-
-	//	// Note: Wile the inclusion of the Accept method in every node class 
-	//	// seems redundant, it cannot be factored into a common superclass, 
-	//	// because the type of this must be specific to the visited node.
-
-	//	// --------------------visitor code as below---------------------
-	//	/*class Visitor
-	//	procedure visit(AbstractNode n)
-	//	n.accept()
-	//	end
-	//	end
-
-	//	class TypeChecking extends Visitor
-	//	procedure visit(IfNode n)
-	//	end
-
-	//	procedure visit(PlusNode n)
-	//	end
-
-	//	procedure visit(MinusNode m)
-	//	end
-
-	//	end
-
-	//	class IFNode extends AbstractNode
-	//	procedure accept(Visitor v)
-	//	v.visit(this)
-	//	end
-	//	end
-
-	//	class PlusNode externds AbstractNode
-	//	procedure accept(Visitor v)
-	//	v.visit(this)
-	//	end
-	//	...
-	//	end
-
-	//	class MinusNode extends AbstractNode
-	//	procedure accept(Visitor v)
-	//	v.visit(this)
-	//	end
-	//	...
-	//	end
-	//	*/
-	//	// --------------------------------------------------------------
-	//	class Visitor
-	//	{
-	//	public:
-	//		virtual void visit(ast::StatementAST* root)
-	//		{
-	//			root->Accept(Visitor*(this));
-	//		}
-
-	//		void func() {}
-	//	};
-	//}
-
 	namespace ast
 	{
 		using namespace compiler::lex;
@@ -100,9 +36,19 @@ namespace compiler
 		class CompoundStmt;
 		class VarDecl;	
 		class UnpackDecl;
+		class ExprStatement;
+		class IfStatement;
+		class WhileStatement;
+		class ClassDecl;
+		class ReturnStatement;
+		class UnaryExpr;
+		class MemberExpr;
+		class BoolLiteral;
+		class DeclRefExpr;
 
 		using ASTPtr = std::vector<std::shared_ptr<StatementAST>>;
 		using StmtASTPtr = std::shared_ptr<StatementAST>;
+		using NumberExprPtr = std::shared_ptr<NumberExpr>;
 		using ExprASTPtr = std::shared_ptr<Expr>;
 		using CallExprPtr = std::shared_ptr<CallExpr>;
 		using DeclASTPtr = std::shared_ptr<DeclStatement>;
@@ -112,6 +58,13 @@ namespace compiler
 		using UnpackDeclPtr = std::shared_ptr<UnpackDecl>;
 		using FunctionDeclPtr = std::shared_ptr<FunctionDecl>;
 		using BinaryPtr = std::shared_ptr<BinaryExpr>;
+		using UnaryPtr = std::shared_ptr<UnaryExpr>;
+		using DeclRefExprPtr = std::shared_ptr<DeclRefExpr>;
+		using AnonTyPtr = std::shared_ptr<AnonymousType>;
+		using UDTyPtr = std::shared_ptr<UserDefinedType>;
+		using ReturnStmtPtr = std::shared_ptr<ReturnStatement>;
+		using MemberExprPtr = std::shared_ptr<MemberExpr>;
+		using BoolLiteralPtr = std::shared_ptr<BoolLiteral>;
 
 		/// \brief StatementAST - Base class for all statements.
 		//--------------------------nonsense for coding---------------------------
@@ -128,12 +81,35 @@ namespace compiler
 			class Visitor
 			{
 			public:
-				virtual void visit(const StatementAST* root)
-				{
-					root->Accept(this);
-				}
+				virtual void visit(const StatementAST* root) {}
+	
+				/// \brief IR gen for NumberExpr
+				virtual void visit(const ExprStatement* exprstmt) {}
+				
+				/// \brief Generate code for CompoundStmt.
+				virtual void visit(const CompoundStmt* comstmt) {}
 
-				void func() {}
+				/// \brief Generate code for IfStatement.
+				virtual void visit(const IfStatement* ifstmt) {}
+
+				virtual void visit(const WhileStatement* whilestmt) {}
+
+				virtual void visit(const VarDecl* VD) {}
+
+				virtual void visit(const ClassDecl* CD) {}
+
+				virtual void visit(const FunctionDecl* FD) {}
+
+				virtual void visit(const UnpackDecl* UD) {}
+
+				/// \brief
+				virtual void visit(const Expr* expr) {}
+
+				/// \brief
+				virtual void visit(const BinaryExpr* B) {}
+
+				/// \brief
+				virtual void visit(const CallExpr* Call) {}
 			};
 
 		protected:
@@ -207,6 +183,8 @@ namespace compiler
 
 			std::shared_ptr<Type> getType() const { return ExprType; }
 
+			void setType(std::shared_ptr<Type> type) { ExprType = type; }
+
 			/// isLvalue - True if this expression is an "l-value" according to
 			/// the rules of the current language. Like C/C++，moses give somewhat
 			/// different rules for this concept, but in general, the result of 
@@ -238,9 +216,13 @@ namespace compiler
 			double Val;
 		public:
 			NumberExpr(SourceLocation start, SourceLocation end, double Val) :
-				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::INT, true), 
-				ExprValueKind::VK_RValue, true), Val(Val) {}
+				Expr(start, end, nullptr, ExprValueKind::VK_RValue, true), Val(Val) {}
 			virtual ~NumberExpr() {}
+
+			void setIntType(std::shared_ptr<Type> type)
+			{
+				Expr::setType(type);
+			}
 
 			double getVal() const { return Val; }
 
@@ -257,9 +239,13 @@ namespace compiler
 		public:
 			/// To Do: 此处使用INT来表示CharExpr，也就是两者可以相加减
 			CharExpr(SourceLocation start, SourceLocation end, std::string c) : 
-				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::INT, true), 
-				ExprValueKind::VK_RValue, true), C(c) 
+				Expr(start, end, nullptr, ExprValueKind::VK_RValue, true), C(c) 
 			{}
+
+			void setCharType(std::shared_ptr<Type> type) 
+			{
+				Expr::setType(type);
+			}
 
 			virtual ~CharExpr() {}
 
@@ -291,8 +277,13 @@ namespace compiler
 			bool value;
 		public:
 			BoolLiteral(SourceLocation start, SourceLocation end, bool value) :
-				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::BOOL, true), 
+				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::BOOL), 
 				ExprValueKind::VK_RValue, true), value(value) {}
+
+			void setBoolType(std::shared_ptr<Type> type)
+			{
+				Expr::setType(type);
+			}
 
 			bool getVal() const
 			{
@@ -316,19 +307,19 @@ namespace compiler
 		class DeclRefExpr final : public Expr
 		{
 			std::string Name;
-			DeclASTPtr D;
+			VarDeclPtr var;
 		public:
 			// Note: 一般情况下，DeclRefExpr都是左值的，但是有一种情况例外，就是函数名字调用
 			// 但是函数调用对应的expression是CallExpr，不是DeclRefExpr.
 			// To Do: 有可能会有潜在的bug
 			DeclRefExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-					std::string name, DeclASTPtr d) : 
-				Expr(start, end, type, ExprValueKind::VK_LValue, true), Name(name), D(d) 
+					std::string name, VarDeclPtr var) : 
+				Expr(start, end, type, ExprValueKind::VK_LValue, true), Name(name), var(var) 
 			{}
 
 			std::string getDeclName() const { return Name; }
 
-			DeclASTPtr getDecl() const { return D; }
+			VarDeclPtr getDecl() const { return var; }
 
 			virtual ~DeclRefExpr() {}
 
@@ -679,23 +670,54 @@ namespace compiler
 			}
 		};
 
-		/// @brief ParameterDecl - This class represents a ParameterDecl
-		/// ParameterDecl's Grammar as below:
-		/// para-declaration -> type identifier | const type identifier
-		///
-		/// --------------------nonsense for coding-------------------------
-		/// AST类的设计不必过于拘泥于文法
-		/// --------------------nonsense for coding-------------------------
-		class ParameterDecl final : public DeclStatement
+		/// @brief VarDecl - This class represents a Variable Declaration or a Const Variable 
+		/// Declaration
+		/// --------------------------------------------------------------
+		/// Variable Declaration's Grammar as below.
+		/// variable-declaration -> "var" identifier initializer ";"
+		///				| "var" identifier type-annotation ";"
+		/// and
+		/// constanr-declaration -> "const" identifier initializer ";"
+		///				| "const" identifier type-annotation ";"
+		/// --------------------------------------------------------------
+		class VarDecl : public DeclStatement
 		{
-		private:
-			std::string ParaName;
+			bool IsConst;
+			std::string name;
+			ExprASTPtr InitExpr;
 		public:
-			ParameterDecl(SourceLocation start, SourceLocation end, std::string name, 
-				std::shared_ptr<Type> type) : 
-				DeclStatement(start, end, type), ParaName(name) {}
+			VarDecl(SourceLocation start, SourceLocation end, std::string name,
+				std::shared_ptr<Type> type, bool isConst, ExprASTPtr init) :
+				DeclStatement(start, end, type), name(name), IsConst(isConst),
+				InitExpr(init) {}
+			std::string getName() const { return name; }
 
-			std::string getParmName() const { return ParaName; }
+			std::shared_ptr<Type> getDeclType() const { return declType; }
+
+			void setInitExpr(ExprASTPtr B) { InitExpr = B; }
+
+			ExprASTPtr getInitExpr() const { return InitExpr; }
+
+			bool isClass() const { return declType->getKind() == TypeKind::USERDEFIED; }
+
+			bool isConst() const { return IsConst; }
+
+			virtual void Accept(Visitor* v) const
+			{
+				v->visit(this);
+			}
+		};
+
+		/// @brief ParameterDecl - This class represents a ParameterDecl
+		/// Note: 暂时还没有实现paramdecl - const 和 init expr
+		class ParameterDecl final : public VarDecl
+		{
+		public:
+			ParameterDecl(SourceLocation start, SourceLocation end, std::string name, bool isConst,
+				std::shared_ptr<Type> type) : 
+				VarDecl(start, end, name, type, isConst, nullptr) {}
+
+			std::string getParmName() const { return VarDecl::getName(); }
 
 			virtual void Accept(Visitor* v) const
 			{
@@ -716,7 +738,7 @@ namespace compiler
 			UnpackDecl(SourceLocation start, SourceLocation end, std::vector<DeclASTPtr> decls)
 				: DeclStatement(start, end, nullptr), decls(decls) {}
 
-			bool TypeCheckingAndTypeSetting(AnonymousType* type);
+			bool TypeCheckingAndTypeSetting(AnonTyPtr type);
 
 			// To Do: Shit code!
 			void setCorrespondingType(std::shared_ptr<Type> type);
@@ -769,68 +791,13 @@ namespace compiler
 			//	func add() -> int  { return 10; }
 			// To Do: 这里我们强制要求，能够进行constant-evaluate的函数只能有一条return语句
 			// 如果后面需要加强推导能力，就需要返回这个函数体了。
-			const ReturnStatement* isEvalCandiateAndGetReturnStmt() const;
+			ReturnStmtPtr isEvalCandiateAndGetReturnStmt() const;
 
 			virtual void Accept(Visitor* v) const
 			{
 				v->visit(this);
 			}
-		};
-
-		/// @brief VarDecl - This class represents a Variable Declaration or a Const Variable 
-		/// Declaration
-		/// --------------------------------------------------------------
-		/// Variable Declaration's Grammar as below.
-		/// variable-declaration -> "var" identifier initializer ";"
-		///				| "var" identifier type-annotation ";"
-		/// and
-		/// constanr-declaration -> "const" identifier initializer ";"
-		///				| "const" identifier type-annotation ";"
-		/// --------------------------------------------------------------
-		class VarDecl : public DeclStatement
-		{
-			bool IsConst;
-			std::string name;
-			ExprASTPtr InitExpr;
-
-			// 丑陋的代码架构，对于moses来说，const变量可初始化，也可不初始化（亦即通过二元赋值进行初始化）
-			//						VarDecl
-			//					   /       \
-			//					name	 InitExpr
-			//					/			  \
-			//				  num			nullptr
-			//
-			//						   BE
-			//						/  |  \
-			//					  lhs  =   rhs
-			//					 /            \
-			//					num			  10
-			// 不能直接使用InitExr -> 指向rhs，因为moses AST使用 std::shared_ptr<> ，所以不可能同时在AST
-			// 树上两个地方指向同一个unique_ptr，会出现double free
-
-			ExprASTPtr BEInit;
-		public:
-			VarDecl(SourceLocation start, SourceLocation end, std::string name, 
-				std::shared_ptr<Type> type, bool isConst, ExprASTPtr init) :
-				DeclStatement(start, end, type), name(name), IsConst(isConst), 
-				InitExpr(init) {}
-			std::string getName() { return name; }
-
-			std::shared_ptr<Type> getDeclType() const { return declType; }
-
-			void setInitExpr(ExprASTPtr B) { BEInit = B; }
-
-			ExprASTPtr getInitExpr() const { return InitExpr; }
-
-			bool isClass() const { return declType->getKind() == TypeKind::USERDEFIED; }
-
-			bool isConst() const { return IsConst; }
-
-			virtual void Accept(Visitor* v) const
-			{
-				v->visit(this);
-			}
-		};
+		};		
 
 		/// @brief ClassDecl - This class represents a Class Declaration
 		/// ---------------------------------------------------------
@@ -843,7 +810,7 @@ namespace compiler
 		/// class-body -> "{" variable-declaration* "}"
 		/// ----------------------------------------------------------
 		/// To Do: class通过数据成员的重排以充分利用内存空间。
-		class ClassDecl : public DeclStatement
+		class ClassDecl final : public DeclStatement
 		{
 			// std::shared_ptr<UserDefinedType> classType;
 			std::string ClassName;

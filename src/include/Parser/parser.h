@@ -9,6 +9,7 @@
 #include "../Lexer/scanner.h"
 #include "ast.h"
 #include "sema.h"
+#include "ASTContext.h"
 namespace compiler
 {
 	namespace parse
@@ -165,10 +166,11 @@ namespace compiler
 		private:
 			Scanner& scan;
 			ASTPtr AST;
+			ASTContext &Ctx;
 			Sema& Actions;
 			ContextKind CurrentContext;
 		public:
-			explicit Parser(Scanner& scan, Sema& Actions);
+			Parser(Scanner& scan, Sema& Actions, ASTContext& Ctx);
 			/// \brief parse - Parse the entire file specified.
 			ASTPtr& parse();
 

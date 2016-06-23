@@ -11,6 +11,7 @@
 #include <string>
 #include <memory>
 #include "User.h"
+#include "ConstantAndGlobal.h"
 namespace compiler
 {
 	namespace IR
@@ -35,6 +36,8 @@ namespace compiler
 				Shr,		// BinaryOperator Integer shift right
 				And,		// BinaryOperator Bool And
 				Or,			// BinaryOperator Bool Or
+				Xor,		// implements ! operator, 
+							// For example, '!flag' flag xor true
 
 				Alloca,			// Stack management
 				Load,			// Memory manipulation instrs load
@@ -58,6 +61,12 @@ namespace compiler
 			void setParent(BBPtr P);
 		public:
 			BBPtr getParent() const { return Parent; }
+
+			std::list<InstPtr> getIterator()
+			{
+				auto BB = this->getParent();
+				
+			}
 
 			/// Return the function this instruction belongs to.
 			/// 
@@ -139,7 +148,7 @@ namespace compiler
 			bool mayHaveSideEffects() const;
 		public:
 			Instruction(TyPtr Ty, Opcode op, unsigned NumOps, InstPtr InsertBefore = nullptr);
-			Instruction(TyPtr Ty, Opcode op, unsigned NumOps, BBPtr InsertAtEnd = nullptr);
+			Instruction(TyPtr Ty, Opcode op, unsigned NumOps, BBPtr InsertAtEnd);
 		};
 
 		//===-------------------------------------------------------------===//
@@ -155,14 +164,12 @@ namespace compiler
 		//    这里的new表示的是一个内存分配函数，分配size字节大小的内存，可以重载，
 		//    这里的new类似于C语言中的malloc，对构造函数一无所知，返回的是raw的内存
 		// ---------------------nonsense for coding------------------------- //
-		class UnaryInstruction : public Instruction
+		class UnaryOperator : public Instruction
 		{
 		protected:
-			UnaryInstruction(TyPtr Ty, Opcode op, ValPtr V, InstPtr IB = nullptr)
+			UnaryOperator(TyPtr Ty, Opcode op, ValPtr V, InstPtr IB = nullptr)
 				: Instruction(Ty, op, 1, IB) 
 			{
-				// set operands
-
 			}
 		public:
 
@@ -186,11 +193,11 @@ namespace compiler
 			{}
 
 			TerminatorInst(TyPtr Ty, Instruction::Opcode op, /*Use *Ops*/ unsigned NumOps,
-				BBPtr InsertAtEnd = nullptr) : Instruction(Ty, op, NumOps, InsertAtEnd)
+				BBPtr InsertAtEnd) : Instruction(Ty, op, NumOps, InsertAtEnd)
 			{}
 
 			// Out of line virtual method, so the vtable, etc has a home.
-			~TerminatorInst() override;
+			~TerminatorInst() override {}
 
 			/// Virtual methods - Terminators should overload these and provide inline
 			/// overrides of non-V methods.
@@ -232,29 +239,36 @@ namespace compiler
 		//===-------------------------------------------------------------===//
 		class BinaryOperator : public Instruction
 		{
-		protected:
+		public:
 			void init();
 			BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty, 
 				InstPtr InstructionBefore = nullptr);
 
 			BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty, BBPtr InsertAtEnd = nullptr);
-		public:
-			// allocate space for exactly two operands.
 
 			/// Construct a binary instruction, given the opcode and the two operands.
 			/// Optionally (if InstBefore is specified) insert the instruction into a 
 			/// BasicBlock right before the specified instruction.
-			static BOPtr Create(Opcode op, ValPtr S1, ValPtr S2, InstPtr InsertBefore = nullptr);
+			// static BOInstPtr Create(Opcode op, ValPtr S1, ValPtr S2, InstPtr InsertBefore = nullptr);
 
 			/// Construct a binary instruction, given the opcode and the two operands.
 			/// Also automatically insert this instruction to the end of the BasicBlock
 			/// specified.
-			static BOPtr Create(Opcode op, ValPtr S1, ValPtr S2, BBPtr InsertAtEnd = nullptr);
+			static BOInstPtr Create(Opcode op, ValPtr S1, ValPtr S2, std::string Name = "", BBPtr InsertAtEnd = nullptr);
 
-			/// These methods just forward to Create, and are useful when you statically
-			/// know what type of instruction you're going to create. These just save 
-			/// some typing.
+			static BOInstPtr Create(Opcode op, ValPtr S1, ValPtr S2, std::string Name, InstPtr InsertBefore);
 
+			static BOInstPtr CreateNeg(ValPtr Operand, std::string Name = "", InstPtr InsertBefore = nullptr);
+
+			static BOInstPtr CreateNeg(ValPtr Operand, std::string Name, BBPtr InsertAtEnd);
+
+			static BOInstPtr CreateNot(ValPtr Operand, std::string Name = "", InstPtr InsertBefore = nullptr);
+			
+			static BOInstPtr CreateNot(ValPtr Operand, std::string Name, BBPtr InsertAtEnd);
+
+			static bool isNeg(ValPtr V);
+
+			static bool isNot(ValPtr V);
 
 			// Methods for support type inquiry through isa, cast, and dyn_cast:
 			static bool classof(InstPtr I)
@@ -267,7 +281,7 @@ namespace compiler
 		//						TruncInst Class
 		//===-------------------------------------------------------------===//
 		// 在moses中唯一需要执行 cast 操作的就是匿名类型赋值给用户自定义类型的转换
-		class TruncInst : public UnaryInstruction
+		class TruncInst : public UnaryOperator
 		{
 			// TrancInst 也有operand，operand的类型必须是type类型的
 		};
@@ -276,8 +290,9 @@ namespace compiler
 		//						CmpInst Class
 		//===-------------------------------------------------------------===//
 
-		class CmpInst : public Instruction
+		class CmpInst final : public Instruction
 		{
+		public:
 			/// This enumeration lists the possible predicates for CmpInst.
 			enum Predicate
 			{
@@ -293,7 +308,7 @@ namespace compiler
 		private:
 			CmpInst() = delete;
 			Predicate predicate;
-		protected:
+		public:
 			CmpInst(InstPtr InsertBefore,		/// Where to insert
 				Predicate pred,					/// The predicate to use for the comparison
 				ValPtr LHS,						/// The left-hand-side of the expression
@@ -333,14 +348,19 @@ namespace compiler
 
 		/// AllocaInst - an instruction to allocate memory on the stack
 		/// 在moses中，只有单值的alloca，暂时不支持Array的alloca
-		class AllocaInst : public UnaryInstruction
+		class AllocaInst final : public UnaryOperator
 		{
 		private:
 			TyPtr AllocatedType;
 		public:
-			explicit AllocaInst(TyPtr Ty, InstPtr InsertBefore = nullptr);
+			AllocaInst(TyPtr Ty, ValPtr Val, std::string Name = "", InstPtr InsertBefore = nullptr);
 
-			AllocaInst(TyPtr Ty, BBPtr InsertAtEnd);
+			static AllocaInstPtr Create(TyPtr Ty)
+			{
+				return std::make_shared<AllocaInst>(Ty);
+			}
+
+			AllocaInst(TyPtr Ty, BBPtr InsertAtEnd = nullptr);
 
 			// Out of line virtual method, so the vtable, etc. has a home.
 			~AllocaInst() override;
@@ -363,7 +383,7 @@ namespace compiler
 		// GetElementPtrInst - an instruction for type-safe pointer arithmetic
 		// to access elements of arrays and structs.
 
-		class GetElementPtrInst : public Instruction
+		class GetElementPtrInst final : public Instruction
 		{
 		private:
 			TyPtr SourceElementType;
@@ -376,20 +396,21 @@ namespace compiler
 			/// list of indices. The first ctor can optionally insert before an existing
 			/// instruction, the second appends the new instruction to the specified
 			/// BasicBlock.
-			GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, std::list<ValPtr> IdxList,
+			GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, std::vector<ValPtr> IdxList,
 				unsigned Values, InstPtr InsertBefore = nullptr);
 
-			GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, std::list<ValPtr> IdxList,
+			GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, std::vector<ValPtr> IdxList,
 				unsigned Values, BBPtr InsertAtEnd);
 			
-		protected:
+		public:
 			static GEPInstPtr Create(TyPtr PointeeType, ValPtr Ptr,
-				std::list<ValPtr> IdxList, InstPtr InsertBefore = nullptr)
+				std::vector<ValPtr> IdxList, InstPtr InsertBefore = nullptr)
 			{
 				unsigned Values = 1 + unsigned(IdxList.size());
 				// 进行类型检查
 				/*return new (Values) GetElementPtrInst(PointeeType, Ptr, IdxList, Values, 
 					InsertBefore);*/
+				return nullptr;
 			}
 
 			// getType - Overload to return most specific sequential type.
@@ -432,28 +453,28 @@ namespace compiler
 		// the SubClassData field to indicate whether or not this is a tail
 		// call. The rest of the bits hold the calling convention of the call.
 
-		class CallInst : public Instruction
+		class CallInst final : public Instruction
 		{
 		private:
-			FuncTyPtr FTy;
+			FuncTypePtr FTy;
 
-			void init(FuncTyPtr FTy, ValPtr Func, std::list<ValPtr> Args,
+			void init(FuncTypePtr FTy, ValPtr Func, std::list<ValPtr> Args,
 					std::string NameStr);
 			void init(ValPtr Func, std::string NameStr);
 
 			/// Construct a CallInst given a range of arguments.
-			CallInst(FuncTyPtr Ty, ValPtr Func, std::list<ValPtr> Args, 
+			CallInst(FuncTypePtr Ty, ValPtr Func, std::list<ValPtr> Args, 
 					std::string NameStr);
 			CallInst(ValPtr Func, std::list<ValPtr> Args, 					
 				std::string NameStr, InstPtr InsertBefore = nullptr);
 		public:
-			static CallInstPtr Create(ValPtr Func, std::list<ValPtr> Args, std::string NameStr = "",
+			static CallInstPtr Create(ValPtr Func, std::vector<ValPtr> Args, std::string NameStr = "",
 				InstPtr InsertBefore = nullptr)
 			{
-				// return nullptr;
+				return nullptr;
 			}
 
-			static CallInstPtr Create(FuncTyPtr *Ty, ValPtr Func, std::list<ValPtr> Args,
+			static CallInstPtr Create(FuncTypePtr *Ty, ValPtr Func, std::list<ValPtr> Args,
 				std::string NameStr, InstPtr InsertBefore = nullptr)
 			{
 				// return nullptr;
@@ -463,7 +484,7 @@ namespace compiler
 
 			~CallInst() override;
 
-			FuncTyPtr getFunctionType() const { return FTy; }
+			FuncTypePtr getFunctionType() const { return FTy; }
 
 			enum TailCallKind {TCK_None = 0, TCK_Tail = 1, TCK_MustTail = 2, TCK_NoTail = 3 };
 
@@ -526,7 +547,7 @@ namespace compiler
 
 			void setCalledFunction(ValPtr Fn) {}
 
-			void setCalledFunction(FuncTyPtr FTy, ValPtr Fn) {}
+			void setCalledFunction(FuncTypePtr FTy, ValPtr Fn) {}
 
 			// Methods for support type inquiry through isa, cast, and dyn_cast:
 			static bool classof(InstPtr I)
@@ -545,7 +566,7 @@ namespace compiler
 		// Example:  <result> = extractvalue {i32, float} %agg, 0
 
 		// 在moses中没有array类型，只有聚合类型，也就是匿名类型和用户自定义类型
-		class ExtractValueInst : public UnaryInstruction
+		class ExtractValueInst final : public UnaryOperator
 		{
 		private:
 			TyPtr AggregateType;
@@ -569,12 +590,14 @@ namespace compiler
 				std::string NameStr = "", InstPtr InsertBefore = nullptr)
 			{
 				// return new ExtractValueInst(Agg, Idxs, NameStr, InsertBefore);
+				return nullptr;
 			}
 
 			static EVInstPtr Create(ValPtr Agg, std::vector<unsigned> Idxs,
 				std::string NameStr, BBPtr InsertAtEnd = nullptr)
 			{
 				// return new ExtractValueInst(Agg, Idxs, NameStr, InsertAtEnd);
+				return nullptr;
 			}
 
 			/// getIndexedType - 
@@ -588,7 +611,7 @@ namespace compiler
 		// (神秘的)PHI node, that can not exist in nature, but can be synthesized
 		// in a computer scientist's overactive imagination.
 		// To Do: PHINode的参数是一系列的pair，PHINode的设计暂时不完整。
-		class PHINode : public Instruction
+		class PHINode final : public Instruction
 		{
 		private:
 			// void *operator new(size_t, unsigned) = delete;
@@ -620,7 +643,7 @@ namespace compiler
 				InstPtr InsertBefore = nullptr)
 			{
 				// return new 
-				// return nullptr;
+				return nullptr;
 			}
 
 			static PHINodePtr Create(TyPtr Ty, unsigned NumReservedValues, std::string NameStr,
@@ -704,15 +727,15 @@ namespace compiler
 		//===----------------------------------------------------------------===//
 		//						ReturnInst Class
 		//===----------------------------------------------------------------===//
-
 		// ReturnInst - Return a value (possibly void), from a function. Execution
 		// does not continue in this  function any longer.
-		class ReturnInst : public TerminatorInst
+		class ReturnInst final : public TerminatorInst
 		{
 		private:
 			ReturnInst(const ReturnInst &RI) = delete;
-			// ValPtr RetVal; 在operand中可以体现
 		private:
+			ValPtr Val;
+		public:
 			// ReturnInst constructors:
 			// ReturnInst()						- 'ret void'	instruction
 			// ReturnInst(	null)				- 'ret void'	instruciton
@@ -727,32 +750,29 @@ namespace compiler
 			ReturnInst(ValPtr retVal, InstPtr InsertBefore = nullptr);
 
 			ReturnInst(ValPtr retVal, BBPtr InsertAtEnd);
-		public:
+
+			~ReturnInst() override;
+
 			static RetInstPtr Create(ValPtr retVal = nullptr, InstPtr InsertBefore = nullptr)
-			{
-				// return new(!!retVal)
-				return nullptr;
+			{				
+				return std::make_shared<ReturnInst>(retVal, InsertBefore);
 			}
 
 			static RetInstPtr Create(ValPtr retVal, BBPtr InsertAtEnd)
 			{
-				// return new
-				// return nullptr;
+				return nullptr;
 			}
 
 			static RetInstPtr Create(BBPtr InsertAtEnd)
 			{
-				// return nullptr;
-			}
+				return nullptr;
+			}			
 
-			~ReturnInst();
+			ValPtr getReturnValue() const;
 
-			/*ValPtr getReturnValue() const
-			{
-				return RetVal;
-			}*/
-
-			unsigned getNumSuccessors() const { return 0; }
+			BBPtr getSuccessorV(unsigned index) const;
+			unsigned getNumSuccessorV() const;
+			void setSuccessorV(unsigned idx, BBPtr B);
 
 			// Method for support type inquiry through isa, cast and dyn_cast:
 			static bool classof(InstPtr I)
@@ -766,7 +786,7 @@ namespace compiler
 		//===----------------------------------------------------------------===//
 
 		// BranchInst - Conditional or Unconditional Branch instruction.
-		class BranchInst : TerminatorInst
+		class BranchInst : public TerminatorInst
 		{
 			/// Ops list - Branches are strange. The operands are ordered:
 			/// [Cond, FalseDest, ] True Dest. This make some accessors faster
@@ -783,27 +803,24 @@ namespace compiler
 			// BranchhInst(BB *T, BB *F, Value *C, BB *I)	- 'br C, T, F'	insert at end
 			explicit BranchInst(BBPtr IfTrue, InstPtr InsertBefore = nullptr);
 
-			BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond,
-				InstPtr InsertBefore = nullptr);
+			BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond, InstPtr InsertBefore = nullptr);
 
 			BranchInst(BBPtr IfTrue, BBPtr InsertAtEnd);
 
-			BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond,
-				BBPtr InsertAtEnd);
+			BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond, BBPtr InsertAtEnd);
 		public:
-			static BBPtr Create(BBPtr IfTrue, InstPtr InsertBefore = nullptr)
+			static BrInstPtr Create(BBPtr IfTrue, InstPtr InsertBefore = nullptr)
 			{
 				return nullptr;
-				// return new
 			}
 
-			static BBPtr Create(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond,
+			static BrInstPtr Create(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond,
 				InstPtr InsertBefore = nullptr)
 			{
 				return nullptr;
 			}
 
-			static BBPtr Create(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond,
+			static BrInstPtr Create(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond,
 				BBPtr InsertAtEnd)
 			{
 				return nullptr;
@@ -848,6 +865,50 @@ namespace compiler
 			static bool classof(InstPtr I)
 			{
 				return I->getOpcode() == Instruction::Opcode::Br;
+			}
+		};
+
+		//===----------------------------------------------------------------===//
+		// LoadInst - an instruction for reading from memory.
+		class LoadInst : public UnaryOperator
+		{
+			void init(ValPtr Ptr);
+		public:
+			LoadInst(TyPtr Ty, ValPtr Ptr, std::string Name = "", InstPtr InsertBefore = nullptr);
+			LoadInst(TyPtr Ty, ValPtr Ptr, std::string Name, BBPtr InsertAtEnd);
+
+			~LoadInst() override;
+
+			static LoadInstPtr Create(ValPtr Ptr)
+			{
+				return std::make_shared<LoadInst>(nullptr, Ptr);
+			}
+
+			static bool classof(LoadInstPtr) { return true; }
+			static bool classof(InstPtr I)
+			{
+				return I->getOpcode() == Instruction::Opcode::Load;
+			}
+		};
+
+		//===----------------------------------------------------------------===//
+		// StoreInst - an instruction for storing to memory.
+		class StoreInst : public Instruction
+		{
+			void init(ValPtr Val, ValPtr Ptr);
+		public:
+			// StoreInst(ValPtr Val, ValPtr Ptr, InstPtr InsertBefore = nullptr);
+			StoreInst(ValPtr Val, ValPtr Ptr, BBPtr InsertAtEnd = nullptr);
+
+			static StoreInstPtr Create(ValPtr Val, ValPtr Ptr)
+			{
+				return std::make_shared<StoreInst>(Val, Ptr);
+			}
+
+			static bool classof(StoreInstPtr) { return true; }
+			static bool classof(InstPtr I)
+			{
+				return I->getOpcode() == Instruction::Opcode::Store;
 			}
 		};
 

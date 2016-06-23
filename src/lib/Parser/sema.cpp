@@ -1,13 +1,19 @@
 //===------------------------------sema.cpp--------------------------------===//
 //
 // This file is used to implement sema.
-// To Do: Implement action routines.
 // 
 //===---------------------------------------------------------------------===//
 #include "../../include/Parser/sema.h"
 #include "../../include/Support/error.h"
 using namespace compiler::sema;
 using namespace compiler::lex;
+
+using VarSymPtr = std::shared_ptr<VariableSymbol>;
+using ParmSymPtr = std::shared_ptr<ParmDeclSymbol>;
+using ClassSymPtr = std::shared_ptr<ClassSymbol>;
+using FuncSymPtr = std::shared_ptr<FunctionSymbol>;
+using UDTyPtr = std::shared_ptr<UserDefinedType>;
+using AnonTyPtr = std::shared_ptr<AnonymousType>;
 
 std::shared_ptr<Symbol> Scope::Resolve(std::string name) const
 {
@@ -66,9 +72,14 @@ void Sema::ActOnFunctionDecl(std::string name, std::shared_ptr<Type> returnType)
 {
 	getFunctionStackTop()->setReturnType(returnType);
 
+	auto OldScope = CurScope;
 	// Create new scope for function body.
 	CurScope = std::make_shared<Scope>("", CurScope->getDepth() + 1, CurScope,
 		Scope::ScopeKind::SK_Block);
+
+	auto symbol = std::make_shared<ScopeSymbol>(CurScope, OldScope);
+	OldScope->addDef(symbol);
+
 	ScopeStack.push_back(CurScope);
 }
 
@@ -87,8 +98,14 @@ StmtASTPtr Sema::ActOnIfStmt(SourceLocation start, SourceLocation end,
 /// \brief Action routines about CompoundStatement.
 void Sema::ActOnCompoundStmt()
 {
+	auto OldScope = CurScope;
+	// Create new scope for function body.	
 	CurScope = std::make_shared<Scope>("", CurScope->getDepth() + 1, CurScope,
 		Scope::ScopeKind::SK_Block);
+
+	auto symbol = std::make_shared<ScopeSymbol>(CurScope, OldScope);
+	OldScope->addDef(symbol);
+
 	ScopeStack.push_back(CurScope);
 }
 
@@ -120,7 +137,7 @@ bool Sema::ActOnBreakAndContinueStmt(bool whileContext)
 std::shared_ptr<Type> Sema::ActOnReturnType(const std::string& name) const
 {
 	// Note: 在moses中，class暂时定义在Top-Level中
-	if (ClassSymbol* sym = dynamic_cast<ClassSymbol*>(ScopeStack[0]->CheckWhetherInCurScope(name).get()))
+	if (ClassSymPtr sym = std::dynamic_pointer_cast<ClassSymbol>(ScopeStack[0]->CheckWhetherInCurScope(name)))
 	{
 		return sym->getType();
 	}
@@ -176,9 +193,7 @@ void Sema::ActOnVarDecl(std::string name, VarDeclPtr VD/*, std::shared_ptr<Type>
 {
 	ExprASTPtr Init = VD->getInitExpr();
 	auto declType = VD->getDeclType();
-	CurScope->addDef(std::make_shared<VariableSymbol>(name, CurScope,
-		declType ? declType : VD->getInitExpr()->getType(),
-		declType ? true : false, VD));
+	CurScope->addDef(std::make_shared<VariableSymbol>(name, CurScope, declType, VD->getInitExpr() ? true : false, VD));
 
 	// To Do: moses采用的是结构类型等价的结构，需要记录Class Type的子Type
 	if (ClassStack.size() != 0)
@@ -211,8 +226,8 @@ bool Sema::ActOnReturnAnonymous(std::shared_ptr<Type> type) const
 		return false;
 	}
 
-	if (type->getTypeFingerPrintWithNoConst() !=
-		getFunctionStackTop()->getReturnType()->getTypeFingerPrintWithNoConst())
+	if (TypeKeyInfo::TypeKeyInfo::getHashValue(type) !=
+		TypeKeyInfo::TypeKeyInfo::getHashValue(getFunctionStackTop()->getReturnType()))
 	{
 		errorReport("Return type not match.");
 		return false;
@@ -229,8 +244,8 @@ bool Sema::ActOnReturnStmt(std::shared_ptr<Type> type) const
 	}
 	// 判断类型是否相同
 	// Note: moses暂时不支持const返回类型
-	if (type->getTypeFingerPrintWithNoConst()
-		!= getFunctionStackTop()->getReturnType()->getTypeFingerPrintWithNoConst())
+	if (TypeKeyInfo::TypeKeyInfo::getHashValue(type)
+		!= TypeKeyInfo::TypeKeyInfo::getHashValue(getFunctionStackTop()->getReturnType()))
 	{
 		errorReport("Return type not match.");
 		return false;
@@ -240,13 +255,13 @@ bool Sema::ActOnReturnStmt(std::shared_ptr<Type> type) const
 
 /// \brief Act on declaration reference.
 /// Perferm name lookup and type checking.
-DeclASTPtr Sema::ActOnDeclRefExpr(std::string name)
+VarDeclPtr Sema::ActOnDeclRefExpr(std::string name)
 {
-	if (VariableSymbol* vsym = dynamic_cast<VariableSymbol*>(CurScope->Resolve(name).get()))
+	if (VarSymPtr vsym = std::dynamic_pointer_cast<VariableSymbol>(CurScope->Resolve(name)))
 	{
 		return vsym->getDecl();
 	}
-	else if (ParmDeclSymbol* psym = dynamic_cast<ParmDeclSymbol*>(CurScope->Resolve(name).get()))
+	else if (ParmSymPtr psym = std::dynamic_pointer_cast<ParmDeclSymbol>(CurScope->Resolve(name)))
 	{
 		return psym->getDecl();
 	}
@@ -264,8 +279,8 @@ std::shared_ptr<Type> Sema::ActOnCallExpr(std::string name,
 	std::vector<std::shared_ptr<Type>> args, FunctionDeclPtr &FD)
 {
 	std::shared_ptr<Type> ReturnType = nullptr;
-	if (FunctionSymbol* FuncSym =
-		dynamic_cast<FunctionSymbol*>(ScopeStack[0]->CheckWhetherInCurScope(name).get()))
+	if (FuncSymPtr FuncSym =
+		std::dynamic_pointer_cast<FunctionSymbol>(ScopeStack[0]->CheckWhetherInCurScope(name)))
 	{
 		ReturnType = FuncSym->getReturnType();
 		// check args number and type.
@@ -289,8 +304,8 @@ std::shared_ptr<Type> Sema::ActOnCallExpr(std::string name,
 				continue;
 			}
 
-			if (args[i]->getTypeFingerPrintWithNoConst() ==
-				(*FuncSym)[i]->getType()->getTypeFingerPrintWithNoConst())
+			if (TypeKeyInfo::TypeKeyInfo::getHashValue(args[i]) == 
+				TypeKeyInfo::TypeKeyInfo::getHashValue((*FuncSym)[i]->getType()))
 			{
 				continue;
 			}
@@ -332,18 +347,18 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
 	{
 		if (!lhs->isLValue())
 			errorReport("Left hand expression must be lvalue.");
-		if (lhs->getType()->getTypeFingerPrintWithNoConst() !=
-			rhs->getType()->getTypeFingerPrintWithNoConst())
+		if (TypeKeyInfo::TypeKeyInfo::getHashValue(lhs->getType()) != 
+			TypeKeyInfo::TypeKeyInfo::getHashValue(rhs->getType()))
 			errorReport("Type on the left and type on the right must be the same.");
 		// Shit code!其实指针不应该暴露出来的，但是C++标准只能通过指针类型实现多态
 		// 以及相应的dynamic_cast转换，std::shared_ptr虽然属于标准库，但是仍然是一个栈上对象
-		if (const DeclRefExpr* DRE = dynamic_cast<DeclRefExpr*>(lhs.get()))
+		if (DeclRefExprPtr DRE = std::dynamic_pointer_cast<DeclRefExpr>(lhs))
 		{
-			if (DRE->getType()->isConst())
+			if (DRE->getDecl()->isConst())
 			{
 				// 检查是否初始化
-				if (VariableSymbol* sym =
-					dynamic_cast<VariableSymbol*>(CurScope->Resolve(DRE->getDeclName()).get()))
+				if (VarSymPtr sym =
+					std::dynamic_pointer_cast<VariableSymbol>(CurScope->Resolve(DRE->getDeclName())))
 				{
 					if (sym->isInitial())
 					{
@@ -391,13 +406,13 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
 	// 如果当前运算符是算术运算，则BinaryOperator是int类型
 	if (tok.isArithmeticOperator())
 	{
-		type = std::make_shared<BuiltinType>(TypeKind::INT, true);
+		type = Ctx.Int;
 	}
 
 	// 如果当前运算符是逻辑运算符，则BinaryOperator是bool类型
 	if (tok.isLogicalOperator())
 	{
-		type = std::make_shared<BuiltinType>(TypeKind::BOOL, true);
+		type = Ctx.Bool;
 	}
 
 	// Note: 为了简化设计，BinaryOperator默认是rvalue
@@ -435,7 +450,7 @@ ExprASTPtr Sema::ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok)
 	/// 这里需要检查该用户自定义类型是否有这个成员名，存在的话，同时获取该数据成员的类型
 	/// Note: 这里将UserDefinedType*指针暴露出来是不符合规范的，但是只有在原生态指针的
 	/// 情况下才能进行多态的转换。
-	if (UserDefinedType* BaseType = dynamic_cast<UserDefinedType*>(lhs->getType().get()))
+	if (UDTyPtr BaseType = std::dynamic_pointer_cast<UserDefinedType>(lhs->getType()))
 	{
 		if (!(BaseType->HaveMember(tok.getLexem())))
 		{
@@ -467,6 +482,30 @@ ExprASTPtr Sema::ActOnDecOrIncExpr(ExprASTPtr rhs)
 	{
 		errorReport("Operator '++' '--' need operand is lvalue");
 	}
+
+	// (3) 检查rhs是否是const类型
+	if (DeclRefExprPtr DeclRef = std::dynamic_pointer_cast<DeclRefExpr>(rhs))
+	{
+		auto decl = DeclRef->getDecl();
+		if (!decl)
+			errorReport("Declaration reference error!");
+		auto symbol = CurScope->Resolve(decl->getName());
+		if (VarSymPtr sym = std::dynamic_pointer_cast<VariableSymbol>(symbol))
+		{
+			if (decl->isConst() && sym->isInitial())
+			{
+				errorReport("Const variable can't be assigned.");
+			}
+		}
+		else if (ParmSymPtr psym = std::dynamic_pointer_cast<ParmDeclSymbol>(symbol))
+		{
+			return rhs;
+		}
+		else
+		{
+			errorReport("Declaration reference error!");
+		}
+	}
 	return rhs;
 }
 
@@ -496,7 +535,7 @@ ExprASTPtr Sema::ActOnUnarySubExpr(ExprASTPtr rhs)
 /// Shit code!
 UnpackDeclPtr Sema::ActOnUnpackDecl(UnpackDeclPtr unpackDecl, std::shared_ptr<Type> type)
 {
-	if (UnpackDecl* unpackd = dynamic_cast<UnpackDecl*>(unpackDecl.get()))
+	if (UnpackDeclPtr unpackd = std::dynamic_pointer_cast<UnpackDecl>(unpackDecl))
 	{
 		if (!type)
 		{
@@ -518,11 +557,11 @@ UnpackDeclPtr Sema::ActOnUnpackDecl(UnpackDeclPtr unpackDecl, std::shared_ptr<Ty
 /// \brief 
 BinaryPtr Sema::ActOnAnonymousTypeVariableAssignment(ExprASTPtr lhs, ExprASTPtr rhs) const
 {
-	if (DeclRefExpr* DRE = dynamic_cast<DeclRefExpr*>(lhs.get()))
+	if (DeclRefExprPtr DRE = std::dynamic_pointer_cast<DeclRefExpr>(lhs))
 	{
 		// Type Checking.
-		if (DRE->getType()->getTypeFingerPrintWithNoConst() !=
-			rhs->getType()->getTypeFingerPrintWithNoConst())
+		if (TypeKeyInfo::TypeKeyInfo::getHashValue(DRE->getType()) !=
+			TypeKeyInfo::TypeKeyInfo::getHashValue(rhs->getType()))
 		{
 			errorReport("Type error occured in anonymous type variable assigning.");
 		}
@@ -550,8 +589,8 @@ bool Sema::ActOnConditionExpr(std::shared_ptr<Type> type) const
 /// \brief Mainly check parameter declaration type.
 std::shared_ptr<Type> Sema::ActOnParmDeclUserDefinedType(Token tok) const
 {
-	if (ClassSymbol* csym =
-		dynamic_cast<ClassSymbol*>(ScopeStack[0]->CheckWhetherInCurScope(tok.getLexem()).get()))
+	if (ClassSymPtr csym =
+		std::dynamic_pointer_cast<ClassSymbol>(ScopeStack[0]->CheckWhetherInCurScope(tok.getLexem())))
 	{
 		return csym->getType();
 	}
@@ -620,6 +659,11 @@ std::shared_ptr<Symbol> Scope::CheckWhetherInCurScope(std::string name)
 	return nullptr;
 }
 
+std::shared_ptr<Scope> Sema::getScopeStackBottom() const
+{
+	return ScopeStack[0];
+}
+
 std::shared_ptr<Scope> Sema::getScopeStackTop() const
 {
 	if (ScopeStack.size() == 0)
@@ -633,7 +677,7 @@ std::shared_ptr<Scope> Sema::getScopeStackTop() const
 /// \brief 该方法主要用于进行类型检查，并设置其类型
 UnpackDeclPtr Sema::unpackDeclTypeChecking(UnpackDeclPtr decl, std::shared_ptr<Type> initType) const
 {
-	if (AnonymousType* anonyt = dynamic_cast<AnonymousType*>(initType.get()))
+	if (AnonTyPtr anonyt = std::dynamic_pointer_cast<AnonymousType>(initType))
 	{
 		// (1) 检查其中的每个类型是否相容
 		if (!(decl->TypeCheckingAndTypeSetting(anonyt)))
@@ -681,5 +725,6 @@ UnpackDeclPtr Sema::unpackDeclTypeChecking(UnpackDeclPtr decl, std::shared_ptr<T
 /// \brief 用于sema的报错
 void Sema::errorReport(const std::string& msg) const
 {
+	Ctx.isParseOrSemaSuccess = false;
 	errorSema(scan->getLastToken().getTokenLoc().toString() + " --- " + msg);
 }

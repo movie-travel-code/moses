@@ -5,6 +5,7 @@
 //===---------------------------------------------------------------------===//
 #include "../../include/IRBuild/IRBuilder.h"
 using namespace compiler::IR;
+using namespace compiler::IRBuild;
 
 void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueB, BBPtr FalseBlock)
 {

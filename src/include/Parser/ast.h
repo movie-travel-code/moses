@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <cassert>
+#include "../IR/Value.h"
 #include "../Support/SourceLocation.h"
 #include "Type.h"
 
@@ -30,13 +32,13 @@ namespace compiler
 		class BinaryExpr;
 		class CallExpr;
 		class DeclStatement;
-		class StatementAST;
+		class StatementAST; 
 		class ParameterDecl;
 		class FunctionDecl;
 		class CompoundStmt;
 		class VarDecl;	
 		class UnpackDecl;
-		class ExprStatement;
+		class ExprStatement; 
 		class IfStatement;
 		class WhileStatement;
 		class ClassDecl;
@@ -66,6 +68,8 @@ namespace compiler
 		using MemberExprPtr = std::shared_ptr<MemberExpr>;
 		using BoolLiteralPtr = std::shared_ptr<BoolLiteral>;
 
+		using IRValue = std::shared_ptr<IR::Value>;
+
 		/// \brief StatementAST - Base class for all statements.
 		//--------------------------nonsense for coding---------------------------
 		// 这里使用std::shared_ptr来包裹AST树，有些鸡肋，因为IR生成的时候，直接将
@@ -78,38 +82,33 @@ namespace compiler
 			// 其中关于被访问体（也就是AST node）部分，通过override的 Accept()的方法来实现
 			// 第一层dispatch，第一层dispatch通过override的方式拿到具体的节点类型。
 			// 第二层dispatch使用重载实现（见IRbuilder）。
+			// http://www.cs.wustl.edu/~cytron/cacweb/Tutorial/Visitor/
+			// And 
+			// http://programmers.stackexchange.com/questions/189476/implementing-the-visitor-pattern-for-an-abstract-syntax-tree
+			template<typename RetTy, typename... Additional>
 			class Visitor
 			{
 			public:
-				virtual void visit(const StatementAST* root) {}
-	
-				/// \brief IR gen for NumberExpr
-				virtual void visit(const ExprStatement* exprstmt) {}
-				
-				/// \brief Generate code for CompoundStmt.
-				virtual void visit(const CompoundStmt* comstmt) {}
-
-				/// \brief Generate code for IfStatement.
-				virtual void visit(const IfStatement* ifstmt) {}
-
-				virtual void visit(const WhileStatement* whilestmt) {}
-
-				virtual void visit(const VarDecl* VD) {}
-
-				virtual void visit(const ClassDecl* CD) {}
-
-				virtual void visit(const FunctionDecl* FD) {}
-
-				virtual void visit(const UnpackDecl* UD) {}
-
-				/// \brief
-				virtual void visit(const Expr* expr) {}
-
-				/// \brief
-				virtual void visit(const BinaryExpr* B) {}
-
-				/// \brief
-				virtual void visit(const CallExpr* Call) {}
+				virtual RetTy visit(const StatementAST* S, Additional... addi) = 0;
+				virtual RetTy visit(const ExprStatement* ES, Additional... addi) = 0;
+				virtual RetTy visit(const CompoundStmt* CS, Additional... addi) = 0;
+				virtual RetTy visit(const IfStatement* IS, Additional... addi) = 0;
+				virtual RetTy visit(const WhileStatement* WS, Additional... addi) = 0;
+				virtual RetTy visit(const ReturnStatement* RS, Additional... addi) = 0;
+				virtual RetTy visit(const DeclStatement* DS, Additional... addi) = 0;
+				virtual RetTy visit(const VarDecl* VD, Additional... addi) = 0;
+				virtual RetTy visit(const ParameterDecl*, Additional... addi) = 0;
+				virtual RetTy visit(const ClassDecl* CD, Additional... addi) = 0;
+				virtual RetTy visit(const FunctionDecl* FD, Additional... addi) = 0;
+				virtual RetTy visit(const UnpackDecl* UD, Additional... addi) = 0;
+				virtual RetTy visit(const Expr* E, Additional... addi) = 0;
+				virtual RetTy visit(const BinaryExpr* BE, Additional... addi) = 0;
+				virtual RetTy visit(const CallExpr* CE, Additional... addi) = 0;
+				virtual RetTy visit(const DeclRefExpr* DRE, Additional... addi) = 0;
+				virtual RetTy visit(const BoolLiteral* BL, Additional... addi) = 0;
+				virtual RetTy visit(const NumberExpr* NE, Additional... addi) = 0;
+				virtual RetTy visit(const UnaryExpr* UE, Additional... addi) = 0;
+				virtual RetTy visit(const MemberExpr* ME, Additional... addi) = 0;
 			};
 
 		protected:
@@ -130,9 +129,9 @@ namespace compiler
 			// , semantic analysis doesn't use vistor pattern).
 			// When a node accepts a visitor, actions are performed that are appropriate to
 			// both the visitor and the node at hand(double dispatch).
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 
 			SourceLocation getLocStart() const { return LocStart; }
@@ -201,12 +200,11 @@ namespace compiler
 
 			virtual ~Expr() {}
 
-			// ---------------------nonsense for coding-------------------------
-			// 注意这里accept与父类的相比不是多余，是通过this的声明类型来实现多态的
-			// -----------------------------------------------------------------
-			virtual void Accept(Visitor* v) const
+			// Silly!
+			// If we have other visitors, we will get a "Accept" list!
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -226,9 +224,9 @@ namespace compiler
 
 			double getVal() const { return Val; }
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -249,9 +247,9 @@ namespace compiler
 
 			virtual ~CharExpr() {}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -265,9 +263,9 @@ namespace compiler
 				Expr(start, end, type, ExprValueKind::VK_RValue, true), str(str) {}
 			virtual ~StringLiteral() {}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -290,9 +288,9 @@ namespace compiler
 				return value;
 			}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -323,9 +321,9 @@ namespace compiler
 
 			virtual ~DeclRefExpr() {}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -352,14 +350,14 @@ namespace compiler
 
 			virtual ~BinaryExpr() {}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
 		/// \brief UnaryExpr - Expression class for a unary operator.
-		class UnaryExpr : public Expr
+		class UnaryExpr final : public Expr
 		{
 			std::string OpName;
 			ExprASTPtr SubExpr;
@@ -376,14 +374,14 @@ namespace compiler
 
 			virtual ~UnaryExpr() {}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
 		/// @brief CallExprAST - Expression class for function calls.
-		class CallExpr : public Expr
+		class CallExpr final : public Expr
 		{
 			std::string CalleeName;
 			// To Do: FunctionDecl*
@@ -406,9 +404,9 @@ namespace compiler
 
 			virtual ~CallExpr() {}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -440,9 +438,9 @@ namespace compiler
 
 			ExprASTPtr getBase() const { return nullptr; }
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -464,9 +462,9 @@ namespace compiler
 				Expr(start, end, type, Expr::ExprValueKind::VK_RValue, true), InitExprs(initExprs) 
 			{}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -475,7 +473,7 @@ namespace compiler
 		/// Compound Statement's Grammar as below.
 		/// compound-statement -> "{" statement* "}"
 		/// ------------------------------------------
-		class CompoundStmt : public StatementAST
+		class CompoundStmt final : public StatementAST
 		{
 			// The sub-statements of the compound statement.
 			std::vector<StmtASTPtr> SubStmts;
@@ -496,9 +494,9 @@ namespace compiler
 				return SubStmts.size();
 			}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -507,7 +505,7 @@ namespace compiler
 		/// If Statement's Grammar as below.
 		/// if-statement -> "if" expression compound-statement "else" compound-statement
 		/// ----------------------------------------------------------------------------
-		class IfStatement : public StatementAST
+		class IfStatement final : public StatementAST
 		{
 			std::shared_ptr<Expr> Condition;
 			std::shared_ptr<StatementAST> Then;
@@ -536,9 +534,9 @@ namespace compiler
 				return Condition;
 			}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -547,7 +545,7 @@ namespace compiler
 		/// While Statement's Grammar as below.
 		/// while-statement -> "while" expression compound-statement
 		/// ---------------------------------------------------------
-		class WhileStatement : public StatementAST
+		class WhileStatement final : public StatementAST
 		{
 			std::shared_ptr<Expr> Condition;
 			std::shared_ptr<StatementAST> WhileBody;
@@ -559,9 +557,9 @@ namespace compiler
 
 			virtual ~WhileStatement() {}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -570,14 +568,14 @@ namespace compiler
 		/// Break Statement's Grammar as below.
 		/// break-statement -> "break" ";"
 		/// ---------------------------------------
-		class BreakStatement : public StatementAST
+		class BreakStatement final : public StatementAST
 		{
 		public:
 			BreakStatement(SourceLocation start, SourceLocation end) : StatementAST(start, end) {}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -586,16 +584,16 @@ namespace compiler
 		/// Continue Statement's Grammar as below.
 		/// continue-statement -> "continue" ";"
 		/// ----------------------------------------
-		class ContinueStatement : public StatementAST
+		class ContinueStatement final : public StatementAST
 		{
 		public:
 			ContinueStatement(SourceLocation start, SourceLocation end) :
 				StatementAST(start, end) {}
 			virtual ~ContinueStatement() {}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -606,7 +604,7 @@ namespace compiler
 		/// return-statement -> "return" ";"
 		/// return-statement -> "return" anonymous-initial ";"
 		/// ---------------------------------------------
-		class ReturnStatement : public StatementAST
+		class ReturnStatement final : public StatementAST
 		{
 			std::shared_ptr<Expr> ReturnExpr;
 		public:
@@ -618,9 +616,9 @@ namespace compiler
 
 			ExprASTPtr getSubExpr() const { return ReturnExpr; }
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -638,9 +636,9 @@ namespace compiler
 
 			virtual ~ExprStatement() {}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -664,9 +662,9 @@ namespace compiler
 
 			std::shared_ptr<Type> getDeclType() const { return declType; }
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -702,9 +700,9 @@ namespace compiler
 
 			bool isConst() const { return IsConst; }
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -719,9 +717,9 @@ namespace compiler
 
 			std::string getParmName() const { return VarDecl::getName(); }
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -749,9 +747,9 @@ namespace compiler
 
 			void getDeclNames(std::vector<std::string>& names) const;
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 
@@ -780,11 +778,17 @@ namespace compiler
 			{}
 
 			virtual ~FunctionDecl() {}
-
-			unsigned getParaNum() { return paraNum; }
-
+			unsigned getParaNum() const { return paraNum; }
+			std::vector<ParmDeclPtr> getParms() const { return parameters; }
 			std::string getParmName(unsigned index) const { return parameters[index].get()->getParmName(); }
-
+			std::shared_ptr<Type> getReturnType() const { return returnType; }
+			std::string getFDName() const { return FDName; }
+			ParmDeclPtr getParmDecl(unsigned index) const { return (*this)[index]; }
+			ParmDeclPtr operator[](unsigned index) const 
+			{
+				assert(index <= paraNum - 1 && "Index out of range when we get specified ParmDecl.");
+				return parameters[index];
+			}
 			// 用于标识该函数能否constant-evaluator. 
 			// 对于函数来说，能进行constant-evaluator的标准是只能有一条return语句，且返回类型是内置类型.
 			// 例如：
@@ -793,9 +797,14 @@ namespace compiler
 			// 如果后面需要加强推导能力，就需要返回这个函数体了。
 			ReturnStmtPtr isEvalCandiateAndGetReturnStmt() const;
 
-			virtual void Accept(Visitor* v) const
+			/// Determine whether the function F ends with a return stmt.
+			bool endsWithReturn() const;
+
+			StmtASTPtr getCompoundBody() const { return funcBody; }
+
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};		
 
@@ -819,9 +828,9 @@ namespace compiler
 			ClassDecl(SourceLocation start, SourceLocation end, std::string name, StmtASTPtr body) :
 				DeclStatement(start, end, nullptr), ClassName(name), Body(body) {}
 
-			virtual void Accept(Visitor* v) const
+			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
-				v->visit(this);
+				return v->visit(this);
 			}
 		};
 	}	

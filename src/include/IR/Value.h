@@ -118,7 +118,7 @@ namespace compiler
 				GlobalVariableVal	// This is an instance of VlobalVariable
 			};
 			
-		private:
+		protected:
 			// a "use list" that keep track of which other Values are using this value.
 			// -------------------------nonsense for coding---------------------------
 			// PS: LLVM IR中如何定义def-use链的机制没有搞懂。所以暂时实现自己的def-use机制
@@ -143,7 +143,7 @@ namespace compiler
 			bool hasName() const { return Name != ""; }
 			const std::string& getName() const { return Name; }
 
-			virtual void SetName(const std::string &name/*, SymbolTable* = 0*/)
+			virtual void setName(const std::string &name/*, SymbolTable* = 0*/)
 			{
 				Name = name;
 			}

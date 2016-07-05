@@ -6,7 +6,7 @@
 //===---------------------------------------------------------------------===//
 #ifndef CG_VALUE_H
 #define CG_VALUE_H
-#include <assert.h>
+#include <cassert>
 #include "../Parser/Type.h"
 #include "../IR/Value.h"
 #include "../IR/IRType.h"

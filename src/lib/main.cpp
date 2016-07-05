@@ -32,8 +32,7 @@ int main()
 		return 0;		
 	}
 
-	ConstantEvaluator evaluator;
-
+	// ConstantEvaluator evaluator;
 	// ≤‚ ‘evaluator
 	auto AST = parse.getAST();
 	MosesIRContext IRContext;

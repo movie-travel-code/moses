@@ -133,7 +133,7 @@ namespace compiler
 			// To Do: 为了减少对内存的占用，我们在MosesIRContext中存放VoidTy和IntTy，
 			// 但是我们统一使用std::shared_ptr<>进行内存管理，所以反而增加了对内存的
 			// 占用，这样的内存占用显然是很大的。
-			std::shared_ptr<Type> VoidTy, IntTy;
+			std::shared_ptr<Type> VoidTy, IntTy, BoolTy;
 			std::shared_ptr<ConstantBool> TheTrueVal, TheFalseVal;
 
 			TypeSet<FuncTypePtr, FunctionTypeKeyInfo> FunctionTypeSet;
@@ -142,20 +142,28 @@ namespace compiler
 			// ExprConstants;
 		public:
 			MosesIRContext() : VoidTy(std::make_shared<Type>(Type::TypeID::VoidTy)), 
-				IntTy(std::make_shared<Type>(Type::TypeID::IntegerTy))
+				IntTy(std::make_shared<Type>(Type::TypeID::IntegerTy)),
+				BoolTy(std::make_shared<Type>(Type::TypeID::BoolTy))
 			{}
-			/// \brief 向其中添加新类型
-			void AddStructType(StructTypePtr Types);
+			/// \brief Add literal structure type(AnonymousType).
+			void AddStructType(StructTypePtr Type)
+			{
+				StructTypeSet.insert(Type);
+			}
 
-			/// \brief 根据名字获知是否存在这样的结构类型（仅针对Identified Type类型）.
-			StructTypePtr getGlobalStructType(std::string Name);
+			/// \brief Add named structure type(UserdefinedType - class).
+			void AddNamedStructType(StructTypePtr Type)
+			{
+				NamedStructTypeSet.insert(Type);
+			}
 			
 			/// \brief 检查某种类型在GlobalType中是否存在.
 			bool CheckHave(StructTypePtr forchecking);
 
 			// helper method.
-			std::shared_ptr<Type> getVoidTy() const {}
-			std::shared_ptr<Type> getIntTy() const {}
+			std::shared_ptr<Type> getVoidTy() const { return VoidTy; }
+			std::shared_ptr<Type> getIntTy() const { return IntTy; }
+			std::shared_ptr<Type> getBoolTy() const { return BoolTy; }
 		};
 	}
 }

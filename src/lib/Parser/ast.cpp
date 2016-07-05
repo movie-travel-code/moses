@@ -42,7 +42,7 @@ bool UnpackDecl::TypeCheckingAndTypeSetting(AnonTyPtr type)
 	// (2) 递归检查其中每个element.
 	// Note: 由于这个函数传递进来的是type，所以不能以type构建智能指针
 	// 使用同一个原生指针初始化两个智能指针，有可能会出现悬空指针。
-	for (int index = 0; index < size; index++)
+	for (unsigned index = 0; index < size; index++)
 	{
 		if (UnpackDeclPtr unpackd = std::dynamic_pointer_cast<UnpackDecl>(decls[index]))
 		{
@@ -86,7 +86,7 @@ std::vector<std::string> UnpackDecl::operator[](unsigned index) const
 void UnpackDecl::getDeclNames(std::vector<std::string>& names) const
 {
 	unsigned size = decls.size();
-	for (int index = 0; index < size; index++)
+	for (unsigned index = 0; index < size; index++)
 	{
 		if (UnpackDeclPtr unpackd = std::dynamic_pointer_cast<UnpackDecl>(decls[index]))
 		{
@@ -127,4 +127,17 @@ ReturnStmtPtr FunctionDecl::isEvalCandiateAndGetReturnStmt() const
 		return nullptr;
 	}
 	return nullptr;
+}
+
+bool FunctionDecl::endsWithReturn() const
+{
+	if (CompoundStmtPtr body = std::dynamic_pointer_cast<CompoundStmt>(funcBody))
+	{
+		// ends with return stmt.
+		if (ReturnStmtPtr ret = std::dynamic_pointer_cast<ReturnStatement>((*body)[body->getSize() - 1]))
+		{
+			return true;
+		}
+	}
+	return false;
 }

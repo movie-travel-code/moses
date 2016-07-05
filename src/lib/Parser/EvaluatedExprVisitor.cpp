@@ -66,7 +66,7 @@ void EvaluatedExprVisitorBase::handleEvalCallTail()
 {
 	std::pair<int, unsigned> bookeepingInfo = ActiveBookingInfo[ActiveBookingInfo.size() - 1];
 	ActiveBookingInfo.pop_back();
-	for (int i = 0; i < bookeepingInfo.second; i++)
+	for (unsigned i = 0; i < bookeepingInfo.second; i++)
 	{
 		ActiveStack.pop_back();
 	}
@@ -104,7 +104,7 @@ bool EvaluatedExprVisitorBase::EvalCallExpr(CallExprPtr CE, EvalInfo &info)
 	ValueKind vk;
 	// (1) 对实参值进行evaluate
 	unsigned num = CE->getArgsNum();
-	for (int i = 0; i < num; i++)
+	for (unsigned i = 0; i < num; i++)
 	{
 		ExprASTPtr Arg = CE->getArg(i);
 		if (Arg->getType()->getKind() == TypeKind::INT)
@@ -177,7 +177,7 @@ bool EvaluatedExprVisitorBase::EvalDeclRefExpr(DeclRefExprPtr DRE, EvalInfo &inf
 		auto stackSize = ActiveStack.size();
 		// ActiveStack 尾部开始检查是否存在parm，不存在，则直接返回。
 		// <start, Evalinfo> <lhs, EvalInfo> <rhs, EvalInfo>
-		for (int i = stackSize - 1; i >= 0; i--)
+		for (unsigned i = stackSize - 1; i >= 0; i--)
 		{
 			if (ActiveStack[i].first == PD->getParmName())
 			{

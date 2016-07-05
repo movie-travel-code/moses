@@ -4,27 +4,52 @@
 //
 //===---------------------------------------------------------------------===//
 #include "../../include/IR/IRType.h"
-#include "../../include/IRbuild/COdeGenTypes.h"
+#include "../../include/IRbuild/CodeGenTypes.h"
 using namespace compiler::IRBuild;
-
 std::shared_ptr<compiler::IR::Type> CodeGenTypes::ConvertType(std::shared_ptr<compiler::ast::Type> type)
 {
-	// (1) 检查相同的StructType是否生成过，生成过的话，直接返回。
-	switch (type->getKind())
+	std::shared_ptr<StructType> IRType = nullptr;
+	// (1) Check type cache.
+	auto iter = RecordDeclTypes.find(type.get());
+	if (iter != RecordDeclTypes.end())
+		IRType = iter->second;
+
+	// (2) Create new type.
+	ast::TypeKind tyKind = type->getKind();
+	assert((tyKind == ast::TypeKind::INT		|| 
+			tyKind == ast::TypeKind::BOOL		|| 
+			tyKind == ast::TypeKind::VOID		||
+			tyKind == ast::TypeKind::USERDEFIED ||
+			tyKind == ast::TypeKind::ANONYMOUS) && "TypeKind not exists.");
+
+	if (tyKind == ast::TypeKind::INT)
 	{
-	case ast::TypeKind::INT:
-		return IRType::getIntType();
-	case ast::TypeKind::BOOL:
-		return IRType::getBoolType();
-	case ast::TypeKind::USERDEFIED:
-		return IRStructTy::Create(type);
-		break;
-	case ast::TypeKind::ANONYMOUS:
-		return IRStructTy::get(type);
-	case ast::TypeKind::VOID:
-		return IRType::getVoidType();
-	default:
-		break;
+		return IRCtx.getIntTy();
 	}
-	return nullptr;
+	if (tyKind == ast::TypeKind::BOOL)
+	{
+		return IRCtx.getBoolTy();
+	}
+	if (tyKind == ast::TypeKind::VOID)
+	{
+		return IRCtx.getVoidTy();
+	}
+	if (tyKind == ast::TypeKind::USERDEFIED)
+	{
+		// Create new named structure type.
+		IRType = IRStructTy::Create(type);
+		// Cached this type into the RecordTypes.
+		RecordDeclTypes.insert({ type.get(), IRType });
+		// Storing this info.
+		IRCtx.AddNamedStructType(IRType);
+	}
+	if (tyKind == ast::TypeKind::ANONYMOUS)
+	{
+		// Created new literal structure type.
+		IRType = IRStructTy::get(type);
+		// Cached this type into the RecordTypes.
+		RecordDeclTypes.insert({type.get(), IRType});
+		IRCtx.AddStructType(IRType);
+	}
+	return IRType;
 }

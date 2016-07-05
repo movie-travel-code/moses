@@ -22,7 +22,7 @@ namespace compiler
 			BO_Add, BO_Sub,				// + -
 			BO_LT, BO_GT, BO_LE, BO_GE,	// < > <= >=
 			BO_EQ, BO_NE,				// == !=
-			UO_Inc, UO_Dec,				// -- ++
+			UO_Inc, UO_Dec,				// ++ --
 			UO_Exclamatory,				// !
 
 			BO_Assign, BO_MulAssign,	// = *=

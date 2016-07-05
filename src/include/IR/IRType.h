@@ -10,7 +10,7 @@
 #define MOSES_IR_IRTYPE_H
 #include <vector>
 #include <memory>
-#include <assert.h>
+#include <cassert>
 #include "../../include/Parser/Type.h"
 namespace compiler
 {
@@ -87,6 +87,8 @@ namespace compiler
 				return getTypeID() == StructTy || getTypeID() == AnonyTy;
 			}
 
+			virtual void useless() {}
+
 			//===------------------------------------------------------------===//
 			// Helper for get types.
 			static IRTyPtr getVoidType();
@@ -101,20 +103,20 @@ namespace compiler
 			// FunctionType对应的对象都不是可复制的。
 			// Function的签名在moses中是唯一的。
 			FunctionType(const FunctionType &) = delete;
-			const FunctionType &operator=(const FunctionType &) = delete;
-
-			FunctionType(ASTTyPtr Return, std::vector<ASTTyPtr> Params);
+			const FunctionType &operator=(const FunctionType &) = delete;					
 		private:
 			/// 对于FunctionType来说，ContainedTys包含函数的形参类型。
 			std::vector<IRTyPtr> ContainedTys;
 
 			unsigned NumContainedTys;
 		public:
+			FunctionType(IRTyPtr retty, std::vector<IRTyPtr> parmsty);
+			FunctionType(IRTyPtr retty);
 			/// This static method is the primary way of constructing a FunctionType.
-			static std::shared_ptr<FunctionType> get(ASTTyPtr Return, std::vector<ASTTyPtr> Params);
+			static std::shared_ptr<FunctionType> get(IRTyPtr retty, std::vector<IRTyPtr> parmtys);
 
 			/// Create a FunctionType taking no parameters.
-			static std::shared_ptr<FunctionType> get(ASTTyPtr Return);
+			static std::shared_ptr<FunctionType> get(IRTyPtr retty);
 
 			IRTyPtr getReturnType() const { return ContainedTys[0]; }
 
@@ -125,7 +127,6 @@ namespace compiler
 			IRTyPtr operator[](unsigned index) const;
 
 			unsigned getNumParams() const { return NumContainedTys - 1; }
-
 			std::vector<IRTyPtr> getParams() const{ return ContainedTys; }
 
 			static bool classof(IRTyPtr Ty);

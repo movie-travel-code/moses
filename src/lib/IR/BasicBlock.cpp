@@ -49,9 +49,10 @@ void BasicBlock::setParent(FuncPtr parent)
 void BasicBlock::setName(std::string Name, SymTabPtr ST)
 {}
 
-InstPtr BasicBlock::getTerminator()
+std::shared_ptr<TerminatorInst> BasicBlock::getTerminator()
 {
-	return InstList.back();
+	if (InstList.empty()) return nullptr;
+	return std::dynamic_pointer_cast<TerminatorInst>(InstList.back());
 }
 
 void BasicBlock::removePredecessor(BBPtr Pred)

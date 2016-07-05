@@ -5,8 +5,8 @@
 //===---------------------------------------------------------------------===//
 #include "../../include/IR/IRType.h"
 using namespace compiler::IR;
-// using IRTyPtr = std::shared_ptr<Type>;
-// using IRStructTyPtr = std::shared_ptr<StructType>;
+using TyPtr = std::shared_ptr<Type>;
+using StructTyPtr = std::shared_ptr<StructType>;
 
 //===---------------------------------------------------------------------===//
 // Implements class Type.
@@ -33,28 +33,31 @@ IRTyPtr Type::getBoolType()
 //===---------------------------------------------------------------------===//
 // Implements class FunctionType.
 
-/// \brief 该函数用于产生FunctionType。
-/// 例如：
-///		class A { var num : int; var flag : bool; };
-///		func add(lhs:int, rhs:int) -> A
-///		{
-///			return {lhs, true};
-///		}
-///	Note: 为function add创建FunctionType的时候，首先需要为return type和parameter type
-/// 创建IR:Type。
-std::shared_ptr<FunctionType> FunctionType::get(ASTTyPtr Return, std::vector<ASTTyPtr> Params)
+FunctionType::FunctionType(TyPtr retty, std::vector<TyPtr> parmsty) : Type(TypeID::FunctionTy)
 {
-	// (1) 首先将函数形参类型转化为moses IR类型.
+	ContainedTys.push_back(retty);
+	for (auto item : parmsty)
+	{
+		ContainedTys.push_back(item);
+	}
+	NumContainedTys = ContainedTys.size();
+}
 
-	// (2) 然后将返回类型转换为moses IR类型
-	// (3) 最后构造得到FunctionType
-	return nullptr;
+FunctionType::FunctionType(TyPtr retty) : Type(TypeID::FunctionTy)
+{
+	ContainedTys.push_back(retty);
+	NumContainedTys = 1;
+}
+
+std::shared_ptr<FunctionType> FunctionType::get(TyPtr retty, std::vector<TyPtr> parmsty)
+{
+	return std::make_shared<FunctionType>(retty, parmsty);
 }
 
 /// \brief 如果函数没有参数的话。
-std::shared_ptr<FunctionType> FunctionType::get(ASTTyPtr Return)
+std::shared_ptr<FunctionType> FunctionType::get(TyPtr retty)
 {
-	return nullptr;
+	return std::make_shared<FunctionType>(retty);
 }
 
 /// 该函数用于获取param type.
@@ -63,15 +66,9 @@ std::shared_ptr<FunctionType> FunctionType::get(ASTTyPtr Return)
 /// [2] = parm2
 IRTyPtr FunctionType::operator[](unsigned index) const
 {
-	if (index == 0)
-	{
-		// operator[] 只能用于取得
-	}
-	if (index > NumContainedTys - 2)
-	{
-		// 报错
-	}
-	return ContainedTys[index + 1];
+	assert(index != 0 && index <= NumContainedTys - 1 && 
+		"Index out of range when we get parm IR type.");
+	return ContainedTys[index];
 }
 
 bool FunctionType::classof(IRTyPtr Ty)

@@ -9,6 +9,7 @@
 #include <vector>
 #include <memory>
 #include <utility>
+#include <cassert>
 #include "../Support/error.h"
 #include "../Lexer/TokenKinds.h"
 #include "../Support/Hasing.h"
@@ -74,7 +75,7 @@ namespace compiler
 
 			bool HaveMember(std::string name) const;
 			bool operator==(const Type& rhs) const;
-			std::pair<TyPtr, std::string> operator[](int index) const { return subTypes[index]; }
+			std::pair<TyPtr, std::string> operator[](unsigned index) const { return subTypes[index]; }
 			std::string getTypeName() { return TypeName; }
 			TyPtr getMemberType(std::string name) const;
 			std::vector<std::pair<TyPtr, std::string>> getMemberTypes() const;
@@ -94,7 +95,7 @@ namespace compiler
 			AnonymousType(std::vector<TyPtr> types) : 
 				Type(TypeKind::ANONYMOUS), subTypes(types) {}
 
-			TyPtr getSubType(int index) const;
+			TyPtr getSubType(unsigned index) const;
 			std::vector<TyPtr> getSubTypes() const;
 
 			unsigned getSubTypesNum() const { return subTypes.size(); };

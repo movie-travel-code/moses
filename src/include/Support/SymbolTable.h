@@ -183,6 +183,7 @@ namespace compiler
 		class ParmDeclSymbol final : public Symbol
 		{
 			ParmDeclPtr PD;
+			IR::AllocaInstPtr allocaInst;
 		public:
 			ParmDeclSymbol(std::string lexem, ScopePtr beongTo,
 				std::shared_ptr<Type> type, bool initial, ParmDeclPtr pd) :
@@ -190,6 +191,9 @@ namespace compiler
 			{}
 
 			ParmDeclPtr getDecl() const { return PD; }
+
+			void setAllocaInst(IR::AllocaInstPtr inst) { allocaInst = inst; }
+			IR::AllocaInstPtr getAllocaInst() const { return allocaInst; }
 		};
 
 		class FunctionSymbol final : public Symbol
@@ -209,7 +213,7 @@ namespace compiler
 				parms.push_back(parm);
 			}
 
-			std::shared_ptr<ParmDeclSymbol> operator[] (int index) const
+			std::shared_ptr<ParmDeclSymbol> operator[] (unsigned index) const
 			{
 				if (index >= parms.size())
 					errorSema("Function parm index out of range");
@@ -220,9 +224,8 @@ namespace compiler
 			{
 				FD = fd;
 			}
-
+			ScopePtr getScope() const { return scope; }
 			unsigned getParmNum() { return  parms.size(); }
-
 			FunctionDeclPtr getFuncDeclPointer() const { return FD; }
 		};
 
@@ -280,12 +283,18 @@ namespace compiler
 		///		}
 		/// symbol table的组织主要通过symbol实现，此时无法留存匿名scope的信息，所以定义一个匿名
 		/// 的scope symbol(仅仅是为了保存symbol信息)。
-		class ScopeSymbol : public Symbol
+		class ScopeSymbol final : public Symbol
 		{
 		private:
 			ScopePtr scope;
+			bool IsVisitedForIRGen;
 		public:
-			ScopeSymbol(ScopePtr scope, ScopePtr parent) : Symbol("", parent, nullptr), scope(scope) {}
+			ScopeSymbol(ScopePtr scope, ScopePtr parent) : 
+				Symbol("", parent, nullptr), scope(scope), IsVisitedForIRGen(false)
+			{}
+			bool isVisitedForIRGen() { return IsVisitedForIRGen; }
+			void setVisitedFlag() { IsVisitedForIRGen = true; }
+			std::shared_ptr<Scope> getScope() const { return scope; }
 		};
 	}
 }

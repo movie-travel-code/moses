@@ -16,18 +16,27 @@ namespace compiler
 
 		/// CGFunctionInfo - Class to encapsulate the information about a function
 		/// definition.
-		/// Note: moses暂时不需要ABI信息。
 		class CGFunctionInfo
 		{
 			unsigned NumArgs;
 			std::vector<std::pair<ASTTyPtr, std::string>> ArgInfos;
-		private:
-			CGFunctionInfo(std::shared_ptr<ASTTyPtr>);
+			ASTTyPtr returnTy;
+		private:			
 			// Note: 暂时moses不支持多种调用惯例，例如函数值返回是否需要进行优化
 			// unsigned CallingConvention;
 			bool NoReturn;
 		public:
+			CGFunctionInfo(unsigned NumArgs, std::vector<std::pair<ASTTyPtr, std::string>>, ASTTyPtr retty);
+			static std::shared_ptr<CGFunctionInfo const> create(const FunctionDecl* FD);
+			ASTTyPtr getRetTy() const { return returnTy; }
 			bool isNoReturn() const { return NoReturn; }
+			unsigned getArgNums() const { return NumArgs; }
+			const std::pair<ASTTyPtr, std::string>& getParm(unsigned index) const 
+			{ 
+				assert(index <= NumArgs - 1 && "Index out of range when we get FunctionInfo.");
+				return ArgInfos[index]; 
+			}
+			const std::vector<std::pair<ASTTyPtr, std::string>>& getParmInfo() const { return ArgInfos; }
 		};
 	}
 }

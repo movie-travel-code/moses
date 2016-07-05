@@ -11,7 +11,6 @@
 #ifndef MOSES_IR_CONSTANT_AND_GLOBAL_H
 #define MOSES_IR_CONSTANT_AND_GLOBAL_H
 #include "User.h"
-// #include "Instruction.h"
 
 namespace compiler
 {
@@ -117,23 +116,14 @@ namespace compiler
 		/// space that are allocated by either the VM, or by the linker in a static 
 		/// compiler. A global variable may have an initial value, which is copied into 
 		/// the executables .data area. Global Constants are required to have initializers.
-		/// 在moses中有特例，全局常量可以先声明，后面再进行初始化。
 		class GlobalVariable : public GlobalValue
 		{
-			// ??? 全局变量也使用prev和next来相互勾连
-			GlobalVariable *Prev, *Next;
-			void setNext(GlobalVariable *N) { Next = N; }
-			void setPrev(GlobalVariable *N) { Prev = N; }
-
-			bool isConstantGlobal;				// Is this a global constant?
+			bool isConstantGlobal;
 		public:
 			/// GlobalVariable ctor - If a parent module is specifiedm the global is 
 			/// automatically inserted into the end of the specified modules global list.
 			GlobalVariable(const Type *Ty, bool isConstant, Constant *Initializer = 0,
 				const std::string &Name = "");
-
-			// Specialize setName to handle symbol table majik...
-			// virtual void setName(const std::string &name, SymbolTable *ST = 0);
 
 			/// The initializer for the global variable/constant is held by Operands[0]
 			/// if an initializer is specified.
@@ -149,12 +139,6 @@ namespace compiler
 			{
 
 			}
-
-			// getNext/Prev - Return the next or previous global variable in the list.
-			GlobalVariable *getNext() { return Next; }
-			const GlobalVariable * getNext() const { return Next; }
-			GlobalVariable *getPrev() { return Prev; }
-			const GlobalVariable *getPrev() const { return Prev; }
 
 			// If the value is a global constant, its value is immutable throughout the
 			// runtime execution of the program. Assigning a value into the constant

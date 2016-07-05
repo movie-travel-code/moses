@@ -8,6 +8,8 @@
 #include <map>
 #include <set>
 #include <utility>
+#include <cassert>
+#include "../IR/MosesIRContext.h"
 #include "CGCall.h"
 #include "../IR/IRType.h"
 #include "../Parser/Type.h"
@@ -42,21 +44,22 @@ namespace compiler
 			//	|				 |
 			//	|	   &CGM		 |
 			//	 ----------------
-			ModuleBuilder &CGM;
+			MosesIRContext &IRCtx;;
 
 			// Contains the moses-IR type for any converted RecordDecl.
 			std::map<const ast::Type*, std::shared_ptr<StructType>> RecordDeclTypes;
 
 			// Hold CGFunctionInfo results.
-			std::set<CGFunctionInfo> FunctionInfos;
-
+			std::set<std::shared_ptr<CGFunctionInfo const>> FunctionInfos;
 		public:
-			CodeGenTypes(ModuleBuilder& CGM) : CGM(CGM) {}
+			CodeGenTypes(MosesIRContext& IRCtx) : IRCtx(IRCtx) {}
 			/// ConvertType - Convert type T into a moses-IR type.
+			/// Note: 如果发现当前Type是StructType，则记录到Map中。
 			IRTyPtr ConvertType(ASTTyPtr type);
-			
-			// std::shared_ptr<IR::Type> ConvertFunctionType(FunctionDeclPtr FD);
-			IRFuncTyPtr getFunctionType(const CGFunctionInfo &Info);
+						
+			IRFuncTyPtr getFunctionType(std::shared_ptr<CGFunctionInfo const> Info);
+
+			std::shared_ptr<const CGFunctionInfo> arrangeFunctionInfo(const FunctionDecl* FD);			
 		};
 	}
 }

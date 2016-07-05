@@ -101,6 +101,8 @@ ASTPtr& Parser::parse()
 		case TokenValue::BO_Sub:
 		case TokenValue::IDENTIFIER:
 		case TokenValue::UO_Exclamatory:
+		case TokenValue::UO_Dec:
+		case TokenValue::UO_Inc:
 		case TokenValue::PUNCTUATOR_Left_Paren:
 		case TokenValue::INTEGER_LITERAL:
 		case TokenValue::BOOL_TRUE:
@@ -162,10 +164,12 @@ StmtASTPtr Parser::ParseIfStatement()
 	{
 		errorReport("Error occured in condition expression.");
 	}
-
-	// To Do: Perform simple semantic analysis
-	// (Check whether the type of the conditional expression is a Boolean type).
-	Actions.ActOnConditionExpr(condition->getType());
+	else
+	{
+		// To Do: Perform simple semantic analysis
+		// (Check whether the type of the conditional expression is a Boolean type).
+		Actions.ActOnConditionExpr(condition->getType());
+	}	
 
 	// Perform simple semantic analysis for then part(Create new scope).
 	Actions.ActOnCompoundStmt();
@@ -670,7 +674,7 @@ ExprASTPtr Parser::ParseWrappedUnaryExpression()
 		RHS = std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(),
 			RHS->getType(), tok.getLexem(), RHS, Expr::ExprValueKind::VK_RValue);
 	}
-	else if (tokKind == TokenValue::UO_Dec || tokKind == TokenValue::UO_Dec)
+	else if (tokKind == TokenValue::UO_Dec || tokKind == TokenValue::UO_Inc)
 	{
 		/// Note: 表示单目运算++ --
 		scan.getNextToken();
@@ -1218,7 +1222,7 @@ ExprASTPtr Parser::ParseAnonymousInitExpr()
 
 	/// 创建一个匿名类型
 	unsigned size = initExprs.size();
-	for (int i = 0; i < size; i++)
+	for (unsigned i = 0; i < size; i++)
 	{
 		initTypes.push_back(initExprs[i]->getType());
 	}

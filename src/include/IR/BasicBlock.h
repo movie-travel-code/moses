@@ -83,7 +83,7 @@ namespace compiler
 			/// getTerminator() - If this is a well formed basic block, the this returns 
 			/// a pointer to the terminator instruction. It it is not, then you get a 
 			/// null pointer back.
-			InstPtr getTerminator();
+			std::shared_ptr<TerminatorInst> getTerminator();
 
 			//===--------------------------------------------------------------------===//
 			// Instruction iterator methods

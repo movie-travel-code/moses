@@ -52,11 +52,7 @@ namespace compiler
 
 		private:
 			BBPtr Parent;
-			InstPtr Prev, Next;
 			Opcode op;
-
-			void setNext(InstPtr N) { Next = N; }
-			void setPrev(InstPtr P) { Prev = P; }
 
 			void setParent(BBPtr P);
 		public:
@@ -747,7 +743,7 @@ namespace compiler
 			// 
 			// Note: If the Value* passed is of type void then the constructor behave as
 			// if it was passed NULL.
-			ReturnInst(ValPtr retVal, InstPtr InsertBefore = nullptr);
+			ReturnInst(ValPtr retVal = nullptr, InstPtr InsertBefore = nullptr);
 
 			ReturnInst(ValPtr retVal, BBPtr InsertAtEnd);
 

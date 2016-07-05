@@ -69,7 +69,7 @@ namespace compiler
 			// Note: clang中间提供了一个ExprResult{}结构体，这里简单起见，不会提供。
 			// 如今moses只提供bool与int类型，所以不需要特别复杂的值表示，后面在丰富
 			// moses的时候就需要提供一个完善的值表示。
-			int intVal;
+			unsigned intVal;
 			bool boolVal;
 			// To Do: AnonymousType是值暂时不支持，AnonymousType的值需要用树来存储。
 			// AnonymousTreeVal;
@@ -120,7 +120,7 @@ namespace compiler
 			bool noteSideEffect();
 		};
 
-		class EvaluatedExprVisitorBase : public StatementAST::Visitor
+		class EvaluatedExprVisitorBase
 		{
 		public:
 			// 在对 CallExpr 进行eval的时候，需要对实参进行推导，所以在对函数体进行eval的

@@ -8,28 +8,159 @@ using namespace compiler::ast;
 using namespace compiler::IR;
 using namespace compiler::IRBuild;
 
-void ModuleBuilder::visit(const IfStatement* ifstmt)
+ValPtr ModuleBuilder::visit(const IfStatement* ifstmt)
+{	
+	EmitIfStmt(ifstmt);
+	return nullptr;
+}
+
+/// EmitBlock - Emit the given block \arg BB and set it as the insert point.
+void ModuleBuilder::EmitBlock(BBPtr BB, bool IsFinished)
+{
+	EmitBrach(BB);
+	if (IsFinished && BB->use_empty())
+	{
+		BB.reset();
+		return;
+	}
+	CurFunc->CurFn->getBasicBlockList().push_back(BB);
+	SetInsertPoint(BB);
+}
+
+/// \brief Emit a branch from the current block to the target one if this
+/// was a real block.
+void ModuleBuilder::EmitBrach(BBPtr Target)
+{
+	if (!CurBB || CurBB->getTerminator())
+	{
+		// If there is no insert point or the previous block is already
+		// terminated, don't touch it.
+	}
+	else
+	{
+		// Otherwise, create a fall-through branch.
+		CreateBr(Target);
+	}
+	ClearInsertionPoint();
+}
+
+void ModuleBuilder::EmitReturnBlock()
+{
+	// For cleanliness, we try to avoid emitting the return block for simple cases.
+	
+	EmitBlock(CurFunc->ReturnBlock);
+}
+
+/// \brief EmitWhileStmt - Emit the code for while statement.
+/// e.g.	while (num < lhs)	-------------------------  ---> Pre-Block
+///			{					|		...				|
+///				lhs += 2;		| br label %while.cond	|
+///			}					-------------------------
+///									
+///								------------------------------------------------- ---> while.cond
+///								| %tmp = load i32* %num							|
+///								| %tmp1 = load i32* %lhs						|
+///								| %cmp = cmp lt i32 %tmp, %tmp1					|
+///								| br %cmp, label %while.body, label %while.end	|
+///								-------------------------------------------------
+///			
+///								----------------------------- ---> while.body
+///								| %tmp2 = load i32* %lhs	|
+///								| %add = add i32 %tmp2, 2	|
+///								| store i32 %add, i32* %lhs	|
+///								| br label %while.cond		|
+///								-----------------------------
+///							
+///								----------------------------- ---> while.end
+///								|			...				|
+///								-----------------------------
+void ModuleBuilder::EmitWhileStmt(const WhileStatement* whilestmt)
+{
+
+}
+
+ValPtr ModuleBuilder::visit(const WhileStatement* whilestmt)
+{
+	EmitWhileStmt(whilestmt);
+	return nullptr;
+}
+
+/// \brief Dispatched the task to the children.
+ValPtr ModuleBuilder::visit(const CompoundStmt* comstmt)
+{
+	// (1) Switch the scope.
+	// e.g.	var num = 10;
+	//	func add(lhs:int, rhs : int) -> int			------------ <---- Symbol table for the 'add'
+	//	{						----> Old scope.   |	 inc    |
+	//		var inc = 100;							------------ <---- Not visited yet.
+	//		if (lhs > rhs)						   | AnonyScope |
+	//		{					----> New scope.	------------ <---- Not visited yet.
+	//			lhs += 10;						   | AnonyScope	|
+	//		}										------------
+	//		else
+	//		{
+	//			rhs += 10;
+	//		}
+	//		return lhs + rhs + inc;
+	//	}
+	// Note: Search the first not accessed ScopeSymbol.
+	auto symTab = CurScope->getSymbolTable();
+	auto num = symTab.size();
+	for (unsigned i = 0; i < num; i++)
+	{
+		if (std::shared_ptr<ScopeSymbol> scope = std::dynamic_pointer_cast<ScopeSymbol>(symTab[i]))
+		{
+			if (scope->isVisitedForIRGen())
+				continue;
+			CurScope = scope->getScope();
+		}
+		continue;
+	}
+
+	// (2) Generated the code for children.
+	unsigned size = comstmt->getSize();
+	for (unsigned i = 0; i < size; i++)
+	{
+		(*comstmt)[i]->Accept(this);
+	}
+
+	// (3) Switch the scope back.
+	CurScope = CurScope->getParent();
+
+	return nullptr;
+}
+
+ValPtr ModuleBuilder::visit(const ReturnStatement* retstmt)
+{
+	return nullptr;
+}
+
+void ModuleBuilder::EmitIfStmt(const IfStatement* ifstmt)
 {
 	// If the condition constant folds and can be elided, try to avoid emitting
 	// the condition and the dead arm of the if/else
 	bool CondConstant;
-	/// \brief 对If语句的condition expr进行evaluate，看是否推断成为constant.
-	ConstantEvaluator evaluator;
-	bool CondCanBeFold = evaluator.EvaluateAsBooleanCondition(ifstmt->getCondition(), CondConstant);
 
-	/// ConditionExpr恒为真，删除else分支（如果有的话）
-	if (CondCanBeFold)
+	/// If the condition expr can be evaluated, true or false.
+	if (evaluator.EvaluateAsBooleanCondition(ifstmt->getCondition(), CondConstant))
 	{
 		StmtASTPtr Executed = ifstmt->getThen();
 		StmtASTPtr Skipped = ifstmt->getElse();
-		/// ConditionExpr恒为假，则删除true分支
-		/// （如果没有else分支的话，删除整个IfStmt的生成）
+		/// Condition expression can be evaluated to the false value.
 		if (!CondConstant)
 			std::swap(Executed, Skipped);
 
-		/// 注意在C/C++中存在一种情况需要注意，就是省略的block中有可能有goto的目标
-		/// label，所以Clang需要检查block中是否有label。
-		/// 但是moses没有goto，也就是说不可能存在上述情况。
+		/// C/C++ has goto statement, so there is one situation that we can't elide the specified block.
+		/// e.g		if (10 != 10)
+		///			{					-----> Evaluate the condition expression to be false, dead 'then'.
+		///		RET:	return num;		-----> The 'RET' label means that there is possible that 
+		///										'return num' can be execeted.
+		///			}
+		///			else
+		///			{
+		///				...
+		///			}
+		/// But moses have no goto statements, so we don't need to worry.
 		if (Executed)
 		{
 			Executed->Accept(this);
@@ -51,82 +182,31 @@ void ModuleBuilder::visit(const IfStatement* ifstmt)
 	// them. 
 	EmitBranchOnBoolExpr(ifstmt->getCondition(), ThenBlock, ElseBlock);
 
-	// 中间要穿插些跳转指令
-	// 进行一些简单的优化判断，如果condition expr是定值，则删除假分支部分代码
+	// Emit the 'then' code.
+	EmitBlock(ThenBlock);
+	ifstmt->Accept(this);
+	EmitBrach(ContBlock);
 
-	// Then->CodeGen()
-
-	// Else->CodeGen()
-}
-
-/// \brief Emit a branch from the current block to the target one if this
-/// was a real block.
-/// 例如：
-///		func add(lhs : int, rhs : int) -> int
-///		{
-///			int num = 0;
-///			num = lhs + rhs;
-///			if (num == 0)
-///			{
-///				return num + 1;
-///			}
-///			return num + 1;
-///		}
-///		----------------------------
-///		|	%1 = alloca i32			|
-///		|	%2 = alloca i32			|
-///		|	%3 = alloca i32			|
-///		|	%num = alloca i32		|
-///		|	store i32 %rhs, i32* %2	|
-///		|	store i32 %lhs, i32* %3	|
-///		|	%4 = load i32* %3		|
-///		|	%5 = load i32* %2		|
-///		|	%6 = add i32 %4, %5		|
-///		|	store i32 %6, i32* %num	|
-///		|	%7 = load i32* %num		|
-///		|	%8 = cmp eq i32 %7, 0	|
-///		|	br i1 %8, label %9, label %12 |
-///		-----------------------------	
-/// 
-///		; <label>: 9
-///			%10 = load i32* %num
-///			%11 = add i32 %10, 1
-///			store i32 %11, i32* %1
-///			br label %14
-///		
-///		; <label>:12
-///			%13 = load i32* %num
-///			store i32 %13, i32* %1
-///			br label %14
-///
-///		; <label>:14
-///			%15 = load i32* %1
-///			ret 32 %15	
-void ModuleBuilder::EmitBrach(BBPtr Target)
-{
-
-}
-
-void ModuleBuilder::visit(const WhileStatement* whilestmt)
-{
-	// Cond->CodeGen()
-
-	// 中间要穿插些跳转指令
-
-	// 这中间生成的是BasicBlock
-
-	// CompoumdStmt->CodeGen()
-}
-
-void ModuleBuilder::visit(const CompoundStmt* comstmt)
-{
-	unsigned size = comstmt->getSize();
-	for (int i = 0; i < size; i++)
+	// Emit the 'else' code if present.
+	if (auto Else = ifstmt->getElse())
 	{
-		(*comstmt)[i]->Accept(this);
+		EmitBlock(ElseBlock);
+		Else.get()->Accept(this);
+		EmitBrach(ContBlock);
 	}
+
+	// Emit the continuation block for code after the if.
+	EmitBlock(ContBlock, true);
 }
 
-void ModuleBuilder::visit(const ExprStatement* exprstmt)
+
+void ModuleBuilder::EmitFunctionBody(StmtASTPtr body)
 {
+	EmitCompoundStmt(body.get());
+}
+
+ValPtr ModuleBuilder::EmitCompoundStmt(const StatementAST* stmt)
+{
+	stmt->Accept(this);
+	return nullptr;
 }

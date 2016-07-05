@@ -82,12 +82,12 @@ bool UserDefinedType::HaveMember(std::string name) const
 
 bool UserDefinedType::operator==(const Type& rhs) const
 {
-	int subTypeNum = subTypes.size();
+	unsigned subTypeNum = subTypes.size();
 	// 使用dynamic_cast<>对引用进行down_cast，转换失败会抛出bad_cast异常
 	try
 	{
 		const UserDefinedType& rhsUserDef = dynamic_cast<const UserDefinedType&>(rhs);
-		for (int i = 0; i < subTypeNum; i++)
+		for (unsigned i = 0; i < subTypeNum; i++)
 		{
 			if (*(subTypes[i].first) == *(rhsUserDef[i].first) &&
 				subTypes[i].second == rhsUserDef[i].second)
@@ -109,7 +109,7 @@ bool UserDefinedType::operator==(const Type& rhs) const
 
 /// Note: 对于匿名类型来说，{int, {int, int}} 和 {int, int, int}
 /// 是不同的，需要区别对待，所以记录结构信息
-std::shared_ptr<Type> AnonymousType::getSubType(int index) const
+std::shared_ptr<Type> AnonymousType::getSubType(unsigned index) const
 {
 	return subTypes[index];
 }
@@ -122,7 +122,7 @@ std::vector<std::shared_ptr<Type>> AnonymousType::getSubTypes() const
 void AnonymousType::getTypes(std::vector<std::shared_ptr<Type>>& types) const
 {
 	unsigned size = subTypes.size();
-	for (int index = 0; index < size; index++)
+	for (unsigned index = 0; index < size; index++)
 	{
 		if (std::shared_ptr<AnonymousType> type = std::dynamic_pointer_cast<AnonymousType>(subTypes[index]))
 		{

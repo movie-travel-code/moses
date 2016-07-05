@@ -6,14 +6,19 @@ using namespace compiler::IR;
 //===---------------------------------------------------------------------===//
 // Implements class ModuleBuilder.
 ModuleBuilder::ModuleBuilder(std::shared_ptr<Scope> SymbolInfo, MosesIRContext &context) : 
-	SymbolTree(SymbolInfo), Context(context), Types(CodeGenTypes(*this)), 
-	CurBB(std::make_shared<BasicBlock>("EntryBlock")) 
-{}
+	SymbolTree(SymbolInfo), Context(context), Types(CodeGenTypes(context)), 
+	CurBB(std::make_shared<BasicBlock>("entry")), CurFunc(std::make_shared<FunctionBuilderStatus>()),
+	CurScope(SymbolInfo)
+{
+	SetInsertPoint(CurBB);
+	// Create a marker to make it easy to insert allocas into the entryblock later.
+	AllocaInsertPoint = InsertPoint;
+}
 
 void ModuleBuilder::VisitChildren(std::vector<std::shared_ptr<StatementAST>> AST)
 {
 	unsigned ASTSize = AST.size();
-	for (int i = 0; i < ASTSize; i++)
+	for (unsigned i = 0; i < ASTSize; i++)
 	{
 		// 在遍历AST的过程中，会根据AST的具体节点来选择对应的Accept函数。
 		// 例如：如果这里是 "IfStmt" 的话，会选择IfStmt的Accept()函数
@@ -66,9 +71,9 @@ ReturnInstPtr ModuleBuilder::CreateRetVoid()
 	return InsertHelper(ReturnInst::Create()); 
 }
 
-ReturnInstPtr ModuleBuilder::Create(ValPtr V)
-{ 
-	return InsertHelper(ReturnInst::Create(V)); 
+ReturnInstPtr ModuleBuilder::CreateRet(ValPtr V)
+{
+	return InsertHelper(ReturnInst::Create(V));
 }
 
 ReturnInstPtr ModuleBuilder::CreateAggregateRet(std::vector<ValPtr> retVals, unsigned N)
@@ -84,6 +89,11 @@ BrInstPtr ModuleBuilder::Create(BBPtr Dest)
 BrInstPtr ModuleBuilder::CreateCondBr(ValPtr Cond, BBPtr True, BBPtr False)
 {
 	return InsertHelper(BranchInst::Create(True, False, Cond));
+}
+
+BrInstPtr ModuleBuilder::CreateBr(BBPtr Dest)
+{
+	return InsertHelper(BranchInst::Create(Dest));
 }
 
 //===-------------------------------------------------------------===//
@@ -304,4 +314,11 @@ ValPtr ModuleBuilder::CreateIsNotNull(ValPtr Arg, std::string Name)
 {
 	// return CreateCmpNE(Arg, Constant::getNullValue(Arg->getType()), Name);
 	return nullptr;
+}
+
+//===-------------------------------------------------------------------===//
+// Other Create* helper.
+BBPtr ModuleBuilder::CreateBasicBlock(std::string Name, FuncPtr parent, BBPtr before)
+{
+	return BasicBlock::Create(Name, parent, before);
 }

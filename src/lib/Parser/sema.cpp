@@ -290,7 +290,7 @@ std::shared_ptr<Type> Sema::ActOnCallExpr(std::string name,
 		}
 
 		unsigned size = args.size();
-		for (int i = 0; i < size; i++)
+		for (unsigned i = 0; i < size; i++)
 		{
 			if (!args[i])
 			{
@@ -413,6 +413,18 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
 	if (tok.isLogicalOperator())
 	{
 		type = Ctx.Bool;
+	}
+
+	// 如果当前运算是赋值运算，则BinaryOperator的返回值是lhs的值。
+	// --------------------Assignment operators-------------------------
+	// An assignment operator stores a value in the object designated by the left operand. 
+	// An assignment expression has the value of the left operand after the assignment,
+	// but is not an lvalue.
+	// http://stackoverflow.com/questions/22616044/assignment-operator-sequencing-in-c11-expressions
+	//---------------------Assignment operators-------------------------
+	if (tok.getLexem() == "=")
+	{
+		type = lhs->getType();
 	}
 
 	// Note: 为了简化设计，BinaryOperator默认是rvalue
@@ -708,7 +720,7 @@ UnpackDeclPtr Sema::unpackDeclTypeChecking(UnpackDeclPtr decl, std::shared_ptr<T
 		}
 		// 3: 创建symbol
 		unsigned size = unpackDeclNames.size();
-		for (int index = 0; index < size; index++)
+		for (unsigned index = 0; index < size; index++)
 		{
 			// (1): 创建variable symbol并插入当前scope
 			CurScope->addDef(std::make_shared<VariableSymbol>(unpackDeclNames[index],

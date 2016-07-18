@@ -10,12 +10,14 @@
 #include <vector>
 #include <string>
 #include <memory>
+#include "BasicBlock.h"
 #include "User.h"
 #include "ConstantAndGlobal.h"
 namespace compiler
 {
 	namespace IR
 	{
+		class MosesIRContext;
 		class Instruction : public User
 		{
 		public:
@@ -50,25 +52,18 @@ namespace compiler
 				Call			// Call a function
 			};
 
-		private:
+		protected:
 			BBPtr Parent;
 			Opcode op;
-
 			void setParent(BBPtr P);
 		public:
 			BBPtr getParent() const { return Parent; }
-
-			std::list<InstPtr> getIterator()
-			{
-				auto BB = this->getParent();
-				
-			}
+			// std::list<InstPtr> getIterator() { auto BB = this->getParent();	}
 
 			/// Return the function this instruction belongs to.
-			/// 
 			/// Note: it is undefined behavior to call this on an instruction not
 			/// currently inserted into a function.
-			FuncPtr getFunction();
+			FuncPtr getFunction() const;
 
 			/// Insert an unlinked instruction into a basic block immediately after the
 			/// specified intruction.
@@ -85,29 +80,12 @@ namespace compiler
 			//===---------------------------------------------------------===//
 			// Subclass classification.
 			//===---------------------------------------------------------===//
-
 			/// Returns a member of one of the enums like Instruction::Add.
 			Opcode getOpcode() const { return op; }
-
-			bool isTerminator() const 
-			{ 
-				return op == Opcode::Ret || op == Opcode::Br;
-			}
-
-			bool isBinaryOp() const 
-			{ 
-				return op >= Opcode::Add && op <= Opcode::Or;
-			}
-
-			bool isShift() 
-			{ 
-				return op == Opcode::Shl || op == Opcode::Shr;
-			}
-
-			bool isCast() const 
-			{ 
-				return op == Opcode::Trunc;
-			}
+			bool isTerminator() const { return op == Opcode::Ret || op == Opcode::Br; }
+			bool isBinaryOp() const { return op >= Opcode::Add && op <= Opcode::Or; }
+			bool isShift() { return op == Opcode::Shl || op == Opcode::Shr; }
+			bool isCast() const { return op == Opcode::Trunc; }
 
 			//===---------------------------------------------------------===//
 			// Predicates and helper methods.
@@ -118,12 +96,26 @@ namespace compiler
 			// Associative operators satisfy: x op (y op z) == (x op y) op z
 			//
 			// In moses IR, the Add, Mul, Mul, and Xor operators are associative.
-			bool isAssociative() const;
+			bool isAssociative() const 
+			{ 
+				return op == Opcode::Add || op == Opcode::Mul || op == Opcode::Xor;
+			}
 			
 			// Return true if the instruction is commutative:
-			// Commutative operators satisfy: (x op y) == (y op x)
-			
-			bool isCommutative() const;
+			// Commutative operators satisfy: (x op y) == (y op x)			
+			bool isCommutative() const
+			{
+				/*switch (op)
+				{
+				case compiler::IR::Instruction::Opcode::Add:
+				case compiler::IR::Instruction::Opcode::Mul:
+				case compiler::IR::Instruction::Opcode::Or:
+				case compiler::IR::Instruction::Opcode::Xor:
+					return true;
+				default:
+					return false;
+				}*/
+			}
 
 			// Return true if this instruction may modify memory.
 			bool mayWriteToMemory() const;
@@ -131,47 +123,35 @@ namespace compiler
 			// Return true if this memory may read memory.
 			bool mayReadFromMemory() const;
 
-			bool mayReadOrWriteMemory() const
-			{
-				// return mayReadRromMemory() || mayWriteToMemory();
-				return true;
-			}
+			bool mayReadOrWriteMemory() const { return mayReadFromMemory() || mayWriteToMemory(); }
 
 			// Return true if the instruciton may have side effects.
 			// Note that this doest not consider malloc and alloca to have side 
 			// effects because the newly allocated memory is completely invisible
 			// to instructions which don't use the returned value.
-			bool mayHaveSideEffects() const;
+			bool mayHaveSideEffects() const { return mayWriteToMemory(); }
 		public:
-			Instruction(TyPtr Ty, Opcode op, unsigned NumOps, InstPtr InsertBefore = nullptr);
-			Instruction(TyPtr Ty, Opcode op, unsigned NumOps, BBPtr InsertAtEnd);
+			Instruction(TyPtr Ty, Opcode op/*, InstPtr InsertBefore = nullptr*/);
+			// Instruction(TyPtr Ty, Opcode op, unsigned NumOps, BBPtr InsertAtEnd);
 		};
 
 		//===-------------------------------------------------------------===//
 		//						UnaryInstruction Class
 		//===-------------------------------------------------------------===//
-
-		// ---------------------nonsense for coding------------------------- //
-		// 对于C++来说new有两层含义，
-		// (1) new operator: Base * b = new base();
-		//	  这里的new表示的是new operator，有两个操作，分配内存调用构造函数，不能
-		//    重载，和C语言中的sizeof相似，
-		// (2) void* operator new(size_t size) {}
-		//    这里的new表示的是一个内存分配函数，分配size字节大小的内存，可以重载，
-		//    这里的new类似于C语言中的malloc，对构造函数一无所知，返回的是raw的内存
-		// ---------------------nonsense for coding------------------------- //
 		class UnaryOperator : public Instruction
 		{
 		protected:
 			UnaryOperator(TyPtr Ty, Opcode op, ValPtr V, InstPtr IB = nullptr)
-				: Instruction(Ty, op, 1, IB) 
+				: Instruction(Ty, op) 
 			{
+				Operands.resize(1);
+				Operands.push_back(Use(V, this));
 			}
 		public:
-
 			static bool classof(InstPtr I)
 			{
-				return I->getOpcode() == Instruction::Opcode::Alloca || I->getOpcode() == Instruction::Opcode::Load;
+				return I->getOpcode() == Instruction::Opcode::Alloca || 
+						I->getOpcode() == Instruction::Opcode::Load;
 			}
 		};
 
@@ -184,44 +164,24 @@ namespace compiler
 		class TerminatorInst : public Instruction
 		{
 		protected:
-			TerminatorInst(TyPtr Ty, Instruction::Opcode op, /*Use *Ops*/ unsigned NumOps,
-				InstPtr InsertBefore = nullptr) : Instruction(Ty, op, NumOps, InsertBefore)
+			TerminatorInst(Instruction::Opcode op, BBPtr InsertAtEnd = nullptr) : 
+				Instruction(Type::getVoidType(), op)
 			{}
-
-			TerminatorInst(TyPtr Ty, Instruction::Opcode op, /*Use *Ops*/ unsigned NumOps,
-				BBPtr InsertAtEnd) : Instruction(Ty, op, NumOps, InsertAtEnd)
-			{}
-
 			// Out of line virtual method, so the vtable, etc has a home.
-			~TerminatorInst() override {}
-
-			/// Virtual methods - Terminators should overload these and provide inline
-			/// overrides of non-V methods.
-			virtual BBPtr getSuccessorV(unsigned idx) const = 0;
-			virtual unsigned getNumSuccessorV() const = 0;
-			virtual void setSuccessorV(unsigned idx, BBPtr B) = 0;
+			~TerminatorInst() override;
 			//===---------------------------------------------------------------------===//
 			// 
 			//===---------------------------------------------------------------------===//
 
 		public:
 			/// Return the number of successors that this terminator hsa.
-			unsigned getNumSuccessors() const
-			{
-				return getNumSuccessorV();
-			}
+			virtual unsigned getNumSuccessors() const = 0;
 
 			/// Return the specified successor.
-			BBPtr getSuccessor(unsigned idx) const
-			{
-				return getSuccessorV(idx);
-			}
+			virtual ValPtr getSuccessor(unsigned idx) const = 0;
 
 			/// Update the specified successor to point at the provided block.
-			void setSuccessor(unsigned idx, BBPtr B)
-			{
-				setSuccessorV(idx, B);
-			}
+			virtual void setSuccessor(unsigned idx, BBPtr B) = 0;
 
 			// Methods for support type inquiry through isa, cast, and dyn_cast:
 			static bool classof(InstPtr I)
@@ -233,14 +193,13 @@ namespace compiler
 		//===-------------------------------------------------------------===//
 		//						BinaryOperator Class
 		//===-------------------------------------------------------------===//
-		class BinaryOperator : public Instruction
+		class BinaryOperator final : public Instruction
 		{
 		public:
-			void init();
 			BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty, 
 				InstPtr InstructionBefore = nullptr);
-
-			BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty, BBPtr InsertAtEnd = nullptr);
+			~BinaryOperator() override;
+			// BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty);
 
 			/// Construct a binary instruction, given the opcode and the two operands.
 			/// Optionally (if InstBefore is specified) insert the instruction into a 
@@ -250,37 +209,32 @@ namespace compiler
 			/// Construct a binary instruction, given the opcode and the two operands.
 			/// Also automatically insert this instruction to the end of the BasicBlock
 			/// specified.
-			static BOInstPtr Create(Opcode op, ValPtr S1, ValPtr S2, std::string Name = "", BBPtr InsertAtEnd = nullptr);
-
-			static BOInstPtr Create(Opcode op, ValPtr S1, ValPtr S2, std::string Name, InstPtr InsertBefore);
-
-			static BOInstPtr CreateNeg(ValPtr Operand, std::string Name = "", InstPtr InsertBefore = nullptr);
-
-			static BOInstPtr CreateNeg(ValPtr Operand, std::string Name, BBPtr InsertAtEnd);
-
-			static BOInstPtr CreateNot(ValPtr Operand, std::string Name = "", InstPtr InsertBefore = nullptr);
-			
-			static BOInstPtr CreateNot(ValPtr Operand, std::string Name, BBPtr InsertAtEnd);
-
+			static BOInstPtr Create(Opcode op, ValPtr S1, ValPtr S2, BBPtr InsertAtEnd = nullptr);
+			static BOInstPtr Create(Opcode op, ValPtr S1, ValPtr S2, InstPtr InsertBefore);
+			static BOInstPtr CreateNeg(MosesIRContext& Ctx, ValPtr Operand, InstPtr InsertBefore = nullptr);
+			static BOInstPtr CreateNeg(MosesIRContext& Ctx, ValPtr Operand, BBPtr InsertAtEnd);
+			// Shit code!
+			static BOInstPtr CreateNot(MosesIRContext& Ctx, ValPtr Operand, InstPtr InsertBefore = nullptr);
+			// Shit code!
+			static BOInstPtr CreateNot(MosesIRContext& Ctx, ValPtr Operand, BBPtr InsertAtEnd);
 			static bool isNeg(ValPtr V);
-
 			static bool isNot(ValPtr V);
 
 			// Methods for support type inquiry through isa, cast, and dyn_cast:
-			static bool classof(InstPtr I)
-			{
-				return I->isBinaryOp();
-			}
+			static bool classof(InstPtr I) { return I->isBinaryOp(); }
+
+			/// \brief Print the BinaryOperator.
+			void Print(std::ostringstream& out);
 		};
 
 		//===-------------------------------------------------------------===//
 		//						TruncInst Class
 		//===-------------------------------------------------------------===//
 		// 在moses中唯一需要执行 cast 操作的就是匿名类型赋值给用户自定义类型的转换
-		class TruncInst : public UnaryOperator
-		{
-			// TrancInst 也有operand，operand的类型必须是type类型的
-		};
+		//class TruncInst : public UnaryOperator
+		//{
+		//	// TrancInst 也有operand，operand的类型必须是type类型的
+		//};
 
 		//===-------------------------------------------------------------===//
 		//						CmpInst Class
@@ -293,7 +247,6 @@ namespace compiler
 			enum Predicate
 			{
 				// Opcode
-				CMP_FALSE,
 				CMP_EQ,
 				CMP_NE,
 				CMP_GT,
@@ -305,13 +258,10 @@ namespace compiler
 			CmpInst() = delete;
 			Predicate predicate;
 		public:
-			CmpInst(InstPtr InsertBefore,		/// Where to insert
-				Predicate pred,					/// The predicate to use for the comparison
-				ValPtr LHS,						/// The left-hand-side of the expression
-				ValPtr RHS,						/// The right-hand-side of the expression
-				std::string NameStr = "");		/// Name of the instruction
-
-			// allocate space for exactly two operands
+			CmpInst(InstPtr InsertBefore, Predicate pred, ValPtr LHS, ValPtr RHS,
+				std::string NameStr = "");
+			// Out-of-line method.
+			~CmpInst() override;
 
 			/// Construct a compare instruction, given the opcode, the predicaee and
 			/// the two operands. Optionally (if InstBefore is specified) insert the
@@ -324,52 +274,39 @@ namespace compiler
 				std::string name, BBPtr InsertAtEnd);
 
 			Predicate getPredicate() const { return predicate; }
-
 			void setPredicate(Predicate P) { predicate = P; }
-
-			bool isCommutative() const;
-			bool isEquality() const;
+			bool isEquality() const { return predicate == Predicate::CMP_EQ; }
 
 			/// @brief Methodds for support type inquiry through isa, cast, and dyn_cast
 			static bool classof(InstPtr I) 
 			{ 
 				return I->getOpcode() == Instruction::Opcode::Cmp; 
 			}
-		};
 
+			/// \brief Print the CmpInst.
+			void Print(std::ostringstream& out);
+		};
 
 		//===-------------------------------------------------------------===//
 		//						AllocaInst Class
 		//===-------------------------------------------------------------===//
-
-		/// AllocaInst - an instruction to allocate memory on the stack
-		/// 在moses中，只有单值的alloca，暂时不支持Array的alloca
+		/// AllocaInst - an instruction to allocate memory on the stack.
 		class AllocaInst final : public UnaryOperator
 		{
-		private:
 			TyPtr AllocatedType;
 		public:
-			AllocaInst(TyPtr Ty, ValPtr Val, std::string Name = "", InstPtr InsertBefore = nullptr);
-
-			static AllocaInstPtr Create(TyPtr Ty)
-			{
-				return std::make_shared<AllocaInst>(Ty);
-			}
-
-			AllocaInst(TyPtr Ty, BBPtr InsertAtEnd = nullptr);
-
-			// Out of line virtual method, so the vtable, etc. has a home.
+			// AllocaInst(TyPtr Ty,/* ValPtr ArraySize, */std::string Name = "", InstPtr InsertBefore = nullptr);			
+			explicit AllocaInst(TyPtr Ty, ValPtr ArraySize = nullptr, 
+						std::string Name = "", BBPtr InsertAtEnd = nullptr);
+			// Out-of-line method.
 			~AllocaInst() override;
+			static AllocaInstPtr Create(TyPtr Ty);
 
-			// 有问题参考LLVM
-			TyPtr getType() const 
-			{
-				return nullptr;
-			}
-
-			/// getAllocatedType - Return the type that is being allocated by the
-			/// instruction.
+			/// getAllocatedType - Return the type that is being allocated by the instruction.
 			TyPtr getAllocatedType() const { return AllocatedType; }
+
+			/// \brief Print the AllocaInst.
+			void Print(std::ostringstream& out);
 		};
 
 		//===-------------------------------------------------------------===//
@@ -438,129 +375,79 @@ namespace compiler
 			static unsigned getPointerOperandIndex()
 			{}
 			// .. 补全
+
+			/// \brief Print the GetElementPtrInst.
+			void Print(std::ostringstream& out);
 		};		
 
 		//===-------------------------------------------------------------===//
 		//						CallInst
-		//===-------------------------------------------------------------===//
-		
+		//===-------------------------------------------------------------===//		
 		// ClassInst - This class represents a function call, abstracting a 
 		// target mechine's calling convention. This class uses low bit of 
 		// the SubClassData field to indicate whether or not this is a tail
 		// call. The rest of the bits hold the calling convention of the call.
-
 		class CallInst final : public Instruction
 		{
 		private:
-			FuncTypePtr FTy;
-
-			void init(FuncTypePtr FTy, ValPtr Func, std::list<ValPtr> Args,
-					std::string NameStr);
-			void init(ValPtr Func, std::string NameStr);
-
-			/// Construct a CallInst given a range of arguments.
-			CallInst(FuncTypePtr Ty, ValPtr Func, std::list<ValPtr> Args, 
-					std::string NameStr);
-			CallInst(ValPtr Func, std::list<ValPtr> Args, 					
-				std::string NameStr, InstPtr InsertBefore = nullptr);
+			FuncTypePtr FTy;	
 		public:
-			static CallInstPtr Create(ValPtr Func, std::vector<ValPtr> Args, std::string NameStr = "",
-				InstPtr InsertBefore = nullptr)
-			{
-				return nullptr;
-			}
+			CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args,
+				std::string Name = "", BBPtr InsertAtEnd = nullptr);
+			/*CallInst(ValPtr Func, std::list<ValPtr> Args,
+				std::string Name = "", InstPtr InsertBefore = nullptr);*/
 
-			static CallInstPtr Create(FuncTypePtr *Ty, ValPtr Func, std::list<ValPtr> Args,
-				std::string NameStr, InstPtr InsertBefore = nullptr)
-			{
-				// return nullptr;
-			}
+			static CallInstPtr Create(ValPtr Func, std::vector<ValPtr> Args,
+				std::string Name = "", InstPtr InsertBefore = nullptr);
 
-			static InstPtr CreateMalloc();
-
+			/*static CallInstPtr Create(FuncTypePtr *Ty, ValPtr Func, std::list<ValPtr> Args,
+				std::string NameStr, InstPtr InsertBefore = nullptr);*/
+			// Out-of-line method.
 			~CallInst() override;
 
 			FuncTypePtr getFunctionType() const { return FTy; }
 
 			enum TailCallKind {TCK_None = 0, TCK_Tail = 1, TCK_MustTail = 2, TCK_NoTail = 3 };
 
-			TailCallKind getTailCallKind() const
-			{
-				// return TailCallKind();
-				return TCK_None;
-			}
-
+			// To Do:
+			TailCallKind getTailCallKind() const { return TCK_None; }
 			bool isTailCall() const { return true; }
-
 			bool isMustTailCall() const { return true; }
-
 			bool isNoTailCall() const { return true; }
-
 			void setTailCall(bool isTC = true) {}
-
 			void setTailCallKind(TailCallKind TCK) {}
 
 			/// getNumArgOperands - Return the number of call arguments.
-			unsigned getNumArgOperands() const { return 10; }
+			unsigned getNumArgOperands() const { return getNumOperands(); }
+			ValPtr getArgOperand(unsigned i) const;
+			void setArgOperand(unsigned i, ValPtr v);
 
-			ValPtr getArgOperand(unsigned i) const { }
-
-			void setArgOperand(unsigned i, ValPtr v) {}
-
-			/// \brief Determine if the call does not access memory.
-			bool doesNotAccessMemory() const
-			{
-				return true;
-			}
-
-			void setDoesNotAccessMemory() {}
-
-			/// \brief Determine if the call does not access or only reads memory.
-			bool onlyReadsMemory() const { return true; }
-
-			void setOnlyReadsMemory() {}
-
-			/// @brief Determine if the call can access memmory only using pointers
-			/// based on its arguments.
-			bool onlyAccessesArgMemory() const { return false; }
-
-			void setOnlyAccessesArgMemory() {}
-
-			/// \brief Determine if any call argument is an aggregate passed by value.
-			bool hasByValArgument() const { return true; }
-
-			FuncPtr getCalledFunction() const 
-			{ 
-				// return nullptr; 
-			}
+			ValPtr getCalledFunction() const { return Operands[0].get(); }
 
 			/// getCalledValue - Get a pointer to the function that is invoked by this
 			/// instruction.
-			ValPtr getCalledValue() 
-			{ 
-				// return nullptr; 
+			ValPtr getCalledValue() const { return getCalledFunction(); }
+			void setCalledFunction(ValPtr Fn) { Operands[0] = Fn; }
+			void setCalledFunction(FuncTypePtr Ty, ValPtr Fn) 
+			{
+				FTy = Ty;
+				Operands[0] = Fn;
 			}
-
-			void setCalledFunction(ValPtr Fn) {}
-
-			void setCalledFunction(FuncTypePtr FTy, ValPtr Fn) {}
 
 			// Methods for support type inquiry through isa, cast, and dyn_cast:
-			static bool classof(InstPtr I)
-			{
-				return I->getOpcode() == Instruction::Opcode::Call;
-			}
+			static bool classof(InstPtr I) { return I->getOpcode() == Instruction::Opcode::Call; }
+
+			/// \brief Print the CallInst.
+			void Print(std::ostringstream& out);
 		};
 
 		//===---------------------------------------------------------------===//
 		//						ExtractValueInst Class
 		//===---------------------------------------------------------------===//
-
 		// ExtractValueInst - This instruction extracts a struct member or array
 		// element value from an aggregate value.
 		// <result> = extractvalue <aggregate type> <val>, <idx>{, <idx>}*
 		// Example:  <result> = extractvalue {i32, float} %agg, 0
-
 		// 在moses中没有array类型，只有聚合类型，也就是匿名类型和用户自定义类型
 		class ExtractValueInst final : public UnaryOperator
 		{
@@ -578,10 +465,12 @@ namespace compiler
 				InstPtr InsertBefore = nullptr);
 			ExtractValueInst(ValPtr Agg, std::vector<unsigned> Idxs, std::string NameStr,
 				BBPtr InsertAtEnd);
-
 			// allocate space for exactly one operand
 			// void *operator new(size_t s){ return User::operator new(s, 1); }
 		public:
+			// Out-of-line method.
+			~ExtractValueInst() override;
+
 			static EVInstPtr Create(ValPtr Agg, std::vector<unsigned> Idxs,
 				std::string NameStr = "", InstPtr InsertBefore = nullptr)
 			{
@@ -596,7 +485,8 @@ namespace compiler
 				return nullptr;
 			}
 
-			/// getIndexedType - 
+			/// \brief Print the ExtractValueInst.
+			void Print(std::ostringstream& out);
 		};
 
 		//===---------------------------------------------------------------===//
@@ -623,74 +513,45 @@ namespace compiler
 
 			explicit PHINode(TyPtr Ty, unsigned NumReservedValues, 
 				std::string NameStr = "", InstPtr InsertBefore = nullptr) :
-				Instruction(Ty, Instruction::Opcode::PHI, 0, InsertBefore)
-			{
-			}
+				Instruction(Ty, Instruction::Opcode::PHI)
+			{}
 		protected:
 			// allocHungoffUses - this is moew complicated than the generic
 			// User::allocHungoffUses, because we have to allocate Uses for the incoming
 			// values and pointers to the incoming blocks, all in one allocation.
-			void allocHungoffUses(unsigned N)
-			{}
+			void allocHungoffUses(unsigned N) {}
 		public:
 			// Constructors - NumReservedValues is a hint for the number of incoming
 			// edges that this phi node will have(use 0 if you really have no idea).
 			static PHINodePtr Create(TyPtr Ty, unsigned NumReservedValues, std::string NameStr = "",
 				InstPtr InsertBefore = nullptr)
 			{
-				// return new 
 				return nullptr;
 			}
 
 			static PHINodePtr Create(TyPtr Ty, unsigned NumReservedValues, std::string NameStr,
 				BBPtr InsertAtEnd)
 			{
-				// return new 
 				return nullptr;
 			}
-
 			// Block iterator interface. This provides access to the list of incoming
 			// basic blocks, which parallels the list of incoming values.
-
-			// ...
 
 			// getNumIncomingValues - Return the number of incoming edges
 			unsigned getNumIncomingValues() const { return getNumOperands(); }
 
 			// getIncomingValue - Return incoming value number x
-			ValPtr getIncomingValue(unsigned i) const \
-			{ 
-				// return getOperand(i); 
-				return nullptr;
-			}
-
-			void setIncomingValue(unsigned i, ValPtr V)
-			{
-				
-			}
-
+			ValPtr getIncomingValue(unsigned i) const { return nullptr; }
+			void setIncomingValue(unsigned i, ValPtr V) {}
 			/// getIncomingBlock - Return incoming basic block number @p i.
-			BBPtr getIncomingBlock(unsigned i) const
-			{
-				// return block_begin()[i];
-				// return nullptr;
-			}
+			BBPtr getIncomingBlock(unsigned i) const {}
 
 			/// getIncomingBlock - Return incoming basic block corresponding
 			// to an operand of the PHI.
-			BBPtr getIncomingBlock(const Use &U) const
-			{
-				// return nullptr;
-			}
-
-			void setIncomingBlock(unsigned i, BBPtr BB)
-			{
-
-			}
-
+			BBPtr getIncomingBlock(const Use &U) const {}
+			void setIncomingBlock(unsigned i, BBPtr BB){}
 			/// addIncoming - Add an incoming value to the end of the PHI list.
-			void addIncoming(ValPtr V, BBPtr BB)
-			{}
+			void addIncoming(ValPtr V, BBPtr BB){}
 
 			/// removeIncomingValue - Remove an incoming value. This is useful if a 
 			/// predecessor basic block is deleted. The value removed is returned.
@@ -698,15 +559,9 @@ namespace compiler
 
 			// getBasicBlockIdx - Return the first index of the specified basic block
 			// in the value list for this PHI. Returns -1 if no instance.
-			int getBasicBlockIndex(BBPtr BB) const
-			{
-				return 0;
-			}
+			int getBasicBlockIndex(BBPtr BB) const{ return 0; }
 
-			ValPtr getIncomingValueForBlock(BBPtr BB) const
-			{
-				// return nullptr;
-			}
+			ValPtr getIncomingValueForBlock(BBPtr BB) const { return nullptr; }
 
 			/// hasConstantValue - If the specified PHI node always merges together the
 			/// same value, return the value, otherwise return null.
@@ -718,6 +573,9 @@ namespace compiler
 			{
 				return I->getOpcode() == Instruction::Opcode::PHI;
 			}
+
+			/// \brief Print the PHINode.
+			void Print(std::ostringstream& out);
 		};
 
 		//===----------------------------------------------------------------===//
@@ -727,54 +585,38 @@ namespace compiler
 		// does not continue in this  function any longer.
 		class ReturnInst final : public TerminatorInst
 		{
-		private:
 			ReturnInst(const ReturnInst &RI) = delete;
-		private:
 			ValPtr Val;
 		public:
-			// ReturnInst constructors:
-			// ReturnInst()						- 'ret void'	instruction
-			// ReturnInst(	null)				- 'ret void'	instruciton
-			// ReturnInst(Value *X)				- 'ret X'		instruction
-			// ReturnInst(	null, Inst *I)		- 'ret void'	instruction, insert before I
-			// ReturnInst(Value *X, Inst *I)	- 'ret X'		instruction, insert before I
-			// ReturnInst(	null, BB *B)		- 'ret void'	instruction, insert @ end of B
-			// ReturnInst(Value *X, BB *B)		- 'ret X'		instruction, insert @ end of B
-			// 
 			// Note: If the Value* passed is of type void then the constructor behave as
 			// if it was passed NULL.
-			ReturnInst(ValPtr retVal = nullptr, InstPtr InsertBefore = nullptr);
-
-			ReturnInst(ValPtr retVal, BBPtr InsertAtEnd);
-
+			// ReturnInst(ValPtr retVal = nullptr, InstPtr InsertBefore = nullptr);
+			ReturnInst(ValPtr retVal = nullptr, BBPtr InsertAtEnd = nullptr);
 			~ReturnInst() override;
+			static RetInstPtr Create(ValPtr retVal = nullptr, BBPtr InsertAtEnd = nullptr);
 
-			static RetInstPtr Create(ValPtr retVal = nullptr, InstPtr InsertBefore = nullptr)
-			{				
-				return std::make_shared<ReturnInst>(retVal, InsertBefore);
-			}
+			ValPtr getReturnValue() const { return Operands.empty() ? nullptr : Operands[0].get(); }
 
-			static RetInstPtr Create(ValPtr retVal, BBPtr InsertAtEnd)
+			ValPtr getSuccessor(unsigned index) const override
 			{
-				return nullptr;
+				assert(0 && "ReturnInst has no successor!");
+				return 0;
 			}
-
-			static RetInstPtr Create(BBPtr InsertAtEnd)
+			unsigned getNumSuccessors() const override 
 			{
-				return nullptr;
-			}			
-
-			ValPtr getReturnValue() const;
-
-			BBPtr getSuccessorV(unsigned index) const;
-			unsigned getNumSuccessorV() const;
-			void setSuccessorV(unsigned idx, BBPtr B);
+				assert(0 && "ReturnInst has no successor!");
+				return 0;
+			}
+			void setSuccessor(unsigned idx, BBPtr B) override;
 
 			// Method for support type inquiry through isa, cast and dyn_cast:
 			static bool classof(InstPtr I)
 			{
 				return I->getOpcode() == Instruction::Opcode::Ret;
 			}
+
+			/// \brief Print the ReturnInst.
+			void Print(std::ostringstream& out);
 		};
 
 		//===----------------------------------------------------------------===//
@@ -784,100 +626,60 @@ namespace compiler
 		// BranchInst - Conditional or Unconditional Branch instruction.
 		class BranchInst : public TerminatorInst
 		{
-			/// Ops list - Branches are strange. The operands are ordered:
-			/// [Cond, FalseDest, ] True Dest. This make some accessors faster
-			/// because they don't have to check for cond/uncond branchness. These 
-			/// are mostly accessed relative from op_end().
-			BranchInst(const BranchInst &BI);
+			BranchInst(const BranchInst &BI) = delete;
 
-			// BranchInst constructors (where {B, T, F} are blocks, and C is a condition):
 			// BranchInst(BB *B)							- 'br B'
 			// BranchInst(BB* T, BB *F, Value *C)			- 'br C, T, F'
 			// BranchInst(BB *B, Inst *I)					- 'br B'		insert before I
 			// BranchInst(BB *T, BB *F, Value *C, Inst *I)	- 'br C, T, F'	insert before I
 			// BranchINst(BB *B, BB *I)						- 'br B'		insert at end
-			// BranchhInst(BB *T, BB *F, Value *C, BB *I)	- 'br C, T, F'	insert at end
-			explicit BranchInst(BBPtr IfTrue, InstPtr InsertBefore = nullptr);
-
-			BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond, InstPtr InsertBefore = nullptr);
-
-			BranchInst(BBPtr IfTrue, BBPtr InsertAtEnd);
-
-			BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond, BBPtr InsertAtEnd);
+			// BranchhInst(BB *T, BB *F, Value *C, BB *I)	- 'br C, T, F'	insert at end			
 		public:
-			static BrInstPtr Create(BBPtr IfTrue, InstPtr InsertBefore = nullptr)
-			{
-				return nullptr;
-			}
-
+			explicit BranchInst(BBPtr IfTrue, BBPtr InsertAtEnd = nullptr);
+			BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond, BBPtr InsertAtEnd = nullptr);
+			static BrInstPtr Create(BBPtr IfTrue, BBPtr InsertAtEnd = nullptr);
 			static BrInstPtr Create(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond,
-				InstPtr InsertBefore = nullptr)
+				BBPtr InsertAtEnd = nullptr);
+			~BranchInst() override;
+			bool isUncoditional() const { return getNumOperands() == 1; }
+			bool isConditional() const { return getNumOperands() == 3; }
+			ValPtr getCondition() const 
 			{
-				return nullptr;
+				assert(Operands.size() > 1 && "Condition branch instruction must have 3 operands!");
+				return Operands[2].get();
 			}
-
-			static BrInstPtr Create(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond,
-				BBPtr InsertAtEnd)
+			void setCondition(ValPtr V) 
 			{
-				return nullptr;
-				//return new
+				assert(Operands.size() > 1 && "Condition branch instruction must have 3 operands!");
+				Operands[2] = V;
 			}
-
-			bool isUncoditional() const 
-			{
-				return true;
-				// return getNumOperands() == 1;
-			}
-
-			bool isConditional() const
-			{
-				// return getNumOperands() == 2;
-				return true;
-			}
-
-			ValPtr getCondition() const
-			{
-				return nullptr;
-			}
-
-			void setCondition(Value *V)
-			{
-			
-			}
-
 			unsigned getNumSuccessors() const { return 1 + isConditional(); }
-
-			BBPtr getSuccessor(unsigned i) const
-			{
-				return nullptr;
-			}
-
-			void setSuccessor(unsigned idx, BBPtr NewSucc)
-			{
-
-			}
+			ValPtr getSuccessor(unsigned i) const;
+			void setSuccessor(unsigned idx, BBPtr NewSucc);
 
 			// Methods for support type inquiry through isa, cast and dyn_cast:
 			static bool classof(InstPtr I)
 			{
 				return I->getOpcode() == Instruction::Opcode::Br;
 			}
+
+			/// \brief Print the BranchInst.
+			void Print(std::ostringstream& out);
 		};
 
 		//===----------------------------------------------------------------===//
 		// LoadInst - an instruction for reading from memory.
 		class LoadInst : public UnaryOperator
 		{
-			void init(ValPtr Ptr);
 		public:
-			LoadInst(TyPtr Ty, ValPtr Ptr, std::string Name = "", InstPtr InsertBefore = nullptr);
-			LoadInst(TyPtr Ty, ValPtr Ptr, std::string Name, BBPtr InsertAtEnd);
-
+			LoadInst(ValPtr Ptr, std::string Name = "", BBPtr InsertAtEnd = nullptr);
 			~LoadInst() override;
+			static LoadInstPtr Create(ValPtr Ptr);
 
-			static LoadInstPtr Create(ValPtr Ptr)
-			{
-				return std::make_shared<LoadInst>(nullptr, Ptr);
+			ValPtr getPointerOperand() const 
+			{ 
+				assert(!Operands.empty() && "Load instruciton's operand may not be null");
+				return Operands[0].get(); 
 			}
 
 			static bool classof(LoadInstPtr) { return true; }
@@ -885,6 +687,9 @@ namespace compiler
 			{
 				return I->getOpcode() == Instruction::Opcode::Load;
 			}
+
+			/// \brief Print the LoadInst.
+			void Print(std::ostringstream& out);
 		};
 
 		//===----------------------------------------------------------------===//
@@ -895,27 +700,12 @@ namespace compiler
 		public:
 			// StoreInst(ValPtr Val, ValPtr Ptr, InstPtr InsertBefore = nullptr);
 			StoreInst(ValPtr Val, ValPtr Ptr, BBPtr InsertAtEnd = nullptr);
-
-			static StoreInstPtr Create(ValPtr Val, ValPtr Ptr)
-			{
-				return std::make_shared<StoreInst>(Val, Ptr);
-			}
-
+			static StoreInstPtr Create(ValPtr Val, ValPtr Ptr);
 			static bool classof(StoreInstPtr) { return true; }
-			static bool classof(InstPtr I)
-			{
-				return I->getOpcode() == Instruction::Opcode::Store;
-			}
-		};
+			static bool classof(InstPtr I) { return I->getOpcode() == Instruction::Opcode::Store; }
 
-		//===----------------------------------------------------------------===//
-		//						IndirectBrInst Class
-		//===----------------------------------------------------------------===//
-
-		// IndirectBrInst - Indirect Branch Instruction.
-		class IndirectBrInst
-		{
-
+			/// \brief Print the StoreInst.
+			void Print(std::ostringstream& out);
 		};
 	}
 }

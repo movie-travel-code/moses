@@ -83,7 +83,6 @@ void ModuleBuilder::EmitLocalVarDecl(const VarDecl* var)
 		ValPtr V = EmitScalarExpr(init.get());
 		EmitStoreOfScalar(V, DeclPtr);
 	}
-	// (3)
 }
 
 /// \brief EmitLocalVarAlloca - Emit tha alloca for a local variable.
@@ -147,6 +146,8 @@ void ModuleBuilder::EmitFunctionDecl(const FunctionDecl* FD)
 {
 	// generate function info.
 	std::shared_ptr<CGFunctionInfo const> FI = Types.arrangeFunctionInfo(FD);
+	// Save the CGFunctionInfo to the symbol.
+
 	std::shared_ptr<FunctionType> Ty = Types.getFunctionType(FI);
 
 	CurFunc->CurFnInfo = FI;
@@ -165,6 +166,7 @@ void ModuleBuilder::EmitFunctionDecl(const FunctionDecl* FD)
 	assert(Sym != nullptr && "Funciton symbol can't be null.");
 	std::shared_ptr<FunctionSymbol> FuncSym = std::dynamic_pointer_cast<FunctionSymbol>(Sym);
 	assert(FuncSym != nullptr && "Funciton symbol can't be null.");
+	FuncSym->setFuncAddr(func);
 	CurScope = FuncSym->getScope();
 
 	StartFunction(FI, func);
@@ -188,33 +190,21 @@ void ModuleBuilder::StartFunction(std::shared_ptr<CGFunctionInfo const> FnInfo, 
 
 	CurFunc->ReturnBlock = CreateBasicBlock("return", CurFunc->CurFn);
 	
-	// Set the argument's name and argument's type here.
-	for (unsigned i = 0; i < FnInfo->getArgNums(); i++)
-	{
-		Fn->setArgumentInfo(i, FnInfo->getParm(i).second);
-	}
+	//// Set the argument's name and argument's type here.
+	//for (unsigned i = 0; i < FnInfo->getArgNums(); i++)
+	//{
+	//	Fn->setArgumentInfo(i, FnInfo->getParm(i).second);
+	//}
 
-	if (FnInfo->getRetTy()->getKind() == TypeKind::VOID)
-	{
-		// Void type; nothing to return
-		CurFunc->ReturnValue = nullptr;
-		// e.g. func print() -> void
-		//		{
-		//			if (num > 10)
-		//			{
-		//				return;
-		//			}
-		//			num ++;
-		//			~~~~~~~			--------> implicit return stmt, increase NumReturnExprs.
-		//		}
-		/*if (!CurFunc->CurFuncDecl->endsWithReturn())
-			CurFunc->NumReturnExprs++;*/
-	}
-	else
-	{
-		CurFunc->ReturnValue = CreateAlloca(Fn->getReturnType(), "retval");
-	}
-
+	//if (FnInfo->getRetTy()->getKind() == TypeKind::VOID)
+	//{
+	//	// Void type; nothing to return
+	//	CurFunc->ReturnValue = nullptr;
+	//}
+	//else
+	//{
+	//	CurFunc->ReturnValue = CreateAlloca(Fn->getReturnType(), "retval");
+	//}
 	EmitFunctionPrologue(FnInfo, Fn);
 }
 
@@ -227,12 +217,6 @@ void ModuleBuilder::FinishFunction()
 ValPtr ModuleBuilder::visit(const VarDecl* VD)
 {
 	EmitLocalVarDecl(VD);
-	return nullptr;
-}
-
-/// \brief 
-ValPtr ModuleBuilder::visit(const ClassDecl* CD)
-{
 	return nullptr;
 }
 

@@ -39,8 +39,21 @@ namespace compiler
 		using namespace sema;
 		using namespace IR;
 		using namespace CodeGen;		
-		
-		typedef BinaryOperator::Opcode Opcode;
+				
+		using Opcode = BinaryOperator::Opcode;
+		using CallArgList = std::vector<std::pair<ValPtr, compiler::IRBuild::ASTTyPtr>>;
+
+		namespace CGStmt
+		{
+			// BreakContinueStack - This keeps track of where break and continue
+			// statements should jump to.
+			struct BreakContinue
+			{
+				BreakContinue(BBPtr bb, BBPtr cb) : BreakBlock(bb), ContinueBlock(cb) {}
+				BBPtr BreakBlock;
+				BBPtr ContinueBlock;
+			};
+		}
 
 		namespace CGExpr
 		{
@@ -71,10 +84,10 @@ namespace compiler
 			/// ReturnValue - The temporary alloca to hold the return value. This is null
 			/// iff the function has no return value.
 			/// If we have multiple return statements, we need this tempprary alloca.
-			/// e.g		func add(parm : var)
-			///			{
-			///				int num = 10;
-			///				int mem = 20;
+			/// e.g	    func add(parm : var)
+			///         {
+			///             int num = 10;
+			///             int mem = 20;
 			///				if (num > 10)
 			///					-----> we will load from num and store to the temp alloca.
 			///					return num;	
@@ -119,26 +132,11 @@ namespace compiler
 		public:
 			using FuncStatusPtr = std::shared_ptr<FunctionBuilderStatus>;
 		private:
-			// We need symbol table to generate code.
-			// e.g：
-			//		func add(lhs : int, rhs : int) -> int
-			//		{
-			//			return lhs + rhs * 2 - 40 + lhs * (rhs - rhs / 10);
-			//		}
-			//		const global = 10;
-			//		var num = add(global, 20) + 23;
-			// ScopeTree:
-			//  ------ -------- -----
-			// | add  | global | num |
-			//  ------ -------- -----
-			//     |
-			//     |
-			//    \|/
-			//  ------- -----
-			// |  lhs  | rhs |
-			//  ------- -----
+			// Symbol table from sema.
 			std::shared_ptr<Scope> SymbolTree;
 			std::shared_ptr<Scope> CurScope;
+
+			std::vector<CGStmt::BreakContinue> BreakContinueStack;
 
 			// Auxiliary module.
 			ConstantEvaluator evaluator;
@@ -146,13 +144,13 @@ namespace compiler
 			CodeGenTypes Types;
 
 			// IRs for the whole translation-unit.
-			// e.g.		var num = 10;									------------		
-			//			if (num > 0)								   |	BBPtr	|
-			//			{												------------
-			//				num = -num;								   |	BBPtr	|
-			//			}												------------
-			//			func add(lhs : int, rhs : int) -> int		   |   FuncPtr	|
-			//			{												------------
+			// e.g.		var num = 10;                                ------------		
+			//			if (num > 0)                                |    BBPtr   |
+			//			{                                            ------------
+			//				num = -num;                             |    BBPtr   |
+			//			}                                            ------------
+			//			func add(lhs : int, rhs : int) -> int       |  FuncPtr   |
+			//			{                                            ------------
 			//				var sum = 0;
 			//				while(lhs > rhs)
 			//				{
@@ -160,7 +158,7 @@ namespace compiler
 			//					sum = sum + rhs;
 			//				}
 			//			}
-			std::list<std::shared_ptr<Value>> IRs;
+			std::list<ValPtr> IRs;
 
 			BBPtr CurBB;
 			// CurFunc - Contains all the state information about current function.
@@ -174,19 +172,11 @@ namespace compiler
 			// Alloca instruction only appear in the Entry Block.
 			// e.g:		define i32 add(i32 parm)
 			//			{
-			//							---------------------
-			//						   |	AllocaInst		 | ----> Entry Block
-			//						   |	AllocaInst		 |	
-			//						   |	Other Inst		 | ----> Alloca insert point.
-			//							----------/------\----
-			//									 /		  \
-			//				--------------------/		   \------------------
-			//			   |				     |		   |				  |
-			//	BB1 <----  |					 |		   |				  |	----> BB2
-			//			   |					 |		   |				  |
-			//				---------------------			------------------
-			//									...
-			//			}
+			//                         --------------------
+			//                        |	    AllocaInst     | ----> Entry Block
+			//                        |	    AllocaInst     |	
+			//                        |	    Other Inst     | ----> Alloca insert point.
+			//                         --------------------
 			// Before executing the function code, we should pre-allocate a portion of memory
 			// on the stack.
 			std::list<InstPtr>::iterator AllocaInsertPoint;
@@ -195,10 +185,6 @@ namespace compiler
 
 			/// \brief This method is used for get MosesIRContext.
 			MosesIRContext& getMosesIRContext() { return Context; }
-
-			// Emit IR for Module.
-			// 对于moses IR来说，最外层的有变量声明（使用ValueSymbolTable存储），instruction
-			// BasicBlock，也就是说最外层是value-list。使用visit进行single dispatch
 
 			/// \brief 当前函数是总控性函数，可以通过遍历AST每个节点，调用相应的visitor
 			/// 使用unique_ptr的作用就是在IR生成之后，AST被析构掉。
@@ -215,9 +201,11 @@ namespace compiler
 			ValPtr visit(const WhileStatement* whilestmt);
 			ValPtr visit(const ReturnStatement* retstmt);
 			ValPtr visit(const DeclStatement* declstmt) { return nullptr; }
+			ValPtr visit(const BreakStatement* BS);
+			ValPtr visit(const ContinueStatement* CS);
 			ValPtr visit(const VarDecl* VD);
 			ValPtr visit(const ParameterDecl* PD) { return nullptr; }
-			ValPtr visit(const ClassDecl* CD);
+			ValPtr visit(const ClassDecl* CD) { return nullptr; }
 			ValPtr visit(const FunctionDecl* FD);
 			ValPtr visit(const UnpackDecl* UD);
 			ValPtr visit(const BinaryExpr* B);
@@ -228,6 +216,8 @@ namespace compiler
 			ValPtr visit(const UnaryExpr* UE);
 			ValPtr visit(const MemberExpr* ME);
 			ValPtr visit(const Expr* E) { return nullptr; }
+
+			const std::list<ValPtr>& getIRs() const { return IRs; };
 		private:
 			//===-----------------------------------------------------------===//
 			// Helper for variable declaration generation.
@@ -262,8 +252,16 @@ namespace compiler
 			//===--------------------------------------------------------------===//
 			// Helper for function call generation.
 			//===--------------------------------------------------------------===//
-			void EmitCall();
-			void EmitCallArg();
+			ValPtr EmitCall(ValPtr FuncAddr, const std::vector<ExprASTPtr> &Args);
+
+			ValPtr EmitCall(ValPtr FuncAddr, CallArgList CallArgs);
+
+			/// EmitCallArg - Emit a single call argument.
+			void EmitCallArg(const Expr* E, compiler::IRBuild::ASTTyPtr ArgType);
+
+			/// EmitCallArgs - Emit call arguments for a function.
+			void EmitCallArgs(CallArgList& CallArgs,
+					const std::vector<ExprASTPtr> &ArgExprs);
 
 			/// EmitBranchOnBoolExpr - Emit a branch on a boolean condition(e.g for an
 			/// if statement) to the specified blocks. Based on the condition, this might
@@ -274,7 +272,6 @@ namespace compiler
 			//===---------------------------------------------------------===//
 			// Helper for builder configuration.
 			//===---------------------------------------------------------===//
-
 			/// \brief Insert a new instruction to the current block.
 			template<typename InstTy>
 			InstTy InsertHelper(InstTy I, std::string Name = "") const
@@ -312,16 +309,17 @@ namespace compiler
 			/// the specified instruction.
 			void SetInsertPoint(InstPtr I);
 
+			bool HaveInsertPoint() const { return CurBB ? true : false; }
 			//===---------------------------------------------------------------===//
 			// Miscellaneous creation methods.
 			//===---------------------------------------------------------------===//
 
 			/// \brief Get the constant value for i1 true.
-			ConstantBoolPtr getTrue() { return ConstantBool::getTrue(); }
+			ConstantBoolPtr getTrue() { return ConstantBool::getTrue(Context); }
 			/// \brief Get the constant value for i1 false;
-			ConstantBoolPtr getFalse() { return ConstantBool::getFalse(); }
+			ConstantBoolPtr getFalse() { return ConstantBool::getFalse(Context); }
 			/// \brief Get the constant value for int.
-			ConstantIntPtr getInt(int val) { return ConstantInt::get(val); }
+			ConstantIntPtr getInt(int val) { return ConstantInt::get(Context, val); }
 		
 			//===---------------------------------------------------------===//
 			// Instruction creation methods: Terminators
@@ -379,7 +377,8 @@ namespace compiler
 			AllocaInstPtr CreateAlloca(TyPtr Ty, std::string Name = "");
 			LoadInstPtr CreateLoad(ValPtr Ptr);
 			StoreInstPtr CreateStore(ValPtr Val, ValPtr Ptr);
-			GEPInstPtr CreateGEP(TyPtr Ty, ValPtr Ptr, std::vector<ValPtr> IdxList, std::string Name = "");
+			GEPInstPtr CreateGEP(TyPtr Ty, ValPtr Ptr, std::vector<ValPtr> IdxList, 
+						std::string Name = "");
 
 			//===---------------------------------------------------------------===//
 			// Instruction creation methods: Compare Instructions.
@@ -397,7 +396,8 @@ namespace compiler
 			//===---------------------------------------------------------------===//
 			PHINodePtr CreatePHI(TyPtr Ty, unsigned NumReservedValues, std::string Name = "");
 			CallInstPtr CreateCall(ValPtr Callee, std::vector<ValPtr> Args, std::string Name = "");
-			EVInstPtr CreateExtractValueValue(ValPtr Agg, std::vector<unsigned> Idxs, std::string Name = "");
+			EVInstPtr CreateExtractValueValue(ValPtr Agg, std::vector<unsigned> Idxs, 
+						std::string Name = "");
 
 			//===----------------------------------------------------------------------===//
 			// Utility creattion methods
@@ -441,13 +441,13 @@ namespace compiler
 			// - Move the stack pointer further by decreasing or increasing its value, depending
 			//  on the whether the stack grows down or up. On x86, the stack pointer is decreased
 			//  to make room for variables(i.e. the functions's local variables).
-			// e.g.		======================
-			//		   |	pushl %ebp		  |
-			//			======================
-			//		   |	movl %esp, %ebp	  |
-			//			======================
-			//		   |	subl $N, %esp	  |
-			//			======================
+			// e.g.     ======================
+			//         |     pushl %ebp       |
+			//          ======================
+			//         |     movl %esp, %ebp  |
+			//          ======================
+			//         |     subl $N, %esp    |
+			//          ======================
 			void EmitFunctionPrologue(std::shared_ptr<CGFunctionInfo const> FunInfo, FuncPtr fun);
 
 			// EmitFunctionEpilogue - Reverse the actions of the function prologue and returns
@@ -459,13 +459,13 @@ namespace compiler
 			//   prologue.
 			// - Returns to calling function(caller), by popping the previous frame's program 
 			//   counter off the stack and jumping to it.
-			// e.g.			======================
-			//			   |	movl %ebp, %esp	  |
-			//				======================
-			//			   |	popl %ebp		  |
-			//				======================
-			//			   |	ret				  |
-			//				======================
+			// e.g.         ======================
+			//             |   movl %ebp, %esp    |
+			//              ======================
+			//             |   popl %ebp          |
+			//              ======================
+			//             |   ret                |
+			//              ======================
 			void EmitFunctionEpilogue();
 			//===---------------------------------------------------------===//
 			// Emit code for stmts.
@@ -482,13 +482,47 @@ namespace compiler
 			/// FixMe: I don't know why we need to return a value. But Clang 'EmitCompoundStmt'
 			///	need a value to return.
 			ValPtr EmitCompoundStmt(const StatementAST* S);
-			void EmitIfStmt(const IfStatement* ifstmt);
+			void EmitIfStmt(const IfStatement* IS);
 			void EmitConBrHints();
-			void EmitWhileStmt(const WhileStatement* S);
-			void EmitReturnStmt(const ReturnStatement* S);
+			void EmitWhileStmt(const WhileStatement* WS);
+			void EmitBreakStmt(const BreakStatement* BS);
+			void EmitContinueStmt(const ContinueStatement* CS);
+
+			/// \brief EmitReturnStmt - Generate code for return statement.
+			/// ----------------Clang/CGStmt.cpp/EmitReturnStmt()--------------
+			/// Note that due to GCC extensions, this can have an operand if 
+			/// the function returns void, or may be missing one if the function
+			/// returns non-void. Fun Stuff :).
+			/// ----------------------------------------------------------------
+			/// http://stackoverflow.com/questions/35987493/return-void-type-in-c-and-c
+			/// This topic, discussed whether the ret-void function's return statement 
+			/// can have sub-expression.
+			/// e.g.	void func1() { ... }
+			///			void func()
+			///			{
+			///				return func1();		----> is this correct?
+			///			}
+			///
+			/// c11, 6.8.6.4 "The return statement:"
+			///	-	A return statement with an expression shall not appear in a function 
+			///		whose return type is void.
+			/// -	return without expression not permitted in function that returns a 
+			///		value (and vice versa)
+			/// So this is forbidden in Standard C.
+			///
+			/// However, this is allowed in C++.
+			///	C++14, 6.6.3 "The return statement:"
+			///	-	A return statement with an expression of non-void type can be used only
+			///		in functions returning a value[...] A return statement with an expression
+			///		of type void can be only in functions with a return type of cv void; the
+			///		expression is evaluated just the function returns its caller.
+			///
+			/// Yes, you may use an expression if it is of void type (that's been valid since C++98).
+			/// "Why would anyone want to write such nonsense code though? Rather than just writing 
+			///	void f2() {f();}", so funny!
+
+			ValPtr EmitReturnStmt(const ReturnStatement* S);
 			void EmitDeclStmt(const DeclStatement* S);
-			void EmitBreakStmt(const BreakStatement* S);
-			void EmitContinueStmt(const ContinueStatement* S);
 
 			//===---------------------------------------------------------===//
 			// Emit code for expressions.
@@ -510,10 +544,12 @@ namespace compiler
 			///		~~~
 			LValue EmitDeclRefExpr(const DeclRefExpr* E);
 
-			/// EmitExprAsInit - Emits the code necessary to initialize a location in
+			/// \brief EmitExprAsInit - Emit the code necessary to initialize a location in
 			/// memory with the given initializer.
 			ValPtr EmitBinaryExpr(const BinaryExpr* BE);
-			void EmitCallExpr(const CallExpr* CE);
+
+			/// \brief EmitCallExpr - Emit the code for call expression.
+			ValPtr EmitCallExpr(const CallExpr* CE);
 
 			/// \brief EmitUnaryExpr - Emit code for unary expression, including '-' '!' '--' '++'.
 			ValPtr EmitUnaryExpr(const UnaryExpr* UE);
@@ -564,6 +600,32 @@ namespace compiler
 			///	load from mem and store to the num).
 			void EmitStoreThroughLValue(RValue Src, LValue Dst, bool isInit = false);
 
+			/// SimplifyForwardingBlocks - If the given basic block is only a branch to
+			/// another basic block, simplify it. This assumes that no other code could
+			/// potentially reference the basic block.
+			/// e.g.        ----------------  BB1
+			///            |      ...       |
+			///            |                |
+			///             ----/-----------\
+			///                /             \
+			///    -----------/----  BB2     -\-----------  BB3
+			///   | br label %BB4  |        |             |
+			///    --------\-------          -------------
+			///             \
+			///        ------\---------  BB4
+			///       |                |
+			///        ----------------
+			/// Note: BB2 is useless, we can eliminate it and replace all use of BB2 to BB4.
+			/// As shown below.
+			/// e.g.        ----------------  BB1
+			///            |      ...       |
+			///            |                |
+			///             ----/-----------\
+			///                /             \
+			///    -----------/----  BB4     -\-----------  BB3
+			///   |                |        |             |
+			///    ----------------          -------------
+			void SimplifyForwardingBlocks(BBPtr BB);
 
 			/// EmitBlock - Emit the given block \arg BB and set it as the insert point, 
 			/// adding a fall-through branch from current insert block if necessary.

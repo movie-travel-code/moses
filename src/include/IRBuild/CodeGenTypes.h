@@ -26,6 +26,7 @@ namespace compiler
 		using IRFuncTy = compiler::IR::FunctionType;
 		using IRTyPtr = std::shared_ptr<IRType>;
 		using IRFuncTyPtr = std::shared_ptr<IRFuncTy>;
+		using CGFuncInfoConstPtr = std::shared_ptr<CGFunctionInfo const>;
 
 		/// This class orgasizes the cross-module state that is used while lowering
 		/// AST types to moses-IR types.
@@ -50,7 +51,8 @@ namespace compiler
 			std::map<const ast::Type*, std::shared_ptr<StructType>> RecordDeclTypes;
 
 			// Hold CGFunctionInfo results.
-			std::set<std::shared_ptr<CGFunctionInfo const>> FunctionInfos;
+			std::map<const FunctionDecl*, CGFuncInfoConstPtr> FunctionInfos;
+			std::map<const FunctionDecl*, FuncTypePtr> FunctionTypes;
 		public:
 			CodeGenTypes(MosesIRContext& IRCtx) : IRCtx(IRCtx) {}
 			/// ConvertType - Convert type T into a moses-IR type.

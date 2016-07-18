@@ -190,7 +190,7 @@ namespace compiler
 			StmtASTPtr ParseWhileStatement();
 			StmtASTPtr ParseBreakStatement();
 			StmtASTPtr ParseContinueStatement();
-			StmtASTPtr ParsereturnStatement();
+			StmtASTPtr ParseReturnStatement();
 
 			ExprASTPtr ParseStringLiteral();
 

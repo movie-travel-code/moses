@@ -41,28 +41,46 @@ std::list<InstPtr>::iterator BasicBlock::end()
 	return InstList.end();
 }
 
-void BasicBlock::setParent(FuncPtr parent)
-{
-
-}
-
-void BasicBlock::setName(std::string Name, SymTabPtr ST)
-{}
-
 std::shared_ptr<TerminatorInst> BasicBlock::getTerminator()
 {
 	if (InstList.empty()) return nullptr;
 	return std::dynamic_pointer_cast<TerminatorInst>(InstList.back());
 }
 
-void BasicBlock::removePredecessor(BBPtr Pred)
+/// \brief Remove 'this' from the containing function.
+/// \returns the element after the erased one.
+BBPtr BasicBlock::removeFromParent()
 {
-
+	auto BlockList = getParent()->getBasicBlockList();
+	for (std::list<BBPtr>::iterator begin = BlockList.begin(), end = BlockList.end();
+			begin != end; begin ++)
+	{
+		if ((*begin).get() == this)
+			return *(BlockList.erase(begin));
+	}
+	assert(0 && "Parent function doesn't contain this basic block?");
+	return nullptr;
 }
+
+void BasicBlock::removePredecessor(BBPtr Pred) {}
 
 /// \brief slpitBasicBlock - This splits a basic block into two at the specified
 /// instruction.
-BBPtr BasicBlock::splitBasicBlock(unsigned index, std::string BBName)
+BBPtr BasicBlock::splitBasicBlock(unsigned index, std::string BBName) { return nullptr; }
+
+/// \brief Print the BasicBlock info.
+/// e.g.	entry:
+///				%retval = alloca i32
+///				...
+///				br i1 %cmp, label %if.then, label %if.end
+///
+///			if.then:
+///				%tmp3 = load i32* %num
+void BasicBlock::Print(std::ostringstream& out)
 {
-	return nullptr;
+	out << " " << Name << ":";
+	for (auto item : InstList)
+	{
+		item->Print(out);
+	}
 }

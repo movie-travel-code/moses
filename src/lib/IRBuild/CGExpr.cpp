@@ -344,8 +344,32 @@ ValPtr ModuleBuilder::EmitPrePostIncDec(const UnaryExpr* UE, bool isInc, bool is
 	ValPtr InVal = EmitLoadOfLValue(LV, ValTy).getScalarVal();
 
 	// (3) Perform operation.
-	NextVal = ConstantInt::get(AmoutVal);
+	NextVal = ConstantInt::get(Context, AmoutVal);
 	NextVal = CreateAdd(InVal, NextVal, isInc ? "inc" : "dec");
+	return NextVal;
+}
+
+/// \brief EmitCallExpr - Emit the code for call expression.
+///	e.g.	func add(lhs:int, rhs:int) -> int { return lhs + rhs;}
+///			var a = 10;
+///			var b = 101;
+///			a = add(a, b);
+///		(1) Emit code for argument.
+///			%tmp = load i32* %a
+///			%tmp1 = load i32* %b
+///
+///		(2) Emit code for call expression.
+///			%call = call i32 @add(i32 %tmp, i32 %tmp1)
+ValPtr ModuleBuilder::EmitCallExpr(const CallExpr* CE)
+{
+	// Get the funciton decl's address.
+	auto Sym = SymbolTree->Resolve(CE->getFuncDecl()->getFDName());
+	assert(Sym && "function decl symbol doesn't exists.");
+	std::shared_ptr<FunctionSymbol> FuncSym = std::dynamic_pointer_cast<FunctionSymbol>(Sym);
+	assert(FuncSym && "function decl symbol doesn't exists.");
+	auto CalleeAddr = FuncSym->getFuncAddr();
+	
+	return EmitCall(CalleeAddr, CE->getArgs());
 }
 
 ValPtr ModuleBuilder::visit(const BinaryExpr* B)
@@ -361,14 +385,14 @@ ValPtr ModuleBuilder::visit(const DeclRefExpr* DRE)
 ValPtr ModuleBuilder::visit(const BoolLiteral* BL)
 {
 	if (BL->getVal())
-		return ConstantBool::getTrue();
+		return ConstantBool::getTrue(Context);
 	else
-		return ConstantBool::getFalse();
+		return ConstantBool::getFalse(Context);
 }
 
 ValPtr ModuleBuilder::visit(const NumberExpr* NE)
 {
-	return ConstantInt::get(NE->getVal());
+	return ConstantInt::get(Context, NE->getVal());
 }
 
 /// \brief Generate the code for UnaryExpr, include ''
@@ -382,6 +406,11 @@ ValPtr ModuleBuilder::visit(const UnaryExpr* UE)
 ValPtr ModuleBuilder::visit(const MemberExpr* ME)
 {
 	return nullptr;
+}
+
+ValPtr ModuleBuilder::visit(const CallExpr* CE)
+{
+	return EmitCallExpr(CE);
 }
 
 /// Emit an expression as an initializer for a variable at the given location. 

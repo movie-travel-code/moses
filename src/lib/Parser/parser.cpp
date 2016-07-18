@@ -388,14 +388,12 @@ StmtASTPtr Parser::ParseCompoundStatementBody()
 			break;
 		case TokenValue::IDENTIFIER:
 		case TokenValue::PUNCTUATOR_Left_Paren:
-			bodyStmts.push_back(ParseExpression());
 		case TokenValue::UO_Exclamatory:
 		case TokenValue::BO_Sub:
 		case TokenValue::INTEGER_LITERAL:
 		case TokenValue::BOOL_TRUE:
 		case TokenValue::BOOL_FALSE:
-			// Note: 在CompoundStmt中单独存在的'!' '-' 'IntegerLiteral' 'true' 'false'
-			// 没有任何意义. 虽然不会报错，但是不会为其构建AST节点
+			bodyStmts.push_back(ParseExpression());
 			break;
 		case TokenValue::KEYWORD_var:
 		case TokenValue::KEYWORD_const:
@@ -407,7 +405,7 @@ StmtASTPtr Parser::ParseCompoundStatementBody()
 			break;
 		case TokenValue::KEYWORD_return:
 			// Check whether current scope is function scope.
-			bodyStmts.push_back(ParsereturnStatement());
+			bodyStmts.push_back(ParseReturnStatement());
 			break;
 		case TokenValue::KEYWORD_break:
 			Actions.ActOnBreakAndContinueStmt(CurrentContext == ContextKind::While);
@@ -517,7 +515,7 @@ StmtASTPtr Parser::ParseContinueStatement()
 /// return-statement -> 'return' expression ? ;
 /// return-statement -> 'return' anonymous-initial ? ;
 /// -------------------------------------------------------------
-StmtASTPtr Parser::ParsereturnStatement()
+StmtASTPtr Parser::ParseReturnStatement()
 {
 	auto locStart = scan.getToken().getTokenLoc();
 	if (!expectToken(TokenValue::KEYWORD_return, "return", true))
@@ -1637,6 +1635,7 @@ void Parser::syntaxErrorRecovery(ParseContext::context context)
 	switch (context)
 	{
 	case ParseContext::context::CompoundStatement:
+		curSafeSymbols = ParseContext::StmtSafeSymbols;
 		break;
 	case ParseContext::context::Statement:
 		// statement, if-statement, while-statement, break-statement, continue-statement

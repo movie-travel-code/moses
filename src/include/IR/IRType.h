@@ -9,6 +9,8 @@
 #ifndef MOSES_IR_IRTYPE_H
 #define MOSES_IR_IRTYPE_H
 #include <vector>
+#include <iostream>
+#include <sstream>
 #include <memory>
 #include <cassert>
 #include "../../include/Parser/Type.h"
@@ -19,6 +21,7 @@ namespace compiler
 		class Type;
 		class StructType;
 		class FunctionType;
+		class PointerType;
 
 		using ASTType = compiler::ast::Type;
 		using ASTTyPtr = std::shared_ptr<ASTType>;
@@ -30,6 +33,7 @@ namespace compiler
 		using IRTyPtr = std::shared_ptr<Type>;
 		using IRStructTyPtr = std::shared_ptr<StructType>;
 		using IRFuncTyPtr = std::shared_ptr<FunctionType>;
+		using IRPtTyPtr = std::shared_ptr<PointerType>;
 		/// \brief IR Type.
 		class Type
 		{
@@ -53,33 +57,21 @@ namespace compiler
 			TypeID ID;
 		public:
 			Type(TypeID id) : ID(id) {}
-
 			//===-----------------------------------------------------===//
 			// Accessors for working with types.
 			TypeID getTypeID() const { return ID; }
-
 			bool isVoidType() const { return getTypeID() == VoidTy; }
-
 			bool isLabelTy() const { return getTypeID() == LabelTy; }
-
 			bool isIntegerTyID() const { return getTypeID() == IntegerTy; }
-
 			bool isFunctionTy() const { return getTypeID() == FunctionTy; }
-
 			bool isStructTy() const { return getTypeID() == StructTy; }
-
 			bool isAnonyTy() const { return getTypeID() == AnonyTy; }
-
 			bool isBoolTy() const { return getTypeID() == BoolTy; }
-
 			bool isPointerTy() const { return getTypeID() == PointerTy; }
 
 			/// isSingleValueType - Return true if the type is a valid type for a 
 			/// register in codegen. 
-			bool isSingleValueType() const
-			{
-				return isIntegerTyID() || isBoolTy();
-			}
+			bool isSingleValueType() const { return isIntegerTyID() || isBoolTy(); }
 
 			/// isAggregateType - Return true if the type is an aggregate type.
 			bool isAggregateType() const
@@ -87,14 +79,15 @@ namespace compiler
 				return getTypeID() == StructTy || getTypeID() == AnonyTy;
 			}
 
-			virtual void useless() {}
-
 			//===------------------------------------------------------------===//
 			// Helper for get types.
 			static IRTyPtr getVoidType();
 			static IRTyPtr getLabelType();
 			static IRTyPtr getIntType();
 			static IRTyPtr getBoolType();
+
+			/// \brief Print the type info.
+			virtual void Print(std::ostringstream& out);
 		};
 
 		/// \brief FunctionType - Class to represent function types.
@@ -130,6 +123,9 @@ namespace compiler
 			std::vector<IRTyPtr> getParams() const{ return ContainedTys; }
 
 			static bool classof(IRTyPtr Ty);
+
+			/// \brief Print the FunctionType info.
+			void Print(std::ostringstream& out) override;
 		private:
 			std::vector<IRTyPtr> ConvertParmTypeToIRType(std::vector<ASTTyPtr> ParmTypes);
 		};
@@ -149,30 +145,24 @@ namespace compiler
 			const StructType &operator=(const StructType&) = delete;
 		private:
 			bool Literal;
-
+			std::string Name;
 			std::vector<IRTyPtr> ContainedTys;
 			unsigned NumContainedTys;
 
 			/// For a named struct that actually has a name, this is a pointer to the 
 			/// symbol table entry for the struct. This is null if the type is an 
 			/// literal struct or if it is a identified type that has an empty name.
-			///
-			/// To Do: 将sema中的symbol切切实实地与IR生成联系起来。
-			/// void *SymbolTableEntry;			
 		public:
-			StructType(std::vector<IRTyPtr> members, bool isliteral);
-			/// 创建identified struct.
+			StructType(std::vector<IRTyPtr> members, std::string Name, bool isliteral);
+			/// Create identified struct.
 			static IRStructTyPtr Create(std::string Name);
-
 			static IRStructTyPtr Create(std::vector<IRTyPtr> Elements,
 				std::string Name);
-
-			// 根据AST上的类型，来创建StructType。
 			static IRStructTyPtr Create(ASTTyPtr type);
 
-			/// 创建literal struct type.
+			/// Create literal struct type.
 			static IRStructTyPtr get(std::vector<IRTyPtr> Elements);
-			/// 创建literal struct type.
+			/// Create literal struct type.
 			static IRStructTyPtr get(ASTTyPtr type);
 
 			bool isLiteral() const { return Literal; }
@@ -188,21 +178,33 @@ namespace compiler
 			/// 如果两者的布局相同，则返回true.
 			/// (有点儿类似于前端中的类型指纹的概念，通过对子元素进行计算，来判断两类型是否相容)
 			bool isLayoutIdentical(IRStructTyPtr Other) const;
-
 			unsigned getNumElements() const { return NumContainedTys; }
-
 			std::vector<std::shared_ptr<Type>> getContainedTys() const { return ContainedTys; }
-
 			IRTyPtr operator[](unsigned index) const
 			{ 
-				// 判断index是否 inbound
+				assert(index < NumContainedTys && "Index out of range!");
 				return ContainedTys[index]; 
 			}
 
-			static bool classof(IRTyPtr T)
-			{
-				return T->getTypeID() == StructTy;
-			}
+			static bool classof(IRTyPtr T) { return T->getTypeID() == StructTy; }
+
+			/// \brief Print the StructType Info.
+			void Print(std::ostringstream& out) override;
+		};
+
+		/// PointerType - Class to represent pointers
+		class PointerType : public compiler::IR::Type
+		{
+			IRTyPtr ElementTy;
+		public:
+			PointerType(IRTyPtr ElementTy);
+			static IRPtTyPtr get(IRTyPtr ElementTy);
+			IRTyPtr getElementTy() const { return ElementTy; };
+			static bool classof(IRPtTyPtr) { return true; }
+			static bool classof(IRTyPtr Ty) { return Ty->isPointerTy(); }
+			
+			/// \brief Print the PointerType.
+			void Print(std::ostringstream& out) override;
 		};
 	}
 }

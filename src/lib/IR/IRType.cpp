@@ -30,6 +30,28 @@ IRTyPtr Type::getBoolType()
 	return std::make_shared<Type>(TypeID::BoolTy);
 }
 
+/// \brief Print the Type info, i32 bool void and so on.
+void Type::Print(std::ostringstream& out)
+{
+	switch (ID)
+	{
+	case compiler::IR::Type::VoidTy:
+		out << " void";
+		break;
+	case compiler::IR::Type::LabelTy:
+		out << " label";
+		break;
+	case compiler::IR::Type::IntegerTy:
+		out << "int";
+		break;
+	case compiler::IR::Type::BoolTy:
+		out << " bool";
+		break;
+	default:
+		break;
+	}
+}
+
 //===---------------------------------------------------------------------===//
 // Implements class FunctionType.
 
@@ -106,25 +128,43 @@ std::vector<IRTyPtr> FunctionType::ConvertParmTypeToIRType(std::vector<ASTTyPtr>
 	return IRTypes;
 }
 
+/// \brief Print the function type info.
+///	e.g.	int (*call)(int);
+///			call = add;
+///
+///			%call = alloca i32 (i32)*					; <i32 (i32)**>
+///					~~~~~~~~~~~~~~~~		--------> Funcition type <i32 (i32)>
+///			store i32 (i32)* @add, i32 (i32)** %call
+///					...
+///			%1 = load i32 (i32)** %call					; <i32 (i32)*>
+///					...
+///			%4 = call i32 %2(i32 %3)
+void FunctionType::Print(std::ostringstream& out)
+{
+	ContainedTys[0]->Print(out);
+	out << " (";
+	if (NumContainedTys > 1)
+	{
+		for (unsigned i = 0; i < NumContainedTys; i++)
+		{
+			ContainedTys[i]->Print(out);
+			if (i != NumContainedTys - 1)
+			{
+				out << ",";
+			}
+		}
+	}
+	out << ")";
+}
+
 //===---------------------------------------------------------------------===//
 // Implements class StructType.
 /// 创建identified struct.
 
-StructType::StructType(std::vector<IRTyPtr> members, bool isliteral) : 
+StructType::StructType(std::vector<IRTyPtr> members, std::string Name, bool isliteral) : 
 	Type(TypeID::StructTy), Literal(isliteral), ContainedTys(members), 
 	NumContainedTys(members.size()) 
 {}
-
-std::shared_ptr<StructType> StructType::Create(std::string Name)
-{
-	return nullptr;
-}
-
-std::shared_ptr<StructType> StructType::Create(std::vector<IRTyPtr> Elements,
-	std::string Name)
-{
-	return nullptr;
-}
 
 /// \brief 根据指定的AST class 类型来创建llvm中的类型信息。
 /// 例如：
@@ -137,9 +177,11 @@ std::shared_ptr<StructType> StructType::Create(std::vector<IRTyPtr> Elements,
 std::shared_ptr<StructType> StructType::Create(ASTTyPtr type)
 {
 	std::vector<IRTyPtr> members;
+	std::string Name;
 	if (ASTUDTyPtr UD = std::dynamic_pointer_cast<ASTUDTy>(type))
 	{
 		auto subtypes = UD->getMemberTypes();
+		Name = UD->getTypeName();
 		// 这是一个递归过程.
 		for (auto item : subtypes)
 		{
@@ -159,13 +201,7 @@ std::shared_ptr<StructType> StructType::Create(ASTTyPtr type)
 			}
 		}
 	}
-	return std::make_shared<StructType>(members, false);
-}
-
-/// 创建literal struct type.
-std::shared_ptr<StructType> StructType::get(std::vector<IRTyPtr> Elements)
-{
-	return nullptr;
+	return std::make_shared<StructType>(members, Name, false);
 }
 
 std::shared_ptr<StructType> StructType::get(ASTTyPtr type)
@@ -196,5 +232,50 @@ std::shared_ptr<StructType> StructType::get(ASTTyPtr type)
 			}
 		}
 	}
-	return std::make_shared<StructType>(members, true);
+	return std::make_shared<StructType>(members, "%anony.1", true);
+}
+
+/// \brief Print the struct type info.
+/// e.g.	class Node
+///			{
+///				int value;
+///				int neg;
+///			};
+///			%struct.Node = type { int, int }
+///
+///					or
+///
+///			var num = {int, bool};
+///			%anony.1 = type {int, bool}
+void StructType::Print(std::ostringstream& out)
+{
+	out << Name << " = type {";
+	if (NumContainedTys > 0)
+	{
+		for (auto item : ContainedTys)
+		{
+			item->Print(out);
+		}
+	}
+	out << "}";
+}
+
+//===---------------------------------------------------------------------===//
+// Implements the PointerType.
+PointerType::PointerType(IRTyPtr Ty) : Type(TypeID::PointerTy)
+{
+	ElementTy = Ty;
+}
+
+IRPtTyPtr PointerType::get(IRTyPtr Ty)
+{
+	return std::make_shared<PointerType>(Ty);
+}
+
+/// \brief Print the pointer info.
+/// e.g.	%retval = alloca i32			; <i32*>
+void PointerType::Print(std::ostringstream& out)
+{
+	ElementTy->Print(out);
+	out << "*";
 }

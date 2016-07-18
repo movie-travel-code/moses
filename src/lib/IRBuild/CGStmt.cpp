@@ -8,10 +8,36 @@ using namespace compiler::ast;
 using namespace compiler::IR;
 using namespace compiler::IRBuild;
 
-ValPtr ModuleBuilder::visit(const IfStatement* ifstmt)
+ValPtr ModuleBuilder::visit(const IfStatement* IS)
 {	
-	EmitIfStmt(ifstmt);
+	EmitIfStmt(IS);
 	return nullptr;
+}
+
+ValPtr ModuleBuilder::visit(const BreakStatement* BS)
+{
+	EmitBreakStmt(BS);
+	return nullptr;
+}
+
+ValPtr ModuleBuilder::visit(const ContinueStatement* CS)
+{
+	EmitContinueStmt(CS);
+	return nullptr;
+}
+
+void ModuleBuilder::EmitBreakStmt(const BreakStatement* BS)
+{
+	assert(!BreakContinueStack.empty() && "break statement not in a loop!");
+	BBPtr Block = BreakContinueStack.back().BreakBlock;
+	EmitBrach(Block);
+}
+
+void ModuleBuilder::EmitContinueStmt(const ContinueStatement* CS)
+{
+	assert(!BreakContinueStack.empty() && "continue statement not in a loop!");
+	BBPtr Block = BreakContinueStack.back().ContinueBlock;
+	EmitBrach(Block);
 }
 
 /// EmitBlock - Emit the given block \arg BB and set it as the insert point.
@@ -52,36 +78,109 @@ void ModuleBuilder::EmitReturnBlock()
 }
 
 /// \brief EmitWhileStmt - Emit the code for while statement.
-/// e.g.	while (num < lhs)	-------------------------  ---> Pre-Block
-///			{					|		...				|
-///				lhs += 2;		| br label %while.cond	|
-///			}					-------------------------
+/// e.g.    while (num < lhs)    -------------------------  ---> Pre-Block
+///         {				     |	    ...              |
+///            lhs += 2;	     | br label %while.cond  |
+///         }				     -------------------------
 ///									
-///								------------------------------------------------- ---> while.cond
-///								| %tmp = load i32* %num							|
-///								| %tmp1 = load i32* %lhs						|
-///								| %cmp = cmp lt i32 %tmp, %tmp1					|
-///								| br %cmp, label %while.body, label %while.end	|
-///								-------------------------------------------------
+///                             ------------------------------------------------- ---> while.cond
+///                             | %tmp = load i32* %num                         |
+///                             | %tmp1 = load i32* %lhs                        |
+///                             | %cmp = cmp lt i32 %tmp, %tmp1                 |
+///                             | br %cmp, label %while.body, label %while.end  |
+///                             -------------------------------------------------
 ///			
-///								----------------------------- ---> while.body
-///								| %tmp2 = load i32* %lhs	|
-///								| %add = add i32 %tmp2, 2	|
-///								| store i32 %add, i32* %lhs	|
-///								| br label %while.cond		|
-///								-----------------------------
+///                             ----------------------------- ---> while.body
+///                             | %tmp2 = load i32* %lhs	|
+///                             | %add = add i32 %tmp2, 2	|
+///                             | store i32 %add, i32* %lhs	|
+///                             | br label %while.cond		|
+///                             -----------------------------
 ///							
-///								----------------------------- ---> while.end
-///								|			...				|
-///								-----------------------------
+///                             ----------------------------- ---> while.end
+///                             |            ...            |
+///                             -----------------------------
 void ModuleBuilder::EmitWhileStmt(const WhileStatement* whilestmt)
 {
+	// Emit the header for the loop, insert it in current 'function', 
+	// which will create an uncond br to it.
+	BBPtr LoopHeader = CreateBasicBlock("while.cond");
+	EmitBlock(LoopHeader);
 
+	// Create an exit block for when the condition fails, create a block
+	// for the body of the loop.
+	BBPtr ExitBlock = CreateBasicBlock("while.end");
+	BBPtr LoopBody = CreateBasicBlock("while.body");
+
+	// Store the blocks to use for break and continue.
+	BreakContinueStack.push_back(CGStmt::BreakContinue(ExitBlock, LoopHeader));
+
+	// Evaluate the conditional in the while header.
+	// The evaluation of the controlling expression taks place before each 
+	// execution of the loop body.
+	ValPtr CondVal = whilestmt->getCondition()->Accept(this);
+
+	// while(true) is common, avoid extra blocks. Be sure to correctly handle 
+	// break/continue though.
+	// e.g.     while(1)                  -------------------------------------------
+	//          {                        |                     ...                   |
+	//              lhs -= 2;            | br label %while.body                      |
+	//              if ()                |                                           |
+	//                  break;           |while.body:                                |
+	//          }                        |        ...                                |
+	//                                   | br i1 %cmp, label %if.then. label %if.end |
+	//                                   |                                           |
+	//                                   |if.then:                                   |
+	//                                   | br label %while.end                       |
+	//                                   |                                           |
+	//                                   |if.end:                                    |
+	//                                   | br label %while.body                      |
+	//                                   |                                           |
+	//                                   |while.end:                                 |
+	//                                   |         ...                               |
+	//                                    -------------------------------------------
+	bool EmitBoolCondBranch = true;
+	if (ConstantBoolPtr CB = std::dynamic_pointer_cast<ConstantBool>(CondVal))
+	{
+		if (CB->getVal())
+			EmitBoolCondBranch = false;
+		// To Do: if CB->getVal() == false, optimize
+	}
+
+	// As long as the conditon is true, go to the loop body.
+	if (EmitBoolCondBranch)
+		CreateCondBr(CondVal, LoopBody, ExitBlock);
+
+	// Emit the loop body.
+	EmitBlock(LoopBody);
+	whilestmt->getLoopBody()->Accept(this);
+
+	EmitBrach(LoopHeader);
+
+	// Emit the exit block.
+	EmitBlock(ExitBlock, true);
+
+	// The LoopHeader typically is just a branch (when we EmitBlock(LoopBody), will generate
+	// a unconditional branch to LoopBody.) if we skipped emitting a branch, try to erase it.
+	if (!EmitBoolCondBranch)
+		SimplifyForwardingBlocks(LoopHeader);
 }
 
-ValPtr ModuleBuilder::visit(const WhileStatement* whilestmt)
+/// If the given basic block is only a branch to another basic block, simplify it.
+void ModuleBuilder::SimplifyForwardingBlocks(BBPtr BB)
 {
-	EmitWhileStmt(whilestmt);
+	if (BB->getInstList().size() != 1)
+		return;
+	BrInstPtr BI = std::dynamic_pointer_cast<BranchInst>(BB->getTerminator());
+	if (!BI || !BI->isUncoditional())
+		return;
+	BB->replaceAllUsesWith(BI->getSuccessor(0));
+	BB->removeFromParent();
+}
+
+ValPtr ModuleBuilder::visit(const WhileStatement* WS)
+{
+	EmitWhileStmt(WS);
 	return nullptr;
 }
 
@@ -90,19 +189,19 @@ ValPtr ModuleBuilder::visit(const CompoundStmt* comstmt)
 {
 	// (1) Switch the scope.
 	// e.g.	var num = 10;
-	//	func add(lhs:int, rhs : int) -> int			------------ <---- Symbol table for the 'add'
-	//	{						----> Old scope.   |	 inc    |
-	//		var inc = 100;							------------ <---- Not visited yet.
-	//		if (lhs > rhs)						   | AnonyScope |
-	//		{					----> New scope.	------------ <---- Not visited yet.
-	//			lhs += 10;						   | AnonyScope	|
-	//		}										------------
-	//		else
-	//		{
-	//			rhs += 10;
-	//		}
-	//		return lhs + rhs + inc;
-	//	}
+	//  func add(lhs:int, rhs : int) -> int         ------------ <---- Symbol table for the 'add'
+	//  {                        ----> Old scope.   |    inc    |
+	//      var inc = 100;                          ------------ <---- Not visited yet.
+	//      if (lhs > rhs)                          | AnonyScope|
+	//      {                    ----> New scope.    ------------ <---- Not visited yet.
+	//          lhs += 10;                          | AnonyScope|
+	//      }                                        ------------
+	//      else
+	//      {
+	//          rhs += 10;
+	//      }
+	//      return lhs + rhs + inc;
+	//  }
 	// Note: Search the first not accessed ScopeSymbol.
 	auto symTab = CurScope->getSymbolTable();
 	auto num = symTab.size();
@@ -132,7 +231,7 @@ ValPtr ModuleBuilder::visit(const CompoundStmt* comstmt)
 
 ValPtr ModuleBuilder::visit(const ReturnStatement* retstmt)
 {
-	return nullptr;
+	return EmitReturnStmt(retstmt);
 }
 
 void ModuleBuilder::EmitIfStmt(const IfStatement* ifstmt)
@@ -151,15 +250,15 @@ void ModuleBuilder::EmitIfStmt(const IfStatement* ifstmt)
 			std::swap(Executed, Skipped);
 
 		/// C/C++ has goto statement, so there is one situation that we can't elide the specified block.
-		/// e.g		if (10 != 10)
-		///			{					-----> Evaluate the condition expression to be false, dead 'then'.
-		///		RET:	return num;		-----> The 'RET' label means that there is possible that 
-		///										'return num' can be execeted.
-		///			}
-		///			else
-		///			{
-		///				...
-		///			}
+		/// e.g	    if (10 != 10)
+		///	        {                    -----> Evaluate the condition expression to be false, dead 'then'.
+		///	    RET:	return num;      -----> The 'RET' label means that there is possible that 
+		///	                                    'return num' can be execeted.
+		///	        }
+		///	        else
+		///	        {
+		///	            ...
+		///	        }
 		/// But moses have no goto statements, so we don't need to worry.
 		if (Executed)
 		{
@@ -199,6 +298,42 @@ void ModuleBuilder::EmitIfStmt(const IfStatement* ifstmt)
 	EmitBlock(ContBlock, true);
 }
 
+/// \ brief EmitReturnStmt - Generate code for ReturnStatement.
+/// Note:	var num : int;
+///			func print() -> void
+///			{
+///				num = 10;
+///			}
+///			func add() -> void
+///			{
+///				return print();   ----> This is allowed.
+///				~~~~~~~~~~~~~~
+///			}
+///	
+ValPtr ModuleBuilder::EmitReturnStmt(const ReturnStatement* RS)
+{
+	// Emit the sub-expression, even if unused, to evaluate the side effects.
+	const Expr* SubE = RS->getSubExpr().get();
+
+	if (!CurFunc->ReturnValue)
+	{
+		// Make sure not to return anything, but evaluate the expression for
+		// side effects.
+		if (SubE)
+			SubE->Accept(this);
+	}
+	else if (SubE == nullptr)
+	{
+		// Do nothing(return value is left uninitialized).
+	}
+	else
+	{
+		ValPtr V = SubE->Accept(this);
+		CreateStore(V, CurFunc->ReturnValue);
+	}
+	EmitBrach(CurFunc->ReturnBlock);
+	return nullptr;
+}
 
 void ModuleBuilder::EmitFunctionBody(StmtASTPtr body)
 {

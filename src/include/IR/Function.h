@@ -12,13 +12,13 @@
 #include <list>
 #include <string>
 #include "ConstantAndGlobal.h"
-#include "BasicBlock.h"
 #include "ValueSymbolTable.h"
 
 namespace compiler
 {
 	namespace IR
 	{		
+		class BasickBlock;
 		/// \brief moses IR(LLVM) Argument representation.
 		///
 		/// This class represents an incoming formal argument to a Function. A formal
@@ -41,18 +41,22 @@ namespace compiler
 			{
 				return V->getValueType() == Value::ValueTy::ArgumentVal;
 			}
+
+			/// \brief Print the Argument.
+			void Print(std::ostringstream& out);
 		};
 
 		class Function : public GlobalValue
 		{
 		private:
 			// Important things that make up a function!
+			TyPtr ReturnType;
 			std::list<BBPtr> BasicBlocks;
 			std::vector<ArgPtr> Arguments;
-			SymTabPtr SymTab;
 		public:
 			Function(FuncTypePtr Ty, std::string Name = "") :
-				GlobalValue(Ty, Value::ValueTy::FunctionVal, Name)
+				GlobalValue(Ty, Value::ValueTy::FunctionVal, Name), 
+				ReturnType(Ty->getReturnType())
 			{
 				// Create space for argument and set the name later.
 				for (unsigned i = 0; i < Ty->getNumParams(); i++)
@@ -60,10 +64,8 @@ namespace compiler
 					Arguments.push_back(std::make_shared<Argument>((*Ty)[i + 1]));
 				}
 			}
-			~Function() {}
 
 			static FuncPtr create(FuncTypePtr Ty, std::string Name);
-
 			ArgPtr operator[](unsigned index) const
 			{
 				assert(index <= Arguments.size() - 1 && 
@@ -80,74 +82,32 @@ namespace compiler
 			}
 
 			ArgPtr getArg(unsigned index) const { return (*this)[index]; }
-
 			TyPtr getReturnType() const;
 			TyPtr getFunctionType() const { return Ty; }
-
-			/// getIntrinsicID - This method returns the ID number of the specified function.
-			/// This value is always defined to be zero to allow easy checking for whether
-			// a function if intrinsic or not. The paticular intrinsic functions which
-			/// correspond to this value are defined in Intrinsics.h
-			unsigned getIntrinsicID() const;
-			bool isIntrinsic() const { return getIntrinsicID() != 0; }
 
 			/// Get the underlying elements of the Function... the basic block list is empty
 			/// for external functions.
 			std::vector<ArgPtr> &getArgumentList() { return Arguments; }
-
 			std::list<BBPtr> &getBasicBlockList() { return BasicBlocks; }
-
 			ArgPtr operator[](unsigned index) { return Arguments[index]; }
-
-			// const BasicBlock &getEntryBlock() const {}
-
-			//===-------------------------------------------------------------------===//
-			// Symbol Table Accessing functions...
-			SymTabPtr getSymbolTable() { return SymTab; }
+			const BBPtr &getEntryBlock() const { return BasicBlocks.front(); }
 
 			/// Determine if the function is known not to recurse, directly or
 			/// indirectly.
-			bool doesNotRecurse() const
-			{
-				return true;
-			}
-
-			static bool classof(ValPtr V)
-			{
-				return V->getValueType() == Value::ValueTy::FunctionVal;
-			}
-
-			void dropAllReferences();
-
-			bool doesNotAccessMemory(unsigned n)
-			{
-			}
-
-			void setDoseNotAccessMemory(unsigned n)
-			{
-			}
-
-			bool onlyReadsMemory(unsigned n) const
-			{
-			}
-
-			void setOnlyReadsMemory(unsigned n)
-			{
-			}
-
+			bool doesNotRecurse() const { return true; }			
+			void dropAllReferences() {}
+			bool doesNotAccessMemory(unsigned n) const { return true; }
+			void setDoseNotAccessMemory(unsigned n) {}
+			bool onlyReadsMemory(unsigned n) const { return true; }
+			void setOnlyReadsMemory(unsigned n) {}
 			/// Optimize this function for minimum size (-Oz).
-			bool optForMinSize() const
-			{
-			}
-
+			bool optForMinSize() const { return true; }
 			/// Optimize this function for size (-Os) or minimum size (-Oz).
-			bool optForSize() const
-			{
-			}
+			bool optForSize() const { return true; }
 
-			//===----------------------------------------------------------===//
-			// Symbol Table Accessing functions...
-			// ValueSymbolTable& getValueSymbolTable() {return *SymTab;}
+			static bool classof(ValPtr V) { return V->getValueType() == Value::ValueTy::FunctionVal; }
+			/// \brief Print the function info.
+			void Print(std::ostringstream& out);
 		};		
 	}
 }

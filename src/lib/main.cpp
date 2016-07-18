@@ -4,6 +4,7 @@
 // 
 //===-------------------------------------------------------------------------===//
 #include <iostream>
+#include <sstream>
 #include "../include/Lexer/scanner.h"
 #include "../include/Parser/parser.h"
 #include "../include/IRBuild/IRBuilder.h"
@@ -11,6 +12,7 @@
 // ------ include header file for testing------------------//
 #include "../include/IR/MosesIRContext.h"
 #include "../include/Parser/ASTContext.h"
+#include "../include/IR/Support/IRPrinter.h"
 // ------ include header file for testing------------------//
 using namespace compiler::parse;
 using namespace compiler::sema;
@@ -39,6 +41,13 @@ int main()
 	ModuleBuilder moduleBuilder(sema.getScopeStackBottom(), IRContext);
 	// (3) IR Build.
 	moduleBuilder.VisitChildren(parse.getAST());
+
+	// (4) IR write;
+	std::ostringstream out;
+	IRPrinter::Print(moduleBuilder.getIRs(), out);
+
+	std::ofstream mi("E:\test\moses.mi");
+	mi << out.str();
 	system("pause");
 	return 0;
 }

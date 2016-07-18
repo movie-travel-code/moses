@@ -43,6 +43,7 @@
 #include "../Parser/ast.h"
 #include "../Parser/Type.h"
 #include "../IR/Instruction.h"
+#include "../IRBuild/CGCall.h"
 namespace compiler
 {
 	namespace Support
@@ -202,6 +203,7 @@ namespace compiler
 			ScopePtr scope;
 			std::vector<std::shared_ptr<ParmDeclSymbol>> parms;
 			FunctionDeclPtr FD;
+			IR::FuncPtr FuncAddr;
 		public:
 			FunctionSymbol(std::string name, std::shared_ptr<Type> type, ScopePtr belongTo, ScopePtr scope) :
 				Symbol(name, belongTo, type), scope(scope) {}
@@ -219,6 +221,10 @@ namespace compiler
 					errorSema("Function parm index out of range");
 				return parms[index];
 			}
+
+			void setFuncAddr(IR::FuncPtr FuncAddr) { this->FuncAddr = FuncAddr; }
+
+			IR::FuncPtr getFuncAddr() const { return FuncAddr; }
 
 			void setFunctionDeclPointer(FunctionDeclPtr fd)
 			{

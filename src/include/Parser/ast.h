@@ -47,6 +47,8 @@ namespace compiler
 		class MemberExpr;
 		class BoolLiteral;
 		class DeclRefExpr;
+		class BreakStatement;
+		class ContinueStatement;
 
 		using ASTPtr = std::vector<std::shared_ptr<StatementAST>>;
 		using StmtASTPtr = std::shared_ptr<StatementAST>;
@@ -67,6 +69,8 @@ namespace compiler
 		using ReturnStmtPtr = std::shared_ptr<ReturnStatement>;
 		using MemberExprPtr = std::shared_ptr<MemberExpr>;
 		using BoolLiteralPtr = std::shared_ptr<BoolLiteral>;
+		using BreakStmtPtr = std::shared_ptr<BreakStatement>;
+		using ContStmtPtr = std::shared_ptr<ContinueStatement>;
 
 		using IRValue = std::shared_ptr<IR::Value>;
 
@@ -96,6 +100,8 @@ namespace compiler
 				virtual RetTy visit(const WhileStatement* WS, Additional... addi) = 0;
 				virtual RetTy visit(const ReturnStatement* RS, Additional... addi) = 0;
 				virtual RetTy visit(const DeclStatement* DS, Additional... addi) = 0;
+				virtual RetTy visit(const BreakStatement* BS, Additional... addi) = 0;
+				virtual RetTy visit(const ContinueStatement* CS, Additional... addi) = 0;
 				virtual RetTy visit(const VarDecl* VD, Additional... addi) = 0;
 				virtual RetTy visit(const ParameterDecl*, Additional... addi) = 0;
 				virtual RetTy visit(const ClassDecl* CD, Additional... addi) = 0;
@@ -402,6 +408,8 @@ namespace compiler
 			// Note: 这里我们没有对传入的index进行检查
 			ExprASTPtr getArg(unsigned index) const { return Args[index]; }
 
+			const std::vector<ExprASTPtr> getArgs() const { return Args; }
+
 			virtual ~CallExpr() {}
 
 			virtual IRValue Accept(Visitor<IRValue>* v) const
@@ -547,14 +555,16 @@ namespace compiler
 		/// ---------------------------------------------------------
 		class WhileStatement final : public StatementAST
 		{
-			std::shared_ptr<Expr> Condition;
-			std::shared_ptr<StatementAST> WhileBody;
+			ExprASTPtr Condition;
+			StmtASTPtr LoopBody;
 		public:
 			WhileStatement(SourceLocation start, SourceLocation end, ExprASTPtr condition, 
 					StmtASTPtr body) : 
-				StatementAST(start, end), Condition(condition), WhileBody(body) 
+					StatementAST(start, end), Condition(condition), LoopBody(body)
 			{}
 
+			ExprASTPtr getCondition() const { return Condition; }
+			StmtASTPtr getLoopBody() const { return LoopBody; }
 			virtual ~WhileStatement() {}
 
 			virtual IRValue Accept(Visitor<IRValue>* v) const

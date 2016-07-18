@@ -25,8 +25,7 @@ namespace compiler
 		{
 			User(const User&) = delete;
 		protected:
-			std::vector<UsePtr> Operands;
-
+			std::vector<Use> Operands;
 			/// Allocate a User with an operand pointer co-allocated.
 			///
 			/// This is used for subclasses which need to allocate a variable number
@@ -39,20 +38,18 @@ namespace compiler
 			// void *operator new(size_t Size, unsigned Us);
 		public:
 			User(TyPtr Ty, ValueTy vty, const std::string &name = "") : Value(Ty, vty, name)
-			{
+			{}
 
-			}
-
-			UsePtr getOperand(unsigned i)
+			Use getOperand(unsigned i)
 			{
-				// Check whether out of range.
+				assert(i < Operands.size() && "User out of range!");
 				return Operands[i];
 			}
 
 			void setOeprand(unsigned i, ValPtr Val)
 			{
-				// Check whether out of range.
-				// Operands[i] = Val;
+				assert(i < Operands.size() && "User out of range!");
+				Operands[i] = Val;
 			}
 
 			unsigned getNumOperands() const { return Operands.size(); }
@@ -71,11 +68,6 @@ namespace compiler
 			/// replaceUsesofWith - Replaces all references to the "From" definition with
 			/// references to the "To" definition.
 			void replaceUsesOfWith(ValPtr From, ValPtr To);
-
-			// Methods for support type inquiry through isa, case, and dyn_cast:
-			/*static bool classof(ValPtr V)
-			{				
-			}*/
 		};
 	}
 }

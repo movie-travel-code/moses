@@ -8,12 +8,12 @@
 //===---------------------------------------------------------------------===//
 #ifndef MOSES_IR_VALUE
 #define MOSES_IR_VALUE
-
 #include <list>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <memory>
-#include "Use.h"
+#include <cassert>
 #include "IRType.h"
 //===---------------------------------------------------------------------===//
 //						Value Class
@@ -67,6 +67,8 @@ namespace compiler
 		class StoreInst;
 		class GetElementPtrInst;
 		class StructType;
+		class Use;
+		class Value;
 
 		typedef std::shared_ptr<Type>				TyPtr;
 		typedef std::shared_ptr<Value>				ValPtr;
@@ -96,9 +98,7 @@ namespace compiler
 		typedef std::shared_ptr<GetElementPtrInst>	GEPInstPtr;
 		typedef std::shared_ptr<FunctionType>		FuncTypePtr;
 		typedef std::shared_ptr<StructType>			StructTypePtr;
-
-		// Iterator表示instruction在BasicBlock中的迭代器
-		typedef std::list<InstPtr>::iterator Iterator;
+		typedef std::list<InstPtr>::iterator		Iterator;
 		class Value
 		{
 		public:
@@ -120,11 +120,7 @@ namespace compiler
 			
 		protected:
 			// a "use list" that keep track of which other Values are using this value.
-			// -------------------------nonsense for coding---------------------------
-			// PS: LLVM IR中如何定义def-use链的机制没有搞懂。所以暂时实现自己的def-use机制
-			// 使用内置的list将一系列的 'use' object链接起来
-			// -----------------------------------------------------------------------
-			std::vector<UsePtr> Uses;
+			std::list<Use*> Uses;
 			std::string Name;
 			ValueTy VTy;
 			TyPtr Ty;
@@ -132,21 +128,17 @@ namespace compiler
 			Value(const Value&) = delete;			// Do not implement
 
 		public:
-			// Type表示类型，例如int short class等等。
-			// ValueTy表示的是指令的种类.
+			// 'Type' stands for Value's type, like integer, void or FunctionType.
+			// 'ValueTy' stands for category, like Instruction, ConstantInt or Function.
 			Value(std::shared_ptr<Type> Ty, ValueTy vty, std::string name = "");
 			virtual ~Value();
 
 			// All values are typed, get the type of this value.
-			std::shared_ptr<Type> getType() const { return Ty; }
+			TyPtr getType() const { return Ty; }
 
 			bool hasName() const { return Name != ""; }
 			const std::string& getName() const { return Name; }
-
-			virtual void setName(const std::string &name/*, SymbolTable* = 0*/)
-			{
-				Name = name;
-			}
+			virtual void setName(const std::string &name) { Name = name; }
 
 			/// getValueType - Return the immediate subclass of this Value.
 			ValueTy getValueType() const { return VTy; }
@@ -154,19 +146,58 @@ namespace compiler
 			/// replaceAllUsesWith - Go through the use list for this definition and make
 			/// each use point to "V" instead of "this". After this completes, this's
 			/// use list is guaranteed to be empty.
-			/// 将指定V的use链中的value指向当前值。
-			void replaceAllUsesWith(Value *V);
+			void replaceAllUsesWith(ValPtr NewV);
 
 			//---------------------------------------------------------------------
 			// Methods for handling the vector of uses of this Value.
-			// 
 			unsigned use_size()	const { return Uses.size(); }
 			bool use_empty() const { return Uses.empty(); }
 
 			/// addUse/killUse - These two methods should only be used by the Use class.
-			void addUse(Use& U)		{}
-			void killUse(Use& U)	{}
+			/// This means that every time we create a new Use object, the use object
+			/// will be linked to the Value's Uses(std::list);
+			void addUse(Use& U);
+			void killUse(Use& U);
+
+			/// \brief Print the Value info.
+			virtual void Print(std::ostringstream& out) = 0;
 		};
+
+		/// -----------------------------LLVM annotation-----------------------------
+		/// \brief A Use represents the edge between a Value definition and its users.
+		/// 
+		/// This is notionally a two-dimensional linked list. It supports traversing 
+		/// all of the uses for a particular value definition. It also supporrts jumping
+		/// directly to the used value when we arrive from the User's operands, and
+		/// jumping directly to the User when we arrive from the Value's uses.
+		/// ------------------------------LLVM annotation-----------------------------
+		/// Use Objects linked up according to the 'Val', the Use objects with the same
+		/// Value must be on the same list.
+		/// e.g.  Val1  %retval = alloca i32  UseList >> Use1---->Use2-----> ...    must have the same Vals
+		///             ...
+		///       User1 store i32 10, i32* %retval =======> Use1 [ Val1 | User1]
+		///             ...
+		///       User2 %tmp = load i32* %retval   =======> Use2 [ Val1 | User2]
+		/// BTW, User can get the use objects through the 'Operands <vector>'.
+		class Use
+		{
+		private:
+			User* U;
+			ValPtr Val;
+		public:
+			Use() : Val(nullptr), U(nullptr){}
+			Use(ValPtr Val, User* U);
+			Use(const Use& u);
+			~Use();
+
+			ValPtr get() const { return Val; }
+			User* getUser() const { return U; }
+			void set(ValPtr Val);
+
+			ValPtr operator=(ValPtr RHS);
+			const Use& operator=(Use RHS);
+			bool operator==(const Use& use);
+		};		
 	}
 }
 #endif

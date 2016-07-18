@@ -42,7 +42,6 @@ namespace compiler
 						return true;
 					return false;
 				}
-
 				bool operator!=(const KeyTy& rhs) const { return !this->operator==(rhs); }
 			};
 			static unsigned long long getHashValue(const KeyTy& Key)
@@ -69,10 +68,7 @@ namespace compiler
 						return true;
 					return false;
 				}
-				bool operator!=(const KeyTy& rhs) const
-				{
-					return !this->operator==(rhs);
-				}
+				bool operator!=(const KeyTy& rhs) const { return !this->operator==(rhs); }
 			};
 			static unsigned long long getHashValue(const KeyTy& Key)
 			{
@@ -100,10 +96,7 @@ namespace compiler
 						return true;
 					return false;
 				}
-				bool operator!=(const KeyTy& rhs) const
-				{
-					return !this->operator==(rhs);
-				}
+				bool operator!=(const KeyTy& rhs) const { return !this->operator==(rhs); }
 			};
 			static unsigned long long getHashValue(const KeyTy& Key)
 			{

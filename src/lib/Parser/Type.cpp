@@ -39,9 +39,6 @@ bool Type::operator == (const Type& rhs) const
 }
 
 //===---------------------------------------------------------------------===//
-// Implement class BuiltinType.
-
-//===---------------------------------------------------------------------===//
 // Implement class UserDefinedType.
 
 /// \brief 根据Member Name获取对象子类型信息
@@ -61,23 +58,24 @@ std::shared_ptr<Type> UserDefinedType::getMemberType(std::string name) const
 	return getType();
 }
 
-/// \brief 获取subtypes.
-std::vector<std::pair<std::shared_ptr<Type>, std::string>> UserDefinedType::getMemberTypes() const
-{
-	return subTypes;
-}
-
-
 bool UserDefinedType::HaveMember(std::string name) const
 {
 	for (auto item : subTypes)
 	{
 		if (item.second == name)
-		{
 			return true;
-		}
 	}
 	return false;
+}
+
+unsigned long UserDefinedType::size() const
+{
+	unsigned long size = 0;
+	for (auto item : subTypes)
+	{
+		size += item.first->size();
+	}
+	return size;
 }
 
 bool UserDefinedType::operator==(const Type& rhs) const
@@ -109,16 +107,6 @@ bool UserDefinedType::operator==(const Type& rhs) const
 
 /// Note: 对于匿名类型来说，{int, {int, int}} 和 {int, int, int}
 /// 是不同的，需要区别对待，所以记录结构信息
-std::shared_ptr<Type> AnonymousType::getSubType(unsigned index) const
-{
-	return subTypes[index];
-}
-
-std::vector<std::shared_ptr<Type>> AnonymousType::getSubTypes() const
-{
-	return subTypes;
-}
-
 void AnonymousType::getTypes(std::vector<std::shared_ptr<Type>>& types) const
 {
 	unsigned size = subTypes.size();
@@ -133,4 +121,12 @@ void AnonymousType::getTypes(std::vector<std::shared_ptr<Type>>& types) const
 			types.push_back(subTypes[index]);
 		}
 	}
+}
+
+unsigned long AnonymousType::size() const 
+{
+	unsigned long size = 0;
+	std::for_each(subTypes.begin(), subTypes.end(), 
+		[&size](const TyPtr& ty){ size += ty->size(); });
+	return size;
 }

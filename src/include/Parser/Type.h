@@ -10,6 +10,7 @@
 #include <memory>
 #include <utility>
 #include <cassert>
+#include <algorithm>
 #include "../Support/error.h"
 #include "../Lexer/TokenKinds.h"
 #include "../Support/Hasing.h"
@@ -41,6 +42,7 @@ namespace compiler
 			Type(TypeKind kind) : Kind(kind) {}
 
 			virtual TyPtr const_remove() const;
+			virtual unsigned long size() const { return 0; }
 
 			bool operator==(const Type& rhs) const;
  			TypeKind getKind() const { return Kind; }
@@ -53,6 +55,21 @@ namespace compiler
 		{
 		public:
 			BuiltinType(TypeKind kind) : Type(kind) {}
+			virtual unsigned long size()
+			{
+				switch (Kind)
+				{
+				case compiler::ast::TypeKind::INT:
+					return 32;
+				case compiler::ast::TypeKind::BOOL:
+					return 32;
+				case compiler::ast::TypeKind::VOID:
+					return 0;
+				default:
+					assert(0 && "Unreachable code!");
+				}
+				return 0;
+			}
 		};
 
 		/// \brief UserDefinedType - This Represents class type.
@@ -69,17 +86,18 @@ namespace compiler
 
 			UserDefinedType(TypeKind kind, std::string TypeName,
 				std::vector<std::pair<TyPtr, std::string>> subTypes) :
-				Type(kind), TypeName(TypeName) {}
-					
-			void addSubType(TyPtr subType, std::string name) { subTypes.push_back({ subType, name }); }
+				Type(kind), TypeName(TypeName) {}							
 
 			bool HaveMember(std::string name) const;
 			bool operator==(const Type& rhs) const;
-			std::pair<TyPtr, std::string> operator[](unsigned index) const { return subTypes[index]; }
-			std::string getTypeName() { return TypeName; }
 			TyPtr getMemberType(std::string name) const;
-			std::vector<std::pair<TyPtr, std::string>> getMemberTypes() const;
+			unsigned long size() const;
 
+			std::pair<TyPtr, std::string> operator[](unsigned index) const { return subTypes[index]; }
+			std::string getTypeName() { return TypeName; }			
+			std::vector<std::pair<TyPtr, std::string>> getMemberTypes() const { return subTypes; }
+			void addSubType(TyPtr subType, std::string name) { subTypes.push_back({ subType, name }); }
+			
 			virtual ~UserDefinedType() {}
 		};		
 
@@ -95,11 +113,20 @@ namespace compiler
 			AnonymousType(std::vector<TyPtr> types) : 
 				Type(TypeKind::ANONYMOUS), subTypes(types) {}
 
-			TyPtr getSubType(unsigned index) const;
-			std::vector<TyPtr> getSubTypes() const;
+			TyPtr getSubType(unsigned index) const
+			{
+				assert(index < subTypes.size() && "Index out of range!");
+				return subTypes[index];
+			}
+			std::vector<TyPtr> getSubTypes() const
+			{
+				return subTypes;
+			}
 
 			unsigned getSubTypesNum() const { return subTypes.size(); };
 			void getTypes(std::vector<TyPtr>& types) const;
+
+			unsigned long size() const;
 		};
 
 		namespace TypeKeyInfo
@@ -181,7 +208,6 @@ namespace compiler
 				static unsigned long long getHashValue(AnonTyPtr RHS) { return getHashValue(KeyTy(RHS)); }
 				static bool isEqual(const KeyTy& LHS, AnonTyPtr RHS) { return LHS == KeyTy(RHS); }
 				static bool isEqual(AnonTyPtr LHS, AnonTyPtr RHS) { return LHS == RHS; }
-
 			};
 
 			struct TypeKeyInfo
@@ -192,10 +218,14 @@ namespace compiler
 					{
 						return UserDefinedTypeKeyInfo::getHashValue(UD);
 					}
-
 					if (AnonTyPtr AnonT = std::dynamic_pointer_cast<AnonymousType>(type))
 					{
 						return AnonTypeKeyInfo::getHashValue(AnonT);
+					}
+					if (std::shared_ptr<BuiltinType> BT = std::dynamic_pointer_cast<BuiltinType>(type))
+					{
+						std::hash<std::shared_ptr<BuiltinType>> hasher;
+						return hasher(BT);
 					}
 				}
 

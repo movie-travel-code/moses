@@ -110,7 +110,7 @@ ValPtr ModuleBuilder::CreateAdd(ValPtr LHS, ValPtr RHS, std::string Name)
 	if (ConstantIntPtr LC = std::dynamic_pointer_cast<ConstantInt>(LHS))
 	{
 		if (ConstantIntPtr RC = std::dynamic_pointer_cast<ConstantInt>(RHS))
-			return InsertHelper(ConstantFolder::CreateArithmetic(Opcode::Add, LC, RC), Name);
+			return InsertHelper(ConstantFolder::CreateArithmetic(Context, Opcode::Add, LC, RC), Name);
 	}
 	return InsertHelper(BinaryOperator::Create(Opcode::Add, LHS, RHS), Name);
 }
@@ -120,7 +120,7 @@ ValPtr ModuleBuilder::CreateSub(ValPtr LHS, ValPtr RHS, std::string Name)
 	if (ConstantIntPtr LC = std::dynamic_pointer_cast<ConstantInt>(LHS))
 	{
 		if (ConstantIntPtr RC = std::dynamic_pointer_cast<ConstantInt>(RHS))
-			return InsertHelper(ConstantFolder::CreateArithmetic(Opcode::Sub, LC, RC), Name);
+			return InsertHelper(ConstantFolder::CreateArithmetic(Context, Opcode::Sub, LC, RC), Name);
 	}
 	return InsertHelper(BinaryOperator::Create(Opcode::Sub, LHS, RHS), Name);
 }
@@ -130,7 +130,7 @@ ValPtr ModuleBuilder::CreateMul(ValPtr LHS, ValPtr RHS, std::string Name)
 	if (ConstantIntPtr LC = std::dynamic_pointer_cast<ConstantInt>(LHS))
 	{
 		if (ConstantIntPtr RC = std::dynamic_pointer_cast<ConstantInt>(RHS))
-			return InsertHelper(ConstantFolder::CreateArithmetic(Opcode::Mul, LC, RC), Name);
+			return InsertHelper(ConstantFolder::CreateArithmetic(Context, Opcode::Mul, LC, RC), Name);
 	}
 	return InsertHelper(BinaryOperator::Create(Opcode::Mul, LHS, RHS), Name);
 }
@@ -140,7 +140,7 @@ ValPtr ModuleBuilder::CreateDiv(ValPtr LHS, ValPtr RHS, std::string Name)
 	if (ConstantIntPtr LC = std::dynamic_pointer_cast<ConstantInt>(LHS))
 	{
 		if (ConstantIntPtr RC = std::dynamic_pointer_cast<ConstantInt>(RHS))
-			return InsertHelper(ConstantFolder::CreateArithmetic(Opcode::Div, LC, RC), Name);
+			return InsertHelper(ConstantFolder::CreateArithmetic(Context, Opcode::Div, LC, RC), Name);
 	}
 	return InsertHelper(BinaryOperator::Create(Opcode::Div, LHS, RHS), Name);
 }
@@ -150,7 +150,7 @@ ValPtr ModuleBuilder::CreateRem(ValPtr LHS, ValPtr RHS, std::string Name)
 	if (ConstantIntPtr LC = std::dynamic_pointer_cast<ConstantInt>(LHS))
 	{
 		if (ConstantIntPtr RC = std::dynamic_pointer_cast<ConstantInt>(RHS))
-			return InsertHelper(ConstantFolder::CreateArithmetic(Opcode::Rem, LC, RC), Name);
+			return InsertHelper(ConstantFolder::CreateArithmetic(Context, Opcode::Rem, LC, RC), Name);
 	}
 	return InsertHelper(BinaryOperator::Create(Opcode::Rem, LHS, RHS), Name);
 }
@@ -160,7 +160,7 @@ ValPtr ModuleBuilder::CreateShl(ValPtr LHS, ValPtr RHS, std::string Name)
 	if (ConstantIntPtr LC = std::dynamic_pointer_cast<ConstantInt>(LHS))
 	{
 		if (ConstantIntPtr RC = std::dynamic_pointer_cast<ConstantInt>(RHS))
-			return InsertHelper(ConstantFolder::CreateArithmetic(Opcode::Shl, LC, RC), Name);
+			return InsertHelper(ConstantFolder::CreateArithmetic(Context, Opcode::Shl, LC, RC), Name);
 	}
 	return InsertHelper(BinaryOperator::Create(Opcode::Shl, LHS, RHS), Name);
 }
@@ -170,7 +170,7 @@ ValPtr ModuleBuilder::CreateShr(ValPtr LHS, ValPtr RHS, std::string Name)
 	if (ConstantIntPtr LC = std::dynamic_pointer_cast<ConstantInt>(LHS))
 	{
 		if (ConstantIntPtr RC = std::dynamic_pointer_cast<ConstantInt>(RHS))
-			return InsertHelper(ConstantFolder::CreateArithmetic(Opcode::Shr, LC, RC), Name);
+			return InsertHelper(ConstantFolder::CreateArithmetic(Context, Opcode::Shr, LC, RC), Name);
 	}
 	return InsertHelper(BinaryOperator::Create(Opcode::Shr, LHS, RHS), Name);
 }
@@ -180,7 +180,7 @@ ValPtr ModuleBuilder::CreateAnd(ValPtr LHS, ValPtr RHS, std::string Name)
 	if (ConstantBoolPtr LC = std::dynamic_pointer_cast<ConstantBool>(LHS))
 	{
 		if (ConstantBoolPtr RC = std::dynamic_pointer_cast<ConstantBool>(RHS))
-			return InsertHelper(ConstantFolder::CreateBoolean(Opcode::And, LC, RC), Name);
+			return InsertHelper(ConstantFolder::CreateBoolean(Context, Opcode::And, LC, RC), Name);
 	}
 	return InsertHelper(BinaryOperator::Create(Opcode::And, LHS, RHS), Name);
 }
@@ -190,7 +190,7 @@ ValPtr ModuleBuilder::CreateOr(ValPtr LHS, ValPtr RHS, std::string Name)
 	if (ConstantBoolPtr LC = std::dynamic_pointer_cast<ConstantBool>(LHS))
 	{
 		if (ConstantBoolPtr RC = std::dynamic_pointer_cast<ConstantBool>(RHS))
-			return InsertHelper(ConstantFolder::CreateBoolean(Opcode::Or, LC, RC), Name);
+			return InsertHelper(ConstantFolder::CreateBoolean(Context, Opcode::Or, LC, RC), Name);
 	}
 	return InsertHelper(BinaryOperator::Create(Opcode::Or, LHS, RHS), Name);
 }
@@ -198,15 +198,15 @@ ValPtr ModuleBuilder::CreateOr(ValPtr LHS, ValPtr RHS, std::string Name)
 ValPtr ModuleBuilder::CreateNeg(ValPtr V, std::string Name)
 {
 	if (ConstantIntPtr VC = std::dynamic_pointer_cast<ConstantInt>(V))
-		return InsertHelper(ConstantFolder::CreateNeg(VC), Name);
-	return InsertHelper(BinaryOperator::CreateNeg(V, Name));
+		return InsertHelper(ConstantFolder::CreateNeg(Context, VC), Name);
+	return InsertHelper(BinaryOperator::CreateNeg(Context, V));
 }
 
 ValPtr ModuleBuilder::CreateNot(ValPtr V, std::string Name)
 {
 	if (ConstantBoolPtr VC = std::dynamic_pointer_cast<ConstantBool>(V))
-		return InsertHelper(ConstantFolder::CreateNot(VC), Name);
-	return InsertHelper(BinaryOperator::CreateNot(V, Name));
+		return InsertHelper(ConstantFolder::CreateNot(Context, VC), Name);
+	return InsertHelper(BinaryOperator::CreateNot(Context, V));
 }
 
 //===------------------------------------------------------------------===//

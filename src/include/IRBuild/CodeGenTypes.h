@@ -27,6 +27,7 @@ namespace compiler
 		using IRTyPtr = std::shared_ptr<IRType>;
 		using IRFuncTyPtr = std::shared_ptr<IRFuncTy>;
 		using CGFuncInfoConstPtr = std::shared_ptr<CGFunctionInfo const>;
+		using GetFuncTypeRet = std::pair<IRFuncTyPtr, std::vector<std::string>>;
 
 		/// This class orgasizes the cross-module state that is used while lowering
 		/// AST types to moses-IR types.
@@ -59,7 +60,7 @@ namespace compiler
 			/// Note: 如果发现当前Type是StructType，则记录到Map中。
 			IRTyPtr ConvertType(ASTTyPtr type);
 						
-			IRFuncTyPtr getFunctionType(std::shared_ptr<CGFunctionInfo const> Info);
+			GetFuncTypeRet getFunctionType(const FunctionDecl* FD, std::shared_ptr<CGFunctionInfo const> Info);
 
 			std::shared_ptr<const CGFunctionInfo> arrangeFunctionInfo(const FunctionDecl* FD);			
 		};

@@ -6,6 +6,7 @@
 #ifndef CGCALL_H
 #define CGCALL_H
 #include <vector>
+#include <string>
 #include "../Parser/Type.h"
 #include "../IR/IRType.h"
 namespace compiler
@@ -63,6 +64,13 @@ namespace compiler
 		private:
 			ASTTyPtr Ty;
 			Kind TheKind;
+			// Easy to pass the parameter name to IR::Function.
+			// Note:	(1) Direct-Builtin name    ----> name
+			//			(2) Direct-Struct  name    ----> name.1 name.2
+			//			(3) Indirect(parm) name    ----> name.addr (byval attr)
+			//			(4) Indirect(ret)          ----> ret.addr  (sret attr)
+			// 
+			std::string Name;
 
 			// struct type can be flattened.
 			// e.g. class { var num:int; };					---->	coerce to int(i32)
@@ -70,14 +78,17 @@ namespace compiler
 			// e.g. class { var num:int, var flag:bool; };	---->	int, int
 			bool CanBeFlattened;
 		public:
-			ArgABIInfo(ASTTyPtr type, Kind kind, std::shared_ptr<IR::Type> tydata = nullptr, bool flatten = false) :
-				Ty(Ty), TheKind(kind), TypeData(tydata), CanBeFlattened(flatten)
+			ArgABIInfo(ASTTyPtr type, Kind kind, std::string name = "", std::shared_ptr<IR::Type> tydata = nullptr,
+				bool flatten = false) :
+				Ty(type), TheKind(kind), Name(name), TypeData(tydata), CanBeFlattened(flatten)
 			{}
 
 			static std::shared_ptr<ArgABIInfo> Create(ASTTyPtr type, Kind kind);
 			ASTTyPtr getType() const { return Ty; }
 			Kind getKind() const { return TheKind; }
 			bool canBeFlattened() const { return CanBeFlattened; }
+			IRTyPtr getCoerceeToType() const { return TypeData; }
+			std::string getArgName() const { return Name; }
 		};
 
 		/// CGFunctionInfo - Class to encapsulate the information about a function
@@ -89,30 +100,24 @@ namespace compiler
 		private:			
 			bool NoReturn;
 		public:
-			CGFunctionInfo(std::vector<ASTTyPtr> ArgsTy, ASTTyPtr RetTy);
+			CGFunctionInfo(std::vector<std::pair<ASTTyPtr, std::string>> ArgsTy, ASTTyPtr RetTy);
 			static std::shared_ptr<CGFunctionInfo const> create(const FunctionDecl* FD);
 			bool isNoReturn() const { return NoReturn; }
+
 			unsigned getArgNums() const { return ArgInfos.size(); }
 			const std::vector<AAIPtr>& getArgsInfo() const { return ArgInfos; }
-			const ASTTyPtr getParm(unsigned index) const 
-			{ 
-				assert(index <= getArgNums() - 1 && "Index out of range when we get FunctionInfo.");
-				return ArgInfos[index]->getType(); 
-			}
-			const ArgABIInfo::Kind getKind(unsigned index) const 
-			{ 
-				assert(index <= getArgNums() - 1 && "Index out of range when we get FunctionInfo.");
-				return ArgInfos[index]->getKind();
-			}			
-			const AAIPtr getArgABIInfo(unsigned index) const
-			{
-				assert(index <= getArgNums() - 1 && "Index out of range when we get FunctionInfo.");
-				return ArgInfos[index];
-			}
+			const ASTTyPtr getParm(unsigned index) const;
+			const ArgABIInfo::Kind getKind(unsigned index) const;
+			const AAIPtr getArgABIInfo(unsigned index) const;
 			AAIPtr getReturnInfo() const { return ReturnInfo; }
+
+			/// \brief func add(lhs:int, rhs:int) -> int {}
+			///				   {'', 'lhs', 'rhs'}
+			std::vector<std::string> getArgNames() const;
+
 			// Generate ArgABIInfo for return type.
 			static AAIPtr classifyReturnTye(ASTTyPtr RetTy);
-			static AAIPtr classifyArgumentType(ASTTyPtr ArgTy);
+			static AAIPtr classifyArgumentType(ASTTyPtr ArgTy, std::string Name);
 		};
 	}
 }

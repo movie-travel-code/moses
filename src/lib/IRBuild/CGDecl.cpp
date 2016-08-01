@@ -8,7 +8,7 @@ using namespace compiler::ast;
 using namespace compiler::IR;
 using namespace compiler::IRBuild;
 using namespace compiler::CodeGen;
-
+extern void print(std::shared_ptr<compiler::IR::Value> V);
 /// EmitVarDecl - This method handles emission of variable declaration inside
 /// a function.  Emit code and set the symbol table entry about this var.
 /// 例如：
@@ -80,8 +80,17 @@ void ModuleBuilder::EmitLocalVarDecl(const VarDecl* var)
 	// Note: We only handle the built-in type.
 	if (auto init = var->getInitExpr())
 	{
-		ValPtr V = EmitScalarExpr(init.get());
-		EmitStoreOfScalar(V, DeclPtr);
+		auto TypeKind = init->getType()->getKind();
+		if (TypeKind == TypeKind::ANONYMOUS ||
+			TypeKind == TypeKind::USERDEFIED)
+		{
+			EmitAggExpr(init.get(), DeclPtr);
+		}
+		else
+		{
+			ValPtr V = EmitScalarExpr(init.get());
+			EmitStoreOfScalar(V, DeclPtr);
+		}		
 	}
 }
 
@@ -92,12 +101,15 @@ AllocaInstPtr ModuleBuilder::EmitLocalVarAlloca(const VarDecl* var)
 
 	// (1) 将VarDecl类型转换为IR Type，并创建一条对应的Alloca 指令
 	IRTyPtr IRTy = Types.ConvertType(Ty);
-	AllocaInstPtr allocInst = CreateAlloca(IRTy, var->getName());
+	AllocaInstPtr allocInst = CreateAlloca(IRTy, var->getName() + ".addr");
+
+	print(allocInst);
 
 	// (2) 将该条alloca instruction插入到当前VarDecl所在的SymbolTable中
 	if (std::shared_ptr<VariableSymbol> varSym = 
 		std::dynamic_pointer_cast<VariableSymbol>(CurScope->Resolve(var->getName())))
 	{
+		assert(!varSym->getAllocaInst() && "Decl's alloca inst already exists.");
 		varSym->setAllocaInst(allocInst);
 	}
 	return allocInst;
@@ -105,21 +117,35 @@ AllocaInstPtr ModuleBuilder::EmitLocalVarAlloca(const VarDecl* var)
 
 /// EmitParmDecl - Emit an alloca (or GlobalValue depending on target)
 /// for the specified parameter and set up LocalDeclMap.
+/// (1) Direct - Alloca Instruction, store.
+/// (2) Indirect - Aggregate, DeclPtr = Arg;
+/// (3) Ignore.
 void ModuleBuilder::EmitParmDecl(const VarDecl* VD, ValPtr Arg)
 {
-	AllocaInstPtr DeclPtr;
+	ValPtr DeclPtr;
 	// A fixed sized single-value variable becomes an alloca in the entry block.
 	IRTyPtr Ty = Types.ConvertType(VD->getDeclType());
-	std::string Name = VD->getName();
-	// e.g. define func(i32 %lhs, i32 %rhs)
-	//		{
-	//			%lhs.addr = alloca i32
-	//		}
-	Name += ".addr";
-	DeclPtr = CreateAlloca(Ty, Name);
 
-	// Store the intial value into the alloca.
-	EmitStoreOfScalar(Arg, DeclPtr);
+	std::string Name = VD->getName();
+	if (Ty->isSingleValueType())
+	{		
+		// e.g. define func(i32 %lhs, i32 %rhs)
+		//		{
+		//			%lhs.addr = alloca i32
+		//		}
+		Name += ".addr";
+		DeclPtr = CreateAlloca(Ty);
+		print(DeclPtr);
+
+		// Store the intial value into the alloca.
+		EmitStoreOfScalar(Arg, DeclPtr);
+	}
+	else
+	{
+		// otherwise, if this is an aggregate, just use the input pointer.
+		DeclPtr = Arg;
+	}
+	Arg->setName(Name);
 
 	// (1) Get the ParmDecl's SymbolTable Entry.
 	auto SymEntry = CurScope->Resolve(VD->getName());
@@ -129,15 +155,11 @@ void ModuleBuilder::EmitParmDecl(const VarDecl* VD, ValPtr Arg)
 		assert((sym->getAllocaInst() == nullptr) && "Symbol's alloca instruciton already exists.");
 		sym->setAllocaInst(DeclPtr);
 	}
-	// Otherwise, if this is an aggregate, just use the input pointer.
-	// DeclPtr = Arg;
 }
 
 
 void ModuleBuilder::EmitScalarInit(const Expr* init, const VarDecl* D, LValue lvalue)
-{
-
-}
+{}
 
 //===---------------------------------------------------------------------===//
 // Generate code for function declaration.
@@ -146,15 +168,15 @@ void ModuleBuilder::EmitFunctionDecl(const FunctionDecl* FD)
 {
 	// generate function info.
 	std::shared_ptr<CGFunctionInfo const> FI = Types.arrangeFunctionInfo(FD);
-	// Save the CGFunctionInfo to the symbol.
 
-	std::shared_ptr<FunctionType> Ty = Types.getFunctionType(FI);
-
-	CurFunc->CurFnInfo = FI;
+	auto TypeAndName = Types.getFunctionType(FD, FI);
+	
+	CurFunc->CGFnInfo = FI;
 	CurFunc->CurFuncDecl = const_cast<FunctionDecl*>(FD);
 	CurFunc->FnRetTy = Types.ConvertType(FD->getReturnType());
-	FuncPtr func = Function::create(Ty, FD->getFDName());
-
+	FuncPtr func = Function::create(TypeAndName.first, FD->getFDName(), TypeAndName.second);
+	CurFunc->CurFn = func;
+	IRs.push_back(func);
 	// (1) Start function.
 	// Note: we need switch the scope.
 	//	e.g.	var num = 10;							----> Old Scope.
@@ -171,11 +193,14 @@ void ModuleBuilder::EmitFunctionDecl(const FunctionDecl* FD)
 
 	StartFunction(FI, func);
 
-	// (2) Function body.	
+	// (2) Emit the function body.	
 	EmitFunctionBody(FD->getCompoundBody());
 
 	// (3) Finish function.
 	FinishFunction();
+	CurFunc->CurFn = nullptr;
+
+	print(func);
 
 	// (4) Switch the scope back.
 	CurScope = CurScope->getParent();
@@ -184,34 +209,32 @@ void ModuleBuilder::EmitFunctionDecl(const FunctionDecl* FD)
 /// \brief Handle the start of function.
 void ModuleBuilder::StartFunction(std::shared_ptr<CGFunctionInfo const> FnInfo, FuncPtr Fn)
 {
-	BBPtr EntryBB = CreateBasicBlock("entry", CurFunc->CurFn);
-	SetInsertPoint(EntryBB);
+	EntryBlock = CreateBasicBlock("entry", Fn);
+	// EmitBlock(EntryBB);
+	Fn->addBB(EntryBlock);
+	SetInsertPoint(EntryBlock);
 	AllocaInsertPoint = InsertPoint;
+	isAllocaInsertPointSetByNormalInsert = false;
 
 	CurFunc->ReturnBlock = CreateBasicBlock("return", CurFunc->CurFn);
-	
-	//// Set the argument's name and argument's type here.
-	//for (unsigned i = 0; i < FnInfo->getArgNums(); i++)
-	//{
-	//	Fn->setArgumentInfo(i, FnInfo->getParm(i).second);
-	//}
 
-	//if (FnInfo->getRetTy()->getKind() == TypeKind::VOID)
-	//{
-	//	// Void type; nothing to return
-	//	CurFunc->ReturnValue = nullptr;
-	//}
-	//else
-	//{
-	//	CurFunc->ReturnValue = CreateAlloca(Fn->getReturnType(), "retval");
-	//}
+	if (FnInfo->getReturnInfo()->getType()->getKind() == TypeKind::VOID)
+	{
+		// Void type; nothing to return
+		CurFunc->ReturnValue = nullptr;
+	}
+	else
+	{
+		CurFunc->ReturnValue = CreateAlloca(Fn->getReturnType(), "retval");
+		print(CurFunc->ReturnValue);
+	}
 	EmitFunctionPrologue(FnInfo, Fn);
 }
 
 void ModuleBuilder::FinishFunction()
 {
-	// Emit function epilog(to return).
 	EmitReturnBlock();
+	EmitFunctionEpilogue(CurFunc->CGFnInfo);
 }
 
 ValPtr ModuleBuilder::visit(const VarDecl* VD)
@@ -223,7 +246,7 @@ ValPtr ModuleBuilder::visit(const VarDecl* VD)
 /// \brief Handle function declaration.
 ValPtr ModuleBuilder::visit(const FunctionDecl* FD)
 {
-	// (1) switch the scope.
+	// (1) switch the scope and save the context-info.
 	// e.g.		var num = 10;							----> Old Scope.
 	//			func add(lhs:int, rhs:int) -> int		----> New Scope.
 	//			{
@@ -231,10 +254,16 @@ ValPtr ModuleBuilder::visit(const FunctionDecl* FD)
 	//			}
 	auto FunSym = CurScope->Resolve(FD->getFDName());
 	assert(FunSym != nullptr && "Function doesn't exists.");
+	SaveTopLevelCtxInfo();
 
 	// (2) Emit code for function.
+	auto CurAllocaInsertPoint = AllocaInsertPoint;
 	EmitFunctionDecl(FD);
 
+	// (3) Switch CurBB back;
+	RestoreTopLevelCtxInfo();
+
+	AllocaInsertPoint = CurAllocaInsertPoint;
 	return nullptr;
 }
 

@@ -41,7 +41,7 @@ namespace compiler
 		public:
 			/// BasicBlock ctor - If the function parameter is specified, the basic block
 			/// is automatically inserted at the end of the function.
-			BasicBlock(std::string Name = "", FuncPtr Parent = nullptr, BBPtr InsertBefore = nullptr);
+			BasicBlock(std::string Name, FuncPtr Parent, BBPtr InsertBefore = nullptr);
 			~BasicBlock() {}
 
 			/// \brief Creates a new BasicBlock.
@@ -49,8 +49,8 @@ namespace compiler
 			/// If the Parent parameter is specified, the basic block is automatically
 			/// inserted at either the end of the function (if InsertBefore is 0), or
 			/// before the specified basic block.
-			static BBPtr Create(std::string Name = "", FuncPtr = nullptr, BBPtr = nullptr);
-
+			static BBPtr Create(std::string Name, FuncPtr, BBPtr = nullptr);
+			bool RemoveInst(const Value* val);
 			void setParent(FuncPtr parent) { Parent = parent; }
 			// Specialize setName to take care of symbol table majik
 			virtual void setName(std::string name) { Name = name; }
@@ -85,7 +85,8 @@ namespace compiler
 			// Instruction iterator methods
 			//===--------------------------------------------------------------------===//
 			std::list<InstPtr> &getInstList() { return InstList; }
-			void Insert(Iterator InsertP, InstPtr I);
+			std::list<InstPtr>::iterator Insert(Iterator InsertP, InstPtr I);
+			void Push(InstPtr I) { InstList.push_back(I); }
 			Iterator getIterator(InstPtr I);
 			std::list<InstPtr>::iterator end();
 			// methods for support type inquiry thorough isa, cast, and dyn_cast

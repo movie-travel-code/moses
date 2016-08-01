@@ -184,7 +184,7 @@ namespace compiler
 		class ParmDeclSymbol final : public Symbol
 		{
 			ParmDeclPtr PD;
-			IR::AllocaInstPtr allocaInst;
+			IR::ValPtr allocaInst;
 		public:
 			ParmDeclSymbol(std::string lexem, ScopePtr beongTo,
 				std::shared_ptr<Type> type, bool initial, ParmDeclPtr pd) :
@@ -193,8 +193,8 @@ namespace compiler
 
 			ParmDeclPtr getDecl() const { return PD; }
 
-			void setAllocaInst(IR::AllocaInstPtr inst) { allocaInst = inst; }
-			IR::AllocaInstPtr getAllocaInst() const { return allocaInst; }
+			void setAllocaInst(IR::ValPtr inst) { allocaInst = inst; }
+			IR::ValPtr getAllocaInst() const { return allocaInst; }
 		};
 
 		class FunctionSymbol final : public Symbol
@@ -223,13 +223,9 @@ namespace compiler
 			}
 
 			void setFuncAddr(IR::FuncPtr FuncAddr) { this->FuncAddr = FuncAddr; }
+			void setFunctionDeclPointer(FunctionDeclPtr fd) { FD = fd; }
 
 			IR::FuncPtr getFuncAddr() const { return FuncAddr; }
-
-			void setFunctionDeclPointer(FunctionDeclPtr fd)
-			{
-				FD = fd;
-			}
 			ScopePtr getScope() const { return scope; }
 			unsigned getParmNum() { return  parms.size(); }
 			FunctionDeclPtr getFuncDeclPointer() const { return FD; }

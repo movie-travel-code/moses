@@ -6,7 +6,7 @@
 #include "../../include/IRBuild/IRBuilder.h"
 using namespace compiler::IR;
 using namespace compiler::IRBuild;
-
+extern void print(std::shared_ptr<compiler::IR::Value> V);
 /// \brief Emit branch condition.
 void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock, BBPtr FalseBlock)
 {
@@ -46,6 +46,8 @@ void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock, BBPtr
 			EmitBranchOnBoolExpr(CondBOp->getLHS(), LHSTrue, FalseBlock);
 			EmitBlock(LHSTrue);
 
+			print(LHSTrue);
+
 			EmitBranchOnBoolExpr(CondBOp->getRHS(), TrueBlock, FalseBlock);
 			return;
 		}
@@ -68,6 +70,8 @@ void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock, BBPtr
 			EmitBranchOnBoolExpr(CondBOp->getLHS(), TrueBlock, LHSFalse);
 			EmitBlock(LHSFalse);
 
+			print(LHSFalse);
+
 			EmitBranchOnBoolExpr(CondBOp->getRHS(), TrueBlock, FalseBlock);
 			return;
 		}
@@ -82,7 +86,8 @@ void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock, BBPtr
 
 	// Emit the code with the fully general case.
 	ValPtr CondV = Cond->Accept(this);
-	CreateCondBr(CondV, TrueBlock, FalseBlock);
+	auto ret = CreateCondBr(CondV, TrueBlock, FalseBlock);
+	print(ret);
 }
 
 ValPtr ModuleBuilder::EvaluateExprAsBool(ExprASTPtr E)
@@ -96,50 +101,67 @@ ValPtr ModuleBuilder::EmitAlgAndBooleanOp(const CGExpr::BinOpInfo& BInfo)
 {
 	std::string Opcode = BInfo.BE->getOpcode();
 
+	ValPtr ret;
+
 	if (Opcode == "+")
 	{
-		return CreateAdd(BInfo.LHS, BInfo.RHS);
+		//return CreateAdd(BInfo.LHS, BInfo.RHS, "add.result");
+		ret = CreateAdd(BInfo.LHS, BInfo.RHS, "add.result");
 	}
 	if (Opcode == "-")
 	{
-		return CreateSub(BInfo.LHS, BInfo.RHS);
+		// return CreateSub(BInfo.LHS, BInfo.RHS, "sub.result");
+		ret = CreateSub(BInfo.LHS, BInfo.RHS, "sub.result");
 	}
 	if (Opcode == "*")
 	{
-		return CreateMul(BInfo.LHS, BInfo.RHS);
+		// return CreateMul(BInfo.LHS, BInfo.RHS, "mul.result");
+		ret = CreateMul(BInfo.LHS, BInfo.RHS, "mul.result");
 	}
 	if (Opcode == "/")
 	{
-		return CreateDiv(BInfo.LHS, BInfo.RHS);
+		// return CreateDiv(BInfo.LHS, BInfo.RHS, "div.result");
+		ret =  CreateDiv(BInfo.LHS, BInfo.RHS, "div.result");
 	}
 	if (Opcode == "%")
 	{
-		return CreateRem(BInfo.LHS, BInfo.RHS);
+		// return CreateRem(BInfo.LHS, BInfo.RHS, "rem.result");
+		ret = CreateRem(BInfo.LHS, BInfo.RHS, "rem.result");
 	}
 	if (Opcode == "<")
 	{
-		return CreateCmpLT(BInfo.LHS, BInfo.RHS);
+		// return CreateCmpLT(BInfo.LHS, BInfo.RHS, "lt.result");
+		ret = CreateCmpLT(BInfo.LHS, BInfo.RHS, "lt.result");
 	}
 	if (Opcode == ">")
 	{
-		return CreateCmpGT(BInfo.LHS, BInfo.RHS);
+		// return CreateCmpGT(BInfo.LHS, BInfo.RHS, "gt.result");
+		ret = CreateCmpGT(BInfo.LHS, BInfo.RHS, "gt.result");
 	}
 	if (Opcode == "<=")
 	{
-		return CreateCmpLE(BInfo.LHS, BInfo.RHS);
+		// return CreateCmpLE(BInfo.LHS, BInfo.RHS, "le.result");
+		ret = CreateCmpLE(BInfo.LHS, BInfo.RHS, "le.result");
 	}
 	if (Opcode == ">=")
 	{
-		return CreateCmpGE(BInfo.LHS, BInfo.RHS);
+		// return CreateCmpGE(BInfo.LHS, BInfo.RHS, "ge.result");
+		ret = CreateCmpGE(BInfo.LHS, BInfo.RHS, "ge.result");
 	}
 	if (Opcode == "==")
 	{
-		return CreateCmpEQ(BInfo.LHS, BInfo.RHS);
+		// return CreateCmpEQ(BInfo.LHS, BInfo.RHS, "eq.result");
+		ret = CreateCmpEQ(BInfo.LHS, BInfo.RHS, "eq.result");
 	}
 	if (Opcode == "!=")
 	{
-		return CreateCmpNE(BInfo.LHS, BInfo.RHS);
+		// return CreateCmpNE(BInfo.LHS, BInfo.RHS, "ne.result");
+		ret = CreateCmpNE(BInfo.LHS, BInfo.RHS, "ne.result");
 	}
+
+	print(ret);
+
+	return ret;
 	assert(0 && "Unreachable program point.");
 	// An invalid LValue, the assert will ensure that this point is never reached.
 	return nullptr;
@@ -151,19 +173,30 @@ ValPtr ModuleBuilder::EmitAlgAndBooleanOp(const CGExpr::BinOpInfo& BInfo)
 ///									| store i32 %tmp, i32* %mem	|
 ///									-----------------------------
 ValPtr ModuleBuilder::EmitBinAssignOp(const BinaryExpr* B)
-{
-	ValPtr RHSV = B->getRHS()->Accept(this);
+{	
 	LValue LHSAddr = EmitLValue(B->getLHS().get());
 
-	// Store the value into the LHS.
-	// --------------------Assignment operators-------------------------
-	// An assignment operator stores a value in the object designated by the left operand. 
-	// An assignment expression has the value of the left operand after the assignment,
-	// but is not an lvalue.
-	// http://stackoverflow.com/questions/22616044/assignment-operator-sequencing-in-c11-expressions
-	//---------------------Assignment operators-------------------------
-	EmitStoreThroughLValue(RValue::get(RHSV), LHSAddr);
-	return EmitLoadOfLValue(LHSAddr, B->getType()).getScalarVal();
+	// Aggregate Type类型语句的赋值与普通的不同，作特殊处理.
+	// 针对Aggregate Type在内存中的存储形式，就是使用memcpy来进行内存到内存间的拷贝。
+	auto ty = Types.ConvertType(B->getType());
+	if (ty->isAggregateType())
+	{
+		EmitAggLoadOfLValue(B->getRHS().get(), LHSAddr.getAddress());
+		return LHSAddr.getAddress();
+	}
+	else
+	{
+		ValPtr RHSV = B->getRHS()->Accept(this);
+		// Store the value into the LHS.
+		// --------------------Assignment operators-------------------------
+		// An assignment operator stores a value in the object designated by the left operand. 
+		// An assignment expression has the value of the left operand after the assignment,
+		// but is not an lvalue.
+		// http://stackoverflow.com/questions/22616044/assignment-operator-sequencing-in-c11-expressions
+		//---------------------Assignment operators-------------------------
+		EmitStoreThroughLValue(RValue::get(RHSV), LHSAddr);
+		return EmitLoadOfLValue(LHSAddr, B->getType()).getScalarVal();
+	}		
 }
 
 /// \brief Handle the compound assign operation, include '*=' '/=' '%=' '+=' '-='
@@ -206,7 +239,13 @@ ValPtr ModuleBuilder::EmitCompoundAssignOp(const BinaryExpr* BE)
 /// \brief Handle the binary expression.
 ValPtr ModuleBuilder::EmitBinaryExpr(const BinaryExpr* B)
 {
-	std::string Opcode = B->getOpcode();
+	std::string Opcode = B->getOpcode();	
+	if (Opcode == "=")
+		return EmitBinAssignOp(B);
+	if (Opcode == "*=" || Opcode == "/=" || Opcode == "%=" || Opcode == "+=" ||
+		Opcode == "-=" || Opcode == "&&=" || Opcode == "||=")
+		return EmitCompoundAssignOp(B);
+
 	CGExpr::BinOpInfo info;
 	info.LHS = B->getLHS()->Accept(this);
 	info.RHS = B->getRHS()->Accept(this);
@@ -217,12 +256,7 @@ ValPtr ModuleBuilder::EmitBinaryExpr(const BinaryExpr* B)
 		Opcode == ">=" || Opcode == "==" || Opcode == "!=")
 		return EmitAlgAndBooleanOp(info);
 
-	if (Opcode == "=")
-		return EmitBinAssignOp(B);
-
-	if (Opcode == "*=" || Opcode == "/=" || Opcode == "%=" || Opcode == "+=" || 
-		Opcode == "-=" || Opcode == "&&=" || Opcode == "||=")
-		return EmitCompoundAssignOp(B);
+	
 	assert(0 && "Unreachable program point.");
 	return nullptr;
 }
@@ -230,15 +264,23 @@ ValPtr ModuleBuilder::EmitBinaryExpr(const BinaryExpr* B)
 /// EmitLValue - Emit code to compute a designator that specifies the location of 
 /// the expression. For example, 'a = 10' or 'a.start.hieght = 10', we need compute
 /// a location to store '10'.
+/// 注：在Clang中有多种LValue，moses暂时只有DeclRefLValue MemberExprLValue 以及CallExpr. 
 LValue ModuleBuilder::EmitLValue(const Expr* E)
 {
 	if (const DeclRefExpr* DRE = dynamic_cast<const DeclRefExpr*>(E))
 	{
-		EmitDeclRefLValue(DRE);
+		return EmitDeclRefLValue(DRE);
 	}
-	// Is not yet implemented.
+	
 	if (const MemberExpr* ME = dynamic_cast<const MemberExpr*>(E))
-	{}
+	{
+		return EmitMemberExprLValue(ME);
+	}
+
+	if (const CallExpr* CE = dynamic_cast<const CallExpr*>(E))
+	{
+
+	}
 	assert(0 && "Unreachable program point.");
 	return LValue();
 }
@@ -268,6 +310,36 @@ LValue ModuleBuilder::EmitDeclRefLValue(const DeclRefExpr* DRE)
 	return LValue();
 }
 
+LValue ModuleBuilder::EmitMemberExprLValue(const MemberExpr* ME)
+{
+	auto base = ME->getBase();
+	// (1) Get the base address.
+	LValue BaseLValue = EmitLValue(ME->getBase().get());
+
+	// (2) According to specified member to get the offset.
+	// e.g.	class B { var num : int; var mem : int; };
+	//		class A { var num : int; var flag: bool; var b : B;};
+	//		var a : A;
+	// We have type size info, so we can get the offset easily.
+	// a.num  ----> BaseAddr, int
+	// a.flag ----> BaseAddr
+	// a.b.mem ----> BaseAddr, int * 3
+	// 因为int和bool在moses IR设计中占用同样的空间（i32），所以以int为offset的基本单位，
+	// 并且没有对齐的概念。。。
+	// To Do: int没有有符合和无符号的区别，大小也相同；bool 占用的空间与int相同。
+	auto idx = ME->getIdx();
+	ValPtr MemberAddr = CreateGEP(Types.ConvertType(ME->getType()), BaseLValue.getAddress(), idx);
+	print(MemberAddr);
+	return LValue::MakeAddr(MemberAddr);
+}
+
+LValue ModuleBuilder::EmitCallExprLValue(const CallExpr* CE)
+{
+	auto CallResult = EmitCallExpr(CE);
+	return LValue::MakeAddr(nullptr);
+}
+
+
 /// \brief EmitLoadOfLValue - Given an expression with complex type that represents
 /// a l-value, this method emits the address of the l-value, then loads and returns
 /// the result.
@@ -283,6 +355,7 @@ RValue ModuleBuilder::EmitLoadOfLValue(LValue LV, compiler::IRBuild::ASTTyPtr Ex
 {
 	ValPtr Ptr = LV.getAddress();
 	auto V = CreateLoad(LV.getAddress());
+	print(V);
 	return RValue::get(V);
 }
 
@@ -301,9 +374,9 @@ ValPtr ModuleBuilder::EmitUnaryExpr(const UnaryExpr* UE)
 	if (Opcode == "++")
 	{
 		if (UE->isLValue())
-			EmitPrePostIncDec(UE, true, true);
+			return EmitPrePostIncDec(UE, true, true);
 		else
-			EmitPrePostIncDec(UE, true, false);
+			return EmitPrePostIncDec(UE, true, false);
 	}
 	if (Opcode == "--")
 	{
@@ -316,8 +389,15 @@ ValPtr ModuleBuilder::EmitUnaryExpr(const UnaryExpr* UE)
 	if (Opcode == "!")
 	{
 		ValPtr OperandV = UE->getSubExpr()->Accept(this);
-		return CreateNot(OperandV, "not");
+		auto ret = CreateNot(OperandV, "not");
+		print(ret);
+		return ret;
 	}
+}
+
+ValPtr ModuleBuilder::EmitMemberExpr(const MemberExpr* ME)
+{
+	return nullptr;
 }
 
 /// \brief EmitPrePostIncDec - Generate code for inc and dec.
@@ -345,7 +425,9 @@ ValPtr ModuleBuilder::EmitPrePostIncDec(const UnaryExpr* UE, bool isInc, bool is
 
 	// (3) Perform operation.
 	NextVal = ConstantInt::get(Context, AmoutVal);
+	NextVal->setName(std::to_string(AmoutVal));
 	NextVal = CreateAdd(InVal, NextVal, isInc ? "inc" : "dec");
+	print(NextVal);
 	return NextVal;
 }
 
@@ -363,15 +445,18 @@ ValPtr ModuleBuilder::EmitPrePostIncDec(const UnaryExpr* UE, bool isInc, bool is
 ValPtr ModuleBuilder::EmitCallExpr(const CallExpr* CE)
 {
 	// Get the funciton decl's address.
+	auto FD = CE->getFuncDecl();
 	auto Sym = SymbolTree->Resolve(CE->getFuncDecl()->getFDName());
 	assert(Sym && "function decl symbol doesn't exists.");
 	std::shared_ptr<FunctionSymbol> FuncSym = std::dynamic_pointer_cast<FunctionSymbol>(Sym);
 	assert(FuncSym && "function decl symbol doesn't exists.");
 	auto CalleeAddr = FuncSym->getFuncAddr();
-	
-	return EmitCall(CalleeAddr, CE->getArgs());
+
+	return EmitCall(FD.get(), CalleeAddr, CE->getArgs());
 }
 
+/// \brief visit(const BinaryExpr*) - Generate code for BinaryExpr.
+/// We need to make AggregateType case special treatment.
 ValPtr ModuleBuilder::visit(const BinaryExpr* B)
 {
 	return EmitBinaryExpr(B);
@@ -392,7 +477,9 @@ ValPtr ModuleBuilder::visit(const BoolLiteral* BL)
 
 ValPtr ModuleBuilder::visit(const NumberExpr* NE)
 {
-	return ConstantInt::get(Context, NE->getVal());
+	auto CInt = ConstantInt::get(Context, NE->getVal());
+	CInt->setName(std::to_string(NE->getVal()));
+	return CInt;
 }
 
 /// \brief Generate the code for UnaryExpr, include ''
@@ -405,12 +492,21 @@ ValPtr ModuleBuilder::visit(const UnaryExpr* UE)
 
 ValPtr ModuleBuilder::visit(const MemberExpr* ME)
 {
-	return nullptr;
+	return EmitLoadOfLValue(ME);
 }
 
 ValPtr ModuleBuilder::visit(const CallExpr* CE)
 {
-	return EmitCallExpr(CE);
+	if (CE->getType()->getKind() == TypeKind::ANONYMOUS ||
+		CE->getType()->getKind() == TypeKind::USERDEFIED)
+	{
+		EmitCallExprAgg(CE, nullptr);
+		return nullptr;
+	}
+	else
+	{
+		return EmitCallExpr(CE);
+	}	
 }
 
 /// Emit an expression as an initializer for a variable at the given location. 
@@ -455,5 +551,6 @@ void ModuleBuilder::EmitStoreThroughLValue(RValue Src, LValue Dst, bool isInit)
 /// \brief Handle the scalar expression.
 void ModuleBuilder::EmitStoreOfScalar(ValPtr Value, ValPtr Addr)
 {
-	CreateStore(Value, Addr);
+	auto ret = CreateStore(Value, Addr);
+	print(ret);
 }

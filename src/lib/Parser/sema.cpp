@@ -326,6 +326,7 @@ std::shared_ptr<Type> Sema::ActOnCallExpr(std::string name,
 /// \brief Act on Binary Operator(Type checking and create new binary expr through lhs and rhs).
 /// Note: 在C/C++中，赋值语句返回的是所赋的值。
 /// 例如：'a = 10;'返回的值是10.
+/// To Do: Shit code!
 ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
 {
 	if (!lhs || !rhs)
@@ -343,15 +344,15 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
 	}
 
 	// Check expression's value kind.
+	std::shared_ptr<Type> type = nullptr;
 	if (tok.isAssign())
 	{
 		if (!lhs->isLValue())
 			errorReport("Left hand expression must be lvalue.");
 		if (TypeKeyInfo::TypeKeyInfo::getHashValue(lhs->getType()) != 
 			TypeKeyInfo::TypeKeyInfo::getHashValue(rhs->getType()))
-			errorReport("Type on the left and type on the right must be the same.");
-		// Shit code!其实指针不应该暴露出来的，但是C++标准只能通过指针类型实现多态
-		// 以及相应的dynamic_cast转换，std::shared_ptr虽然属于标准库，但是仍然是一个栈上对象
+			errorReport("Type on the left and type on the right must be same.");
+		type = lhs->getType();
 		if (DeclRefExprPtr DRE = std::dynamic_pointer_cast<DeclRefExpr>(lhs))
 		{
 			if (DRE->getDecl()->isConst())
@@ -378,8 +379,7 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
 		}
 	}
 
-	tok::TokenValue tokKind = tok.getKind();
-	std::shared_ptr<Type> type = nullptr;
+	tok::TokenValue tokKind = tok.getKind();	
 
 	// Note:现在moses只有两种类型，int和bool.
 	// To Do: moses还没有实现类型转换（type cast）
@@ -399,8 +399,15 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
 		if (lhs->getType()->getKind() != TypeKind::BOOL ||
 			rhs->getType()->getKind() != TypeKind::BOOL)
 		{
-			errorReport("Left hand expression and right hand expression must be int type.");
+			errorReport("Left hand expression and right hand expression must be bool type.");
 		}
+	}
+
+	if (tok.isCmpOperator())
+	{
+		if (TypeKeyInfo::TypeKeyInfo::getHashValue(lhs->getType()) !=
+			TypeKeyInfo::TypeKeyInfo::getHashValue(rhs->getType()))
+			errorReport("Type on the left and type on the right must be same.");
 	}
 
 	// 如果当前运算符是算术运算，则BinaryOperator是int类型
@@ -422,7 +429,7 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
 	// but is not an lvalue.
 	// http://stackoverflow.com/questions/22616044/assignment-operator-sequencing-in-c11-expressions
 	//---------------------Assignment operators-------------------------
-	if (tok.getLexem() == "=")
+	if (tok.isArithmeticOperator())
 	{
 		type = lhs->getType();
 	}
@@ -458,6 +465,7 @@ ExprASTPtr Sema::ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok)
 	}
 
 	std::shared_ptr<Type> memberType = nullptr;
+	int idx = -1;
 	/// (2) Check Member name.
 	/// 这里需要检查该用户自定义类型是否有这个成员名，存在的话，同时获取该数据成员的类型
 	/// Note: 这里将UserDefinedType*指针暴露出来是不符合规范的，但是只有在原生态指针的
@@ -470,10 +478,11 @@ ExprASTPtr Sema::ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok)
 			return nullptr;
 		}
 		memberType = BaseType->getMemberType(tok.getLexem());
+		idx = BaseType->getIdx(tok.getLexem());
 	}
 
 	return std::make_shared<MemberExpr>(lhs->getLocStart(), lhs->getLocEnd(), memberType, lhs, 
-		tok.getTokenLoc(), tok.getLexem(), memberType->getKind() != TypeKind::USERDEFIED);
+		tok.getTokenLoc(), tok.getLexem(), memberType->getKind() != TypeKind::USERDEFIED, idx);
 }
 
 ExprASTPtr Sema::ActOnDecOrIncExpr(ExprASTPtr rhs)

@@ -19,15 +19,44 @@ void Argument::Print(std::ostringstream& out)
 }
 //===---------------------------------------------------------------------===//
 // Implement class function.
-FuncPtr Function::create(FuncTypePtr Ty, std::string Name)
+Function::Function(FuncTypePtr Ty, std::string Name, std::vector<std::string> Names) :
+	GlobalValue(PointerType::get(Ty), Value::ValueTy::FunctionVal, Name),
+	ReturnType(Ty->getReturnType()), FunctionTy(Ty)
 {
-	return std::make_shared<Function>(Ty, Name);
+	// Create space for argument and set the name later.
+	for (unsigned i = 0; i < Ty->getNumParams(); i++)
+	{
+		Arguments.push_back(std::make_shared<Argument>((*Ty)[i], Names[i]));
+	}
+}
+
+/// \brief Get the argument.
+ArgPtr Function::operator[](unsigned index) const
+{
+	assert(index <= Arguments.size() - 1 &&
+		"Index out of range when we get the specified Argument(IR).");
+	return Arguments[index];
+}
+
+/// \brief Set argument info.
+void Function::setArgumentInfo(unsigned index, std::string name)
+{
+	assert(index <= Arguments.size() - 1 &&
+		"Index out of range when set Argument(IR) name.");
+	Arguments[index]->setName(name);
+}
+
+/// \brief Create a new function.
+FuncPtr Function::create(FuncTypePtr Ty, std::string Name, std::vector<std::string> Names)
+{
+	return std::make_shared<Function>(Ty, Name, Names);
 }
 
 TyPtr Function::getReturnType() const
 {
-	if (FuncTypePtr ty = std::dynamic_pointer_cast<FunctionType>(Ty))
+	if (FuncTypePtr ty = std::dynamic_pointer_cast<FunctionType>(FunctionTy))
 		return ty->getReturnType();
+	return nullptr;
 }
 
 /// \brief Print the Function Info.
@@ -47,7 +76,7 @@ void Function::Print(std::ostringstream& out)
 		for (unsigned i = 0; i < ArgNum; i++)
 		{
 			Arguments[i]->Print(out);
-			if (i == ArgNum - 1) { out << ","; }
+			if (i < ArgNum - 1) { out << ","; }
 		}
 	}
 	out << ")\n{\n";

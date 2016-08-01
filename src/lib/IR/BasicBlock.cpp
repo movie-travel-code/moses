@@ -9,8 +9,9 @@
 #include "../../include/IR/IRType.h"
 using namespace compiler::IR;
 
-BasicBlock::BasicBlock(std::string Name, FuncPtr Parent, BBPtr InsertBefore)
-: Value(std::make_shared<Type>(Type::TypeID::LabelTy), Value::ValueTy::BasicBlockVal, Name)
+BasicBlock::BasicBlock(std::string Name, FuncPtr Parent, BBPtr InsertBefore) : 
+	Value(std::make_shared<Type>(Type::TypeID::LabelTy), Value::ValueTy::BasicBlockVal, Name), 
+	Parent(Parent)
 {}
 
 BBPtr BasicBlock::Create(std::string Name, FuncPtr Parent, BBPtr InsertBefore)
@@ -18,9 +19,9 @@ BBPtr BasicBlock::Create(std::string Name, FuncPtr Parent, BBPtr InsertBefore)
 	return std::make_shared<BasicBlock>(Name, Parent, InsertBefore);
 }
 
-void BasicBlock::Insert(Iterator InsertP, InstPtr I)
-{
-	InstList.insert(InsertP, I);
+std::list<InstPtr>::iterator BasicBlock::Insert(Iterator InsertP, InstPtr I)
+{ 
+	return InstList.insert(InsertP, I); 
 }
 
 Iterator BasicBlock::getIterator(InstPtr I)
@@ -45,6 +46,20 @@ std::shared_ptr<TerminatorInst> BasicBlock::getTerminator()
 {
 	if (InstList.empty()) return nullptr;
 	return std::dynamic_pointer_cast<TerminatorInst>(InstList.back());
+}
+
+// Shit code!
+bool BasicBlock::RemoveInst(const Value* val)
+{
+	for (auto iter = InstList.begin(), end = InstList.end(); iter != end; iter++)
+	{
+		if (val == (*iter).get())
+		{
+			InstList.erase(iter);
+			return true;
+		}
+	}
+	return false;
 }
 
 /// \brief Remove 'this' from the containing function.
@@ -78,7 +93,7 @@ BBPtr BasicBlock::splitBasicBlock(unsigned index, std::string BBName) { return n
 ///				%tmp3 = load i32* %num
 void BasicBlock::Print(std::ostringstream& out)
 {
-	out << " " << Name << ":";
+	out << " " << Name << ":\n";
 	for (auto item : InstList)
 	{
 		item->Print(out);

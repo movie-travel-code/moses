@@ -370,7 +370,7 @@ namespace compiler
 		public:
 			UnaryExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, std::string Op,
 				ExprASTPtr subExpr, ExprValueKind vk) :
-				Expr(start, end, type, vk, true), OpName(Op), SubExpr(SubExpr) {}
+				Expr(start, end, type, vk, true), OpName(Op), SubExpr(subExpr) {}
 
 			ExprASTPtr getSubExpr() const { return SubExpr; }
 
@@ -423,29 +423,26 @@ namespace compiler
 		{
 			/// Base - the expression for the base pointer or structure references. In
 			/// X.F, this is "X". ¼´DeclRefExpr
-			StmtASTPtr Base;
-
-			/// name - member name
-			std::string name;
-
-			/// MemberLoc - This is the location of the member name.
+			ExprASTPtr Base;
+			std::string MemberName;
 			SourceLocation MemberLoc;
-
-			/// This is the location of the -> or . in the expression.
 			SourceLocation OperatorLoc;
+			// e.g.	class O{ var a:int; var b:int;}; var o:O;
+			// o.a; -----> idx = 0;
+			// o.b; -----> idx = 1;
+			int idx;
 		public:
 			MemberExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-				std::shared_ptr<Expr> base, SourceLocation operatorloc, std::string name, bool canDoEvaluate) :
+				std::shared_ptr<Expr> base, SourceLocation operatorloc, std::string name, 
+				bool canDoEvaluate, int idx) :
 				Expr(start, end, type, ExprValueKind::VK_LValue, canDoEvaluate), Base(base), 
-				OperatorLoc(operatorloc), name(name) 
+				OperatorLoc(operatorloc), MemberName(name), idx(idx)
 			{}
 
 			void setBase(ExprASTPtr E) { Base = E; }
-
-			std::string getMemberName() const { return name; }
-
-			ExprASTPtr getBase() const { return nullptr; }
-
+			std::string getMemberName() const { return MemberName; }
+			ExprASTPtr getBase() const { return Base; }
+			int getIdx() const { return idx; }
 			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{
 				return v->visit(this);

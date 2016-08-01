@@ -45,9 +45,7 @@ int main()
 	// (4) IR write;
 	std::ostringstream out;
 	IRPrinter::Print(moduleBuilder.getIRs(), out);
-
-	std::ofstream mi("E:\test\moses.mi");
-	mi << out.str();
+	cout << out.str();
 	system("pause");
 	return 0;
 }

@@ -131,8 +131,7 @@ namespace compiler
 			// to instructions which don't use the returned value.
 			bool mayHaveSideEffects() const { return mayWriteToMemory(); }
 		public:
-			Instruction(TyPtr Ty, Opcode op/*, InstPtr InsertBefore = nullptr*/);
-			// Instruction(TyPtr Ty, Opcode op, unsigned NumOps, BBPtr InsertAtEnd);
+			Instruction(TyPtr Ty, Opcode op, BBPtr parent, std::string Name = "");
 		};
 
 		//===-------------------------------------------------------------===//
@@ -141,10 +140,10 @@ namespace compiler
 		class UnaryOperator : public Instruction
 		{
 		protected:
-			UnaryOperator(TyPtr Ty, Opcode op, ValPtr V, InstPtr IB = nullptr)
-				: Instruction(Ty, op) 
+			UnaryOperator(TyPtr Ty, Opcode op, ValPtr V, BBPtr parent, InstPtr IB = nullptr)
+				: Instruction(Ty, op, parent)
 			{
-				Operands.resize(1);
+				// Operands.resize(1);
 				Operands.push_back(Use(V, this));
 			}
 		public:
@@ -164,8 +163,8 @@ namespace compiler
 		class TerminatorInst : public Instruction
 		{
 		protected:
-			TerminatorInst(Instruction::Opcode op, BBPtr InsertAtEnd = nullptr) : 
-				Instruction(Type::getVoidType(), op)
+			TerminatorInst(Instruction::Opcode op, BBPtr parent, BBPtr InsertAtEnd = nullptr) : 
+				Instruction(Type::getVoidType(), op, parent)
 			{}
 			// Out of line virtual method, so the vtable, etc has a home.
 			~TerminatorInst() override;
@@ -196,8 +195,8 @@ namespace compiler
 		class BinaryOperator final : public Instruction
 		{
 		public:
-			BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty, 
-				InstPtr InstructionBefore = nullptr);
+			BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty, BBPtr parent,
+				std::string Name = "");
 			~BinaryOperator() override;
 			// BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty);
 
@@ -209,14 +208,24 @@ namespace compiler
 			/// Construct a binary instruction, given the opcode and the two operands.
 			/// Also automatically insert this instruction to the end of the BasicBlock
 			/// specified.
-			static BOInstPtr Create(Opcode op, ValPtr S1, ValPtr S2, BBPtr InsertAtEnd = nullptr);
-			static BOInstPtr Create(Opcode op, ValPtr S1, ValPtr S2, InstPtr InsertBefore);
-			static BOInstPtr CreateNeg(MosesIRContext& Ctx, ValPtr Operand, InstPtr InsertBefore = nullptr);
-			static BOInstPtr CreateNeg(MosesIRContext& Ctx, ValPtr Operand, BBPtr InsertAtEnd);
+			static BOInstPtr Create(Opcode op, ValPtr S1, ValPtr S2, BBPtr parent, 
+				BBPtr InsertAtEnd = nullptr);
+
+			static BOInstPtr Create(Opcode op, ValPtr S1, ValPtr S2, BBPtr parent, 
+				InstPtr InsertBefore);
+
+			static BOInstPtr CreateNeg(MosesIRContext& Ctx, ValPtr Operand, BBPtr parent, 
+				InstPtr InsertBefore = nullptr);
+
+			static BOInstPtr CreateNeg(MosesIRContext& Ctx, ValPtr Operand, BBPtr parent, 
+				BBPtr InsertAtEnd);
+
 			// Shit code!
-			static BOInstPtr CreateNot(MosesIRContext& Ctx, ValPtr Operand, InstPtr InsertBefore = nullptr);
+			static BOInstPtr CreateNot(MosesIRContext& Ctx, ValPtr Operand, BBPtr parent, 
+				InstPtr InsertBefore = nullptr);
+
 			// Shit code!
-			static BOInstPtr CreateNot(MosesIRContext& Ctx, ValPtr Operand, BBPtr InsertAtEnd);
+			static BOInstPtr CreateNot(MosesIRContext& Ctx, ValPtr Operand, BBPtr parent, BBPtr InsertAtEnd);
 			static bool isNeg(ValPtr V);
 			static bool isNot(ValPtr V);
 
@@ -259,7 +268,7 @@ namespace compiler
 			Predicate predicate;
 		public:
 			CmpInst(InstPtr InsertBefore, Predicate pred, ValPtr LHS, ValPtr RHS,
-				std::string NameStr = "");
+				BBPtr parent, std::string Name = "");
 			// Out-of-line method.
 			~CmpInst() override;
 
@@ -267,10 +276,10 @@ namespace compiler
 			/// the two operands. Optionally (if InstBefore is specified) insert the
 			/// instruction into a BasicBlock right before the specified instruction
 			/// @brief Create a CmpInst
-			static CmpInstPtr Create(Predicate predicate, ValPtr S1, ValPtr S2,
+			static CmpInstPtr Create(Predicate predicate, ValPtr S1, ValPtr S2, BBPtr parent,
 				std::string name = "", InstPtr InsertBefore = nullptr);
 
-			static CmpInstPtr Create(Predicate predicate, ValPtr S1, ValPtr S2,
+			static CmpInstPtr Create(Predicate predicate, ValPtr S1, ValPtr S2, BBPtr parent,
 				std::string name, BBPtr InsertAtEnd);
 
 			Predicate getPredicate() const { return predicate; }
@@ -296,11 +305,10 @@ namespace compiler
 			TyPtr AllocatedType;
 		public:
 			// AllocaInst(TyPtr Ty,/* ValPtr ArraySize, */std::string Name = "", InstPtr InsertBefore = nullptr);			
-			explicit AllocaInst(TyPtr Ty, ValPtr ArraySize = nullptr, 
-						std::string Name = "", BBPtr InsertAtEnd = nullptr);
+			explicit AllocaInst(TyPtr Ty, BBPtr parent, std::string Name = "", BBPtr InsertAtEnd = nullptr);
 			// Out-of-line method.
 			~AllocaInst() override;
-			static AllocaInstPtr Create(TyPtr Ty);
+			static AllocaInstPtr Create(TyPtr Ty, BBPtr parent, std::string Name = "");
 
 			/// getAllocatedType - Return the type that is being allocated by the instruction.
 			TyPtr getAllocatedType() const { return AllocatedType; }
@@ -312,72 +320,35 @@ namespace compiler
 		//===-------------------------------------------------------------===//
 		//						GetElementPtrInst Class
 		//===-------------------------------------------------------------===//
-
 		// GetElementPtrInst - an instruction for type-safe pointer arithmetic
 		// to access elements of arrays and structs.
-
 		class GetElementPtrInst final : public Instruction
 		{
-		private:
-			TyPtr SourceElementType;
-			TyPtr ResultElementType;
-
-			GetElementPtrInst(const GetElementPtrInst &GEPI);
-			void init(ValPtr Ptr, std::list<ValPtr> IdxList);
-
-			/// Constructors - Create a getelementptr instructions with a base pointer an
-			/// list of indices. The first ctor can optionally insert before an existing
-			/// instruction, the second appends the new instruction to the specified
-			/// BasicBlock.
-			GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, std::vector<ValPtr> IdxList,
-				unsigned Values, InstPtr InsertBefore = nullptr);
-
-			GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, std::vector<ValPtr> IdxList,
-				unsigned Values, BBPtr InsertAtEnd);
-			
+			GetElementPtrInst(const GetElementPtrInst &GEPI) = delete;
+			void init(ValPtr Ptr, std::vector<ValPtr> IdxList);
+			void init(ValPtr Ptr, ValPtr Idx0, ValPtr Idx1);
 		public:
-			static GEPInstPtr Create(TyPtr PointeeType, ValPtr Ptr,
-				std::vector<ValPtr> IdxList, InstPtr InsertBefore = nullptr)
-			{
-				unsigned Values = 1 + unsigned(IdxList.size());
-				// 进行类型检查
-				/*return new (Values) GetElementPtrInst(PointeeType, Ptr, IdxList, Values, 
-					InsertBefore);*/
-				return nullptr;
-			}
+			/// Constructors - Create a getelementptr instruction with a base pointer and an
+			/// list of indices.
+			GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, std::vector<ValPtr> IdxList,
+				BBPtr parent, std::string Name = "", InstPtr InsertBefore = nullptr);
 
-			// getType - Overload to return most specific sequential type.
-			// SequentialType *getType() const 
-			// {
-			//		return cast<SequaentialType>(Instruction::getType());
-			// }
+			/// Constructors - This constructions is convenience method because two
+			/// index getelementptr instructions are so common.
+			GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, ValPtr Idx0, ValPtr Idx1, BBPtr parent, 
+				std::string Name = "");
+		public:
+			static GEPInstPtr Create(TyPtr PointeeType, ValPtr Ptr, std::vector<ValPtr> IdxList, 
+				BBPtr parent, std::string Name = "", InstPtr InsertBefore = nullptr);
+			static GEPInstPtr Create(TyPtr PointeeType, ValPtr Ptr, ValPtr Idx0, ValPtr Idx1,
+				BBPtr parent, std::string Name = "", InstPtr InsertBefore = nullptr);
 
-			TyPtr getSourceElementType() const { return SourceElementType; }
-
-			void setSourceElementType(TyPtr Ty) { SourceElementType = Ty; }
-			void setResultElementType(TyPtr Ty) { ResultElementType = Ty; }
-
-			/// getIndexedType
-
-			static TyPtr getIndexedType(TyPtr Ty, std::list<ValPtr> IdxList);
-			// ...
-
-			ValPtr getPointerOperand()
-			{
-				// return nullptr;
-			}
-
-			const ValPtr getPointerOperand() const
-			{
-				// return nullptr;
-			}
-
-			static unsigned getPointerOperandIndex()
-			{}
-			// .. 补全
+			ValPtr getPointerOperand();
+			static unsigned getPointerOperandIndex() { return 0; }
+			unsigned getNumIndices() const { return getNumOperands() - 1; }
 
 			/// \brief Print the GetElementPtrInst.
-			void Print(std::ostringstream& out);
+			void Print(std::ostringstream &out);
 		};		
 
 		//===-------------------------------------------------------------===//
@@ -392,12 +363,12 @@ namespace compiler
 		private:
 			FuncTypePtr FTy;	
 		public:
-			CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args,
+			CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args, BBPtr parent,
 				std::string Name = "", BBPtr InsertAtEnd = nullptr);
 			/*CallInst(ValPtr Func, std::list<ValPtr> Args,
 				std::string Name = "", InstPtr InsertBefore = nullptr);*/
 
-			static CallInstPtr Create(ValPtr Func, std::vector<ValPtr> Args,
+			static CallInstPtr Create(ValPtr Func, std::vector<ValPtr> Args, BBPtr parent, 
 				std::string Name = "", InstPtr InsertBefore = nullptr);
 
 			/*static CallInstPtr Create(FuncTypePtr *Ty, ValPtr Func, std::list<ValPtr> Args,
@@ -511,9 +482,9 @@ namespace compiler
 				return User::operator new(s);
 			}*/
 
-			explicit PHINode(TyPtr Ty, unsigned NumReservedValues, 
+			explicit PHINode(TyPtr Ty, unsigned NumReservedValues, BBPtr parent, 
 				std::string NameStr = "", InstPtr InsertBefore = nullptr) :
-				Instruction(Ty, Instruction::Opcode::PHI)
+				Instruction(Ty, Instruction::Opcode::PHI, parent)
 			{}
 		protected:
 			// allocHungoffUses - this is moew complicated than the generic
@@ -586,14 +557,13 @@ namespace compiler
 		class ReturnInst final : public TerminatorInst
 		{
 			ReturnInst(const ReturnInst &RI) = delete;
-			ValPtr Val;
 		public:
 			// Note: If the Value* passed is of type void then the constructor behave as
 			// if it was passed NULL.
 			// ReturnInst(ValPtr retVal = nullptr, InstPtr InsertBefore = nullptr);
-			ReturnInst(ValPtr retVal = nullptr, BBPtr InsertAtEnd = nullptr);
+			ReturnInst(BBPtr parent, ValPtr retVal = nullptr, BBPtr InsertAtEnd = nullptr);
 			~ReturnInst() override;
-			static RetInstPtr Create(ValPtr retVal = nullptr, BBPtr InsertAtEnd = nullptr);
+			static RetInstPtr Create(BBPtr parent, ValPtr retVal = nullptr, BBPtr InsertAtEnd = nullptr);
 
 			ValPtr getReturnValue() const { return Operands.empty() ? nullptr : Operands[0].get(); }
 
@@ -635,10 +605,10 @@ namespace compiler
 			// BranchINst(BB *B, BB *I)						- 'br B'		insert at end
 			// BranchhInst(BB *T, BB *F, Value *C, BB *I)	- 'br C, T, F'	insert at end			
 		public:
-			explicit BranchInst(BBPtr IfTrue, BBPtr InsertAtEnd = nullptr);
-			BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond, BBPtr InsertAtEnd = nullptr);
-			static BrInstPtr Create(BBPtr IfTrue, BBPtr InsertAtEnd = nullptr);
-			static BrInstPtr Create(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond,
+			BranchInst(BBPtr IfTrue, BBPtr parent, BBPtr InsertAtEnd = nullptr);
+			BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond, BBPtr parent, BBPtr InsertAtEnd = nullptr);
+			static BrInstPtr Create(BBPtr IfTrue, BBPtr parent, BBPtr InsertAtEnd = nullptr);
+			static BrInstPtr Create(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond, BBPtr parent,
 				BBPtr InsertAtEnd = nullptr);
 			~BranchInst() override;
 			bool isUncoditional() const { return getNumOperands() == 1; }
@@ -672,9 +642,9 @@ namespace compiler
 		class LoadInst : public UnaryOperator
 		{
 		public:
-			LoadInst(ValPtr Ptr, std::string Name = "", BBPtr InsertAtEnd = nullptr);
+			LoadInst(ValPtr Ptr, BBPtr parent, std::string Name = "", BBPtr InsertAtEnd = nullptr);
 			~LoadInst() override;
-			static LoadInstPtr Create(ValPtr Ptr);
+			static LoadInstPtr Create(ValPtr Ptr, BBPtr parent);
 
 			ValPtr getPointerOperand() const 
 			{ 
@@ -699,8 +669,8 @@ namespace compiler
 			void init(ValPtr Val, ValPtr Ptr);
 		public:
 			// StoreInst(ValPtr Val, ValPtr Ptr, InstPtr InsertBefore = nullptr);
-			StoreInst(ValPtr Val, ValPtr Ptr, BBPtr InsertAtEnd = nullptr);
-			static StoreInstPtr Create(ValPtr Val, ValPtr Ptr);
+			StoreInst(ValPtr Val, ValPtr Ptr, BBPtr parent, BBPtr InsertAtEnd = nullptr);
+			static StoreInstPtr Create(ValPtr Val, ValPtr Ptr, BBPtr parent);
 			static bool classof(StoreInstPtr) { return true; }
 			static bool classof(InstPtr I) { return I->getOpcode() == Instruction::Opcode::Store; }
 

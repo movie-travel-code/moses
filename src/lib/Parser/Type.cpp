@@ -68,14 +68,42 @@ bool UserDefinedType::HaveMember(std::string name) const
 	return false;
 }
 
+int UserDefinedType::getIdx(std::string name) const
+{
+	for (unsigned i = 0; i < subTypes.size(); i++)
+	{
+		if (subTypes[i].second == name)
+			return i;
+	}
+	return -1;
+}
+
 unsigned long UserDefinedType::size() const
 {
 	unsigned long size = 0;
+
 	for (auto item : subTypes)
 	{
+		auto type = item.first;
+		type->size();
+
 		size += item.first->size();
 	}
 	return size;
+}
+
+/// \brief StripOfShell - 如果class类型，只是一种类型的简单包裹，则去掉表层。注意
+/// 该函数只在CodeGen为UserDefinedType生成ArgInfo的时候，调用。
+TyPtr UserDefinedType::StripOffShell() const
+{
+	if (size() > 32)
+		return nullptr;
+	// To Do: 由于moses暂时只允许int和bool，且都是4 bytes表示。
+	// 所以当size <= 32时，表示sub
+	if (auto UDTy = std::dynamic_pointer_cast<UserDefinedType>(subTypes[0].first))
+		return UDTy->StripOffShell();
+	else
+		return subTypes[0].first;
 }
 
 bool UserDefinedType::operator==(const Type& rhs) const
@@ -121,6 +149,18 @@ void AnonymousType::getTypes(std::vector<std::shared_ptr<Type>>& types) const
 			types.push_back(subTypes[index]);
 		}
 	}
+}
+
+TyPtr AnonymousType::StripOffShell() const
+{
+	if (size() > 32)
+		return nullptr;
+	// To Do: 由于moses暂时只允许int和bool，且都是4 bytes表示。
+	// 所以当size <= 32时，表示sub
+	if (auto UDTy = std::dynamic_pointer_cast<AnonymousType>(subTypes[0]))
+		return UDTy->StripOffShell();
+	else
+		return subTypes[0];
 }
 
 unsigned long AnonymousType::size() const 

@@ -8,8 +8,8 @@
 using namespace compiler::IR;
 //===---------------------------------------------------------------------===//
 // Implements Instruction.
-Instruction::Instruction(TyPtr Ty, Opcode op) : 
-	User(Ty, Value::ValueTy::InstructionVal)
+Instruction::Instruction(TyPtr Ty, Opcode op, BBPtr parent, std::string Name) :
+	User(Ty, Value::ValueTy::InstructionVal, Name), Parent(parent), op(op)
 {}
 
 FuncPtr Instruction::getFunction() const { return Parent->getParent(); }
@@ -35,10 +35,10 @@ bool Instruction::mayWriteToMemory() const
 
 //===---------------------------------------------------------------------===//
 // Implements CmpInst.
-CmpInst::CmpInst(InstPtr InsertBefore, Predicate pred, ValPtr LHS, ValPtr RHS, std::string NameStr) : 
-	Instruction(nullptr, Opcode::Cmp)
+CmpInst::CmpInst(InstPtr InsertBefore, Predicate pred, ValPtr LHS, ValPtr RHS, BBPtr parent, std::string Name) : 
+	Instruction(Type::getBoolType(), Opcode::Cmp, parent, Name), predicate(pred)
 {
-	Operands.resize(2);
+	// Operands.resize(2);
 	Operands.push_back(Use(LHS, this));
 	Operands.push_back(Use(RHS, this));
 	// To Do: some checks.	
@@ -46,15 +46,16 @@ CmpInst::CmpInst(InstPtr InsertBefore, Predicate pred, ValPtr LHS, ValPtr RHS, s
 
 CmpInst::~CmpInst() {}
 
-CmpInstPtr CmpInst::Create(Predicate predicate, ValPtr S1, ValPtr S2, std::string name, InstPtr InsertBefore)
+CmpInstPtr CmpInst::Create(Predicate predicate, ValPtr S1, ValPtr S2, BBPtr parent, 
+	std::string name, InstPtr InsertBefore)
 {
-	return std::make_shared<CmpInst>(nullptr, predicate, S1, S2, name);
+	return std::make_shared<CmpInst>(nullptr, predicate, S1, S2, parent, name);
 }
 
-CmpInstPtr CmpInst::Create(Predicate predicate, ValPtr S1, ValPtr S2,
+CmpInstPtr CmpInst::Create(Predicate predicate, ValPtr S1, ValPtr S2, BBPtr parent,
 	std::string name, BBPtr InsertAtEnd)
 {
-	return std::make_shared<CmpInst>(nullptr, predicate, S1, S2);
+	return std::make_shared<CmpInst>(nullptr, predicate, S1, S2, parent, name);
 }
 
 /// \brief Print CmpInst.
@@ -88,11 +89,12 @@ void CmpInst::Print(std::ostringstream& out)
 		assert(0 && "Unreachable code!");
 		break;
 	}
+	out << "%" << Name << " = cmp";
 	out << PreStr;
 	Operands[0].get()->getType()->Print(out);
 	out << " " << Operands[0].get()->getName() << ",";
 	Operands[1].get()->getType()->Print(out);
-	out << " " << Operands[0].get()->getName();
+	out << " " << Operands[1].get()->getName();
 	out << "        ; < ";
 	Type::getBoolType()->Print(out);
 	out << " > \n";
@@ -100,10 +102,11 @@ void CmpInst::Print(std::ostringstream& out)
 
 //===---------------------------------------------------------------------===//
 // Implements BinaryOperator Instructions.
-BinaryOperator::BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty, InstPtr InstructionBefore)
-	: Instruction(Ty, op)
+BinaryOperator::BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty, BBPtr parent, 
+	std::string Name)
+	: Instruction(Ty, op, parent)
 {
-	Operands.resize(2);
+	// Operands.resize(2);
 	Operands.push_back(Use(S1, this));
 	Operands.push_back(Use(S2, this));
 	assert(S1 && S2 && S1->getType() == S2->getType());
@@ -111,41 +114,41 @@ BinaryOperator::BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty, InstPt
 
 BinaryOperator::~BinaryOperator() {}
 
-BOInstPtr BinaryOperator::Create(Opcode op, ValPtr S1, ValPtr S2, BBPtr InsertAtEnd)
+BOInstPtr BinaryOperator::Create(Opcode op, ValPtr S1, ValPtr S2, BBPtr parent, BBPtr InsertAtEnd)
 {
 	assert(S1->getType() == S2->getType() &&
 		"Cannot create binary operator with two operands of differing type!");
-	return std::make_shared<BinaryOperator>(op, S1, S2, S1->getType());
+	return std::make_shared<BinaryOperator>(op, S1, S2, S1->getType(), parent);
 }
 
-BOInstPtr BinaryOperator::Create(Opcode op, ValPtr S1, ValPtr S2, InstPtr InsertBefore)
+BOInstPtr BinaryOperator::Create(Opcode op, ValPtr S1, ValPtr S2, BBPtr parent, InstPtr InsertBefore)
 {
-	return std::make_shared<BinaryOperator>(op, S1, S2, S1->getType());
+	return std::make_shared<BinaryOperator>(op, S1, S2, S1->getType(), parent);
 }
 
-BOInstPtr BinaryOperator::CreateNeg(MosesIRContext& Ctx, ValPtr Operand, InstPtr InsertBefore)
-{
-	ConstantIntPtr zero = ConstantInt::getZeroValueForNegative(Ctx);
-	return Create(Opcode::Sub, zero, Operand, InsertBefore);
-}
-
-BOInstPtr BinaryOperator::CreateNeg(MosesIRContext& Ctx, ValPtr Operand, BBPtr InsertAtEnd)
+BOInstPtr BinaryOperator::CreateNeg(MosesIRContext& Ctx, ValPtr Operand, BBPtr parent, InstPtr InsertBefore)
 {
 	ConstantIntPtr zero = ConstantInt::getZeroValueForNegative(Ctx);
-	return Create(Opcode::Sub, zero, Operand, InsertAtEnd);
+	return Create(Opcode::Sub, zero, Operand, parent, InsertBefore);
 }
 
-BOInstPtr BinaryOperator::CreateNot(MosesIRContext& Ctx, ValPtr Operand, InstPtr InsertBefore)
+BOInstPtr BinaryOperator::CreateNeg(MosesIRContext& Ctx, ValPtr Operand, BBPtr parent, BBPtr InsertAtEnd)
+{
+	ConstantIntPtr zero = ConstantInt::getZeroValueForNegative(Ctx);
+	return Create(Opcode::Sub, zero, Operand, parent, InsertAtEnd);
+}
+
+BOInstPtr BinaryOperator::CreateNot(MosesIRContext& Ctx, ValPtr Operand, BBPtr parent, InstPtr InsertBefore)
 {
 	ConstantBoolPtr True = ConstantBool::getTrue(Ctx);
-	return Create(Opcode::Xor, Operand, True, InsertBefore);
+	return Create(Opcode::Xor, Operand, True, parent, InsertBefore);
 }
 
 /// Shit code!
-BOInstPtr BinaryOperator::CreateNot(MosesIRContext& Ctx, ValPtr Operand, BBPtr InsertAtEnd)
+BOInstPtr BinaryOperator::CreateNot(MosesIRContext& Ctx, ValPtr Operand, BBPtr parent, BBPtr InsertAtEnd)
 {
 	ConstantBoolPtr True = ConstantBool::getTrue(Ctx);
-	return Create(Opcode::Xor, Operand, True, InsertAtEnd);
+	return Create(Opcode::Xor, Operand, True, parent, InsertAtEnd);
 }
 
 /// \brief Print the BinaryOperator info.
@@ -192,17 +195,17 @@ void BinaryOperator::Print(std::ostringstream& out)
 	Operands[0].get()->getType()->Print(out);
 	out << " " << Operands[0].get()->getName() << ",";
 	Operands[0].get()->getType()->Print(out);
-	out << " " << Operands[0].get()->getName();
+	out << " " << Operands[1].get()->getName();
 	out << "        ; <";
 	Ty->Print(out);
 	out << " >\n";
 }
 //===---------------------------------------------------------------------===//
 // StoreInst Implementation
-StoreInst::StoreInst(ValPtr Val, ValPtr Ptr, BBPtr InsertAtEnd) :
-		Instruction(Type::getVoidType(), Opcode::Store)
+StoreInst::StoreInst(ValPtr Val, ValPtr Ptr, BBPtr parent, BBPtr InsertAtEnd) :
+		Instruction(Type::getVoidType(), Opcode::Store, parent)
 {
-	Operands.resize(2);
+	// Operands.resize(2);
 	Operands.push_back(Use(Val, this));
 	Operands.push_back(Use(Ptr, this));
 	assert(Val && Ptr && "Both operands must be non-null!");
@@ -210,14 +213,19 @@ StoreInst::StoreInst(ValPtr Val, ValPtr Ptr, BBPtr InsertAtEnd) :
 	//      store i32 10, i32* %retval
 	// %retval must have i32* type.
 	assert(Ptr->getType()->isPointerTy() && "Ptr must have pointer type!");
+
+	auto valty = Val->getType();
+	auto ptrty = Ptr->getType();
+	auto dynptrty = std::dynamic_pointer_cast<PointerType>(Ptr->getType());
+
 	assert(Val->getType().get() == 
 			std::dynamic_pointer_cast<PointerType>(Ptr->getType())->getElementTy().get()
 			&& "Ptr must be a pointer to Val type!");
 }
 
-StoreInstPtr StoreInst::Create(ValPtr Val, ValPtr Ptr)
+StoreInstPtr StoreInst::Create(ValPtr Val, ValPtr Ptr, BBPtr parent)
 {
-	return std::make_shared<StoreInst>(Val, Ptr);
+	return std::make_shared<StoreInst>(Val, Ptr, parent);
 }
 
 /// \brief Print the StoreInst info.
@@ -238,16 +246,15 @@ void StoreInst::Print(std::ostringstream& out)
 
 //===---------------------------------------------------------------------===//
 // Implements AllocInst.
-AllocaInst::AllocaInst(TyPtr Ty, ValPtr Val, std::string Name, BBPtr InsertAtEnd) :
-	UnaryOperator(PointerType::get(Ty), Opcode::Alloca, nullptr, nullptr), 
-	AllocatedType(Ty)
+AllocaInst::AllocaInst(TyPtr Ty, BBPtr parent, std::string Name, BBPtr InsertAtEnd) :
+	UnaryOperator(PointerType::get(Ty), Opcode::Alloca, nullptr, parent), AllocatedType(Ty)
 {}
 
 AllocaInst::~AllocaInst() {}
 
-AllocaInstPtr AllocaInst::Create(TyPtr Ty)
+AllocaInstPtr AllocaInst::Create(TyPtr Ty, BBPtr parent, std::string Name)
 {
-	return std::make_shared<AllocaInst>(Ty);
+	return std::make_shared<AllocaInst>(Ty, parent, Name);
 }
 
 /// \brief Print the AllocaInst info.
@@ -263,17 +270,68 @@ void AllocaInst::Print(std::ostringstream& out)
 	out << " >\n";
 }
 
+//===-------------------------------------------------------------===//
+//						GetElementPtrInst Class
+void GetElementPtrInst::init(ValPtr Ptr, std::vector<ValPtr> Idx)
+{
+	Operands.push_back(Use(Ptr, this));
+	for (unsigned i = 0, size = Idx.size(); i < size; i++)
+		Operands.push_back(Use(Idx[i], this));
+}
+
+void GetElementPtrInst::init(ValPtr Ptr, ValPtr Idx0, ValPtr Idx1)
+{
+	Operands.push_back(Use(Ptr, this));
+	Operands.push_back(Use(Idx0, this));
+	Operands.push_back(Use(Idx1, this));
+}
+
+GetElementPtrInst::GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, std::vector<ValPtr> IdxList,
+	BBPtr parent, std::string Name, InstPtr InsertBefore) : 
+	Instruction(PointerType::get(PointeeType), Opcode::GetElementPtr, parent)
+{
+	init(Ptr, IdxList);
+}
+
+GetElementPtrInst::GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, ValPtr Idx0, ValPtr Idx1, 
+	BBPtr parent, std::string Name) :
+	Instruction(PointerType::get(PointeeType), Opcode::GetElementPtr, parent)
+{
+	init(Ptr, Idx0, Idx1);
+}
+
+
+GEPInstPtr GetElementPtrInst::Create(TyPtr PointeeType, ValPtr Ptr, ValPtr Idx0, ValPtr Idx1,
+	BBPtr parent, std::string Name, InstPtr InsertBefore)
+{
+	return std::make_shared<GetElementPtrInst>(PointeeType, Ptr, Idx0, Idx1, parent, Name);
+}
+
+GEPInstPtr GetElementPtrInst::Create(TyPtr PointeeType, ValPtr Ptr, std::vector<ValPtr> IdxList,
+	BBPtr parent, std::string Name, InstPtr InsertBefore)
+{
+	return std::make_shared<GetElementPtrInst>(PointeeType, Ptr, IdxList, parent, Name);
+}
+
+void GetElementPtrInst::Print(std::ostringstream &out)
+{
+	out << Name << " = getelementptr";
+	Operands[0].get()->getType()->Print(out);
+	out << " " << Operands[0].get()->getName() << ", ";
+	out << "int 0, " << "int " << Operands[2].get()->getName() << "\n";
+}
+
 //===---------------------------------------------------------------------===//
 // Implements the Terminatror inst.
 TerminatorInst::~TerminatorInst() {}
 
 //===---------------------------------------------------------------------===//
 // Implements CallInst.
-CallInst::CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args,  std::string Name, 
-				BBPtr InsertAtEnd) : 
-		Instruction(FTy->getReturnType(), Opcode::Call), FTy(FTy)
+CallInst::CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args, BBPtr parent, 
+	std::string Name, BBPtr InsertAtEnd) : 
+	Instruction(FTy->getReturnType(), Opcode::Call, parent), FTy(FTy)
 {
-	Operands.resize(1 + Args.size());
+	// Operands.resize(1 + Args.size());
 	Operands.push_back(Use(Func, this));
 	assert(Args.size() == FTy->getNumParams() && "The number of parameters is different!");
 	unsigned ArgsNum = Args.size();
@@ -286,14 +344,14 @@ CallInst::CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args,  std:
 
 CallInst::~CallInst() {}
 
-CallInstPtr CallInst::Create(ValPtr Func, std::vector<ValPtr> Args, 
+CallInstPtr CallInst::Create(ValPtr Func, std::vector<ValPtr> Args, BBPtr parent,
 			std::string Name, InstPtr InsertBefore)
 {
 	auto func = std::dynamic_pointer_cast<Function>(Func);
 	assert(func && "The Value must be the 'Function'!");
 	auto functy = std::dynamic_pointer_cast<FunctionType>(func->getFunctionType());
 	assert(functy && "The function must have 'FunctionType'");
-	return std::make_shared<CallInst>(functy, Func, Args);
+	return std::make_shared<CallInst>(functy, Func, Args, parent);
 }
 
 ValPtr CallInst::getArgOperand(unsigned i) const
@@ -341,19 +399,20 @@ void CallInst::Print(std::ostringstream& out)
 	}
 	out << ")" << "        ; <";
 	Ty->Print(out);
-	out << ">";
+	out << ">\n";
 }
 //===---------------------------------------------------------------------===//
 // Implements ReturnInst.
-ReturnInst::ReturnInst(ValPtr retVal, BBPtr InsertAtEnd) : TerminatorInst(Opcode::Ret)
+ReturnInst::ReturnInst(BBPtr parent, ValPtr retVal, BBPtr InsertAtEnd) :
+	TerminatorInst(Opcode::Ret, parent)
 {
-	Operands.resize(1);
+	// Operands.resize(1);
 	Operands.push_back(Use(retVal, this));
 }
 
-ReturnInstPtr ReturnInst::Create(ValPtr retVal, BBPtr InsertAtEnd)
+ReturnInstPtr ReturnInst::Create(BBPtr parent, ValPtr retVal, BBPtr InsertAtEnd)
 {
-	return std::make_shared<ReturnInst>(retVal, InsertAtEnd);
+	return std::make_shared<ReturnInst>(parent, retVal, InsertAtEnd);
 }
 
 ReturnInst::~ReturnInst() {}
@@ -374,24 +433,33 @@ void ReturnInst::setSuccessor(unsigned idx, BBPtr B)
 void ReturnInst::Print(std::ostringstream& out)
 {
 	out << "ret";
-	Ty->Print(out);
-	out << " " << Name;
+	if (Operands.size() == 1)
+	{
+		Operands[0].get()->getType()->Print(out);
+		std::string name = Operands[0].get()->getName();
+		out << " " << name << "\n";
+	}
+	else
+	{
+		out << " void\n";
+	}
 }
 //===---------------------------------------------------------------------===//
 // Implements the BranchInst class.
-BranchInst::BranchInst(BBPtr IfTrue, BBPtr InsertAtEnd) : TerminatorInst(Opcode::Br)
+BranchInst::BranchInst(BBPtr IfTrue, BBPtr parent, BBPtr InsertAtEnd) : 
+	TerminatorInst(Opcode::Br, parent)
 {
 	assert(IfTrue && "Dest basic block may not be null!");
-	Operands.resize(1);
+	// Operands.resize(1);
 	Operands.push_back(Use(IfTrue, this));
 }
 
-BranchInst::BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr CondV, BBPtr InsertAtEnd) : 
-		TerminatorInst(Opcode::Br)
+BranchInst::BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr CondV, BBPtr parent, BBPtr InsertAtEnd) : 
+		TerminatorInst(Opcode::Br, parent)
 {
 	assert(IfTrue && IfFalse && "Dest basic blocks may not be null!");
 	assert(CondV->getType()->isBoolTy() && "May only branch on boolean predicates!");
-	Operands.resize(3);
+	// Operands.resize(3);
 	Operands.push_back(Use(IfTrue, this));
 	Operands.push_back(Use(IfFalse, this));
 	Operands.push_back(Use(CondV, this));
@@ -399,14 +467,15 @@ BranchInst::BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr CondV, BBPtr InsertAt
 
 BranchInst::~BranchInst() {}
 
-BrInstPtr BranchInst::Create(BBPtr IfTrue, BBPtr InsertAtEnd)
+BrInstPtr BranchInst::Create(BBPtr IfTrue, BBPtr parent, BBPtr InsertAtEnd)
 {
-	return std::make_shared<BranchInst>(IfTrue, InsertAtEnd);
+	return std::make_shared<BranchInst>(IfTrue, parent, InsertAtEnd);	
 }
 
-BrInstPtr BranchInst::Create(BBPtr IfTrue, BBPtr IfFalse, ValPtr CondV, BBPtr InsertAtEnd)
+BrInstPtr BranchInst::Create(BBPtr IfTrue, BBPtr IfFalse, ValPtr CondV, BBPtr parent, 
+	BBPtr InsertAtEnd)
 {
-	return std::make_shared<BranchInst>(IfTrue, IfFalse, CondV, InsertAtEnd);
+	return std::make_shared<BranchInst>(IfTrue, IfFalse, CondV, parent, InsertAtEnd);
 }
 
 ValPtr BranchInst::getSuccessor(unsigned i) const
@@ -428,15 +497,27 @@ void BranchInst::setSuccessor(unsigned idx, BBPtr NewSucc)
 ///			br i1 %cmp, label %if.then, label %if.end
 void BranchInst::Print(std::ostringstream& out)
 {
-	out << "br bool " 
-		<< Operands[0].get()->getName() 
-		<< ", label " 
-		<< Operands[0].get()->getName();
+	if (Operands.size() == 3)
+	{
+		out << "br bool "
+			<< Operands[2].get()->getName()
+			<< ", label "
+			<< Operands[0].get()->getName()
+			<< ", label "
+			<< Operands[1].get()->getName()
+			<< "\n";
+	}
+	else
+	{
+		out << "br label "
+			<< Operands[0].get()->getName()
+			<< "\n";
+	}
 }
 //===---------------------------------------------------------------------===//
 // Implements the Load instruciton.
-LoadInst::LoadInst(ValPtr Addr, std::string Name, BBPtr InsertAtEnd) : 
-		UnaryOperator(nullptr, Opcode::Load, Addr)
+LoadInst::LoadInst(ValPtr Addr, BBPtr parent, std::string Name, BBPtr InsertAtEnd) :
+		UnaryOperator(nullptr, Opcode::Load, Addr, parent)
 {
 	auto PointerTy = std::dynamic_pointer_cast<PointerType>(Addr->getType());
 	assert(PointerTy && "Addr must have pointer type.");
@@ -445,9 +526,9 @@ LoadInst::LoadInst(ValPtr Addr, std::string Name, BBPtr InsertAtEnd) :
 
 LoadInst::~LoadInst() {}
 
-LoadInstPtr LoadInst::Create(ValPtr Addr)
+LoadInstPtr LoadInst::Create(ValPtr Addr, BBPtr parent)
 {
-	return std::make_shared<LoadInst>(Addr);
+	return std::make_shared<LoadInst>(Addr, parent);
 }
 
 /// \brief Print the LoadInst info.

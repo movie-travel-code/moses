@@ -7,7 +7,7 @@
 using namespace compiler::ast;
 using namespace compiler::IR;
 using namespace compiler::IRBuild;
-
+extern void print(std::shared_ptr<compiler::IR::Value> V);
 ValPtr ModuleBuilder::visit(const IfStatement* IS)
 {	
 	EmitIfStmt(IS);
@@ -49,7 +49,16 @@ void ModuleBuilder::EmitBlock(BBPtr BB, bool IsFinished)
 		BB.reset();
 		return;
 	}
-	CurFunc->CurFn->getBasicBlockList().push_back(BB);
+	
+	if (CurFunc->CurFn)
+	{
+		CurFunc->CurFn->addBB(BB);
+	}
+	else
+	{
+		IRs.push_back(BB);
+	}
+	// CurFunc->CurFn->getBasicBlockList().push_back(BB);
 	SetInsertPoint(BB);
 }
 
@@ -65,15 +74,30 @@ void ModuleBuilder::EmitBrach(BBPtr Target)
 	else
 	{
 		// Otherwise, create a fall-through branch.
-		CreateBr(Target);
+		auto ret = CreateBr(Target);
+		print(ret);
 	}
 	ClearInsertionPoint();
 }
 
 void ModuleBuilder::EmitReturnBlock()
 {
-	// For cleanliness, we try to avoid emitting the return block for simple cases.
-	
+	if (CurFunc->ReturnBlock->use_empty())
+		return;
+	// otherwise, if the return block is the target of a single direct
+	// branch then we can just put the code in that block instead.
+	if (CurFunc->ReturnBlock->hasOneUse())
+	{
+		const BranchInst* BI = dynamic_cast<const BranchInst*>(CurFunc->ReturnBlock->use_begin());
+		if (BI && BI->isUncoditional() && BI->getSuccessor(0).get() == CurFunc->ReturnBlock.get())
+		{
+			auto BB = BI->getParent();
+			SetInsertPoint(BB);
+			BB->RemoveInst(BI);
+			return;
+		}
+	}
+
 	EmitBlock(CurFunc->ReturnBlock);
 }
 
@@ -149,7 +173,10 @@ void ModuleBuilder::EmitWhileStmt(const WhileStatement* whilestmt)
 
 	// As long as the conditon is true, go to the loop body.
 	if (EmitBoolCondBranch)
-		CreateCondBr(CondVal, LoopBody, ExitBlock);
+	{
+		auto ret = CreateCondBr(CondVal, LoopBody, ExitBlock);
+		print(ret);
+	}
 
 	// Emit the loop body.
 	EmitBlock(LoopBody);
@@ -212,15 +239,16 @@ ValPtr ModuleBuilder::visit(const CompoundStmt* comstmt)
 			if (scope->isVisitedForIRGen())
 				continue;
 			CurScope = scope->getScope();
+			break;
 		}
 		continue;
 	}
 
 	// (2) Generated the code for children.
-	unsigned size = comstmt->getSize();
-	for (unsigned i = 0; i < size; i++)
+ 	unsigned size = comstmt->getSize();
+	for (unsigned i = 0; i < size; ++i)
 	{
-		(*comstmt)[i]->Accept(this);
+		auto ret = (*comstmt)[i]->Accept(this);
 	}
 
 	// (3) Switch the scope back.
@@ -261,9 +289,8 @@ void ModuleBuilder::EmitIfStmt(const IfStatement* ifstmt)
 		///	        }
 		/// But moses have no goto statements, so we don't need to worry.
 		if (Executed)
-		{
 			Executed->Accept(this);
-		}
+		return;
 	}
 
 	// othewise, the condition did not fold, or we couldn't elide it. Just emit
@@ -283,14 +310,18 @@ void ModuleBuilder::EmitIfStmt(const IfStatement* ifstmt)
 
 	// Emit the 'then' code.
 	EmitBlock(ThenBlock);
-	ifstmt->Accept(this);
-	EmitBrach(ContBlock);
+	ifstmt->getThen().get()->Accept(this);
+	print(ThenBlock);
 
+	EmitBrach(ContBlock);
 	// Emit the 'else' code if present.
 	if (auto Else = ifstmt->getElse())
 	{
 		EmitBlock(ElseBlock);
+		
 		Else.get()->Accept(this);
+		print(ElseBlock);
+
 		EmitBrach(ContBlock);
 	}
 
@@ -326,10 +357,16 @@ ValPtr ModuleBuilder::EmitReturnStmt(const ReturnStatement* RS)
 	{
 		// Do nothing(return value is left uninitialized).
 	}
+	else if (SubE->getType()->getKind() == TypeKind::USERDEFIED || 
+		SubE->getType()->getKind() == TypeKind::ANONYMOUS)
+	{
+		EmitAggExpr(SubE, CurFunc->ReturnValue);
+	}
 	else
 	{
 		ValPtr V = SubE->Accept(this);
-		CreateStore(V, CurFunc->ReturnValue);
+		auto ret = CreateStore(V, CurFunc->ReturnValue);
+		print(ret);
 	}
 	EmitBrach(CurFunc->ReturnBlock);
 	return nullptr;

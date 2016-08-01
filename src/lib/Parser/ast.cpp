@@ -22,6 +22,7 @@ StmtASTPtr CompoundStmt::getSubStmt(unsigned index) const
 
 StmtASTPtr CompoundStmt::operator[](unsigned index) const
 {
+	assert(index < SubStmts.size() && "Index out of range!");
 	return SubStmts[index];
 }
 

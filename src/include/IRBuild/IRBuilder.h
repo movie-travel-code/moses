@@ -71,16 +71,21 @@ namespace compiler
 		struct FunctionBuilderStatus
 		{
 			FunctionDecl* CurFuncDecl;
-			std::shared_ptr<CGFunctionInfo const> CurFnInfo;
+			CGFuncInfoConstPtr CGFnInfo;
 			TyPtr FnRetTy;
 			FuncPtr CurFn;
 			// Count the return expr(contain implicit return-expr).
 			unsigned NumReturnExprs;
 
+			// For switching context to top-level.
+			BBPtr TopLevelCurBB;
+			BBPtr TopLevelEntry;
+			std::list<InstPtr>::iterator TopLevelAllocaIsPt;
+			bool TopLevelIsAllocaInsertPointSetByNormalInsert;
+
 			/// ReturnBlock - Unified return block.
 			/// ReturnBlock can omit later.
 			BBPtr ReturnBlock;
-
 			/// ReturnValue - The temporary alloca to hold the return value. This is null
 			/// iff the function has no return value.
 			/// If we have multiple return statements, we need this tempprary alloca.
@@ -112,7 +117,7 @@ namespace compiler
 			ValPtr ReturnValue;
 
 			explicit FunctionBuilderStatus() : 
-				CurFuncDecl(nullptr), CurFnInfo(nullptr), FnRetTy(nullptr), CurFn(nullptr), 
+				CurFuncDecl(nullptr), CGFnInfo(nullptr), FnRetTy(nullptr), CurFn(nullptr), 
 				ReturnValue(nullptr), NumReturnExprs(0)
 			{}
 		};
@@ -180,6 +185,8 @@ namespace compiler
 			// Before executing the function code, we should pre-allocate a portion of memory
 			// on the stack.
 			std::list<InstPtr>::iterator AllocaInsertPoint;
+			bool isAllocaInsertPointSetByNormalInsert;
+			BBPtr EntryBlock;
 		public:
 			ModuleBuilder(std::shared_ptr<Scope> SymbolInfo, MosesIRContext &context);
 
@@ -252,9 +259,9 @@ namespace compiler
 			//===--------------------------------------------------------------===//
 			// Helper for function call generation.
 			//===--------------------------------------------------------------===//
-			ValPtr EmitCall(ValPtr FuncAddr, const std::vector<ExprASTPtr> &Args);
+			ValPtr EmitCall(const FunctionDecl* FD, ValPtr FuncAddr, const std::vector<ExprASTPtr> &Args);
 
-			ValPtr EmitCall(ValPtr FuncAddr, CallArgList CallArgs);
+			ValPtr EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr, CallArgList CallArgs);
 
 			/// EmitCallArg - Emit a single call argument.
 			void EmitCallArg(const Expr* E, compiler::IRBuild::ASTTyPtr ArgType);
@@ -274,23 +281,49 @@ namespace compiler
 			//===---------------------------------------------------------===//
 			/// \brief Insert a new instruction to the current block.
 			template<typename InstTy>
-			InstTy InsertHelper(InstTy I, std::string Name = "") const
+			InstTy InsertHelper(InstTy I, std::string Name = "")
 			{
-				CurBB->Insert(InsertPoint, I);
+				if (!isAllocaInsertPointSetByNormalInsert)
+				{
+					AllocaInsertPoint = CurBB->Insert(InsertPoint, I);
+					isAllocaInsertPointSetByNormalInsert = true;
+				}
+				else
+				{
+					CurBB->Push(I);
+				}
+
+				// CurBB->Push(I);
 				I->setName(Name);
 				return I;
 			}
 
-			AllocaInstPtr InsertHelper(AllocaInstPtr I, std::string Name = "") const
+			ConstantBoolPtr InsertHelper(ConstantBoolPtr B, std::string Name = "")
 			{
-				CurBB->Insert(AllocaInsertPoint, I);
+				B->setName(Name);
+				return B;
+			}
+
+			ConstantIntPtr InsertHelper(ConstantIntPtr I, std::string Name = "")
+			{
 				I->setName(Name);
 				return I;
+			}
+
+			AllocaInstPtr InsertHelper(AllocaInstPtr I, std::string Name = "")
+			{
+				if (EntryBlock)
+				{
+					EntryBlock->Insert(AllocaInsertPoint, I);
+					I->setName(Name);	
+					return I;
+				}
+				assert(0 && "Unreachable code!");
 			}
 
 			/// \brief Template specialization.
-			ValPtr InsertHelper(ConstantBoolPtr V, std::string Name = "") const { return V; }
-			ValPtr InsertHelper(ConstantIntPtr V, std::string Name = "") const { return V; }
+			/*ValPtr InsertHelper(ConstantBoolPtr V, std::string Name = "") const { return V; }
+			ValPtr InsertHelper(ConstantIntPtr V, std::string Name = "") const { return V; }*/
 			/// \brief Clear the insertion point: created instructions will not be
 			/// inserted into a block.
 			void ClearInsertionPoint() 
@@ -377,8 +410,9 @@ namespace compiler
 			AllocaInstPtr CreateAlloca(TyPtr Ty, std::string Name = "");
 			LoadInstPtr CreateLoad(ValPtr Ptr);
 			StoreInstPtr CreateStore(ValPtr Val, ValPtr Ptr);
-			GEPInstPtr CreateGEP(TyPtr Ty, ValPtr Ptr, std::vector<ValPtr> IdxList, 
+			GEPInstPtr CreateGEP(TyPtr Ty, ValPtr Ptr, std::vector<unsigned> IdxList, 
 						std::string Name = "");
+			GEPInstPtr CreateGEP(TyPtr Ty, ValPtr Ptr, unsigned Idx, std::string Name = "");
 
 			//===---------------------------------------------------------------===//
 			// Instruction creation methods: Compare Instructions.
@@ -395,7 +429,7 @@ namespace compiler
 			// Instruction creation methods: Other Instructions.
 			//===---------------------------------------------------------------===//
 			PHINodePtr CreatePHI(TyPtr Ty, unsigned NumReservedValues, std::string Name = "");
-			CallInstPtr CreateCall(ValPtr Callee, std::vector<ValPtr> Args, std::string Name = "");
+			CallInstPtr CreateCall(ValPtr Callee, std::vector<ValPtr> Args);
 			EVInstPtr CreateExtractValueValue(ValPtr Agg, std::vector<unsigned> Idxs, 
 						std::string Name = "");
 
@@ -413,8 +447,10 @@ namespace compiler
 			BBPtr CreateBasicBlock(std::string Name, FuncPtr parent = nullptr, BBPtr before = nullptr);			
 		private:
 			//===---------------------------------------------------------===//
-			// Helpers for value.
+			// Helpers.
 			//===---------------------------------------------------------===//
+			void SaveTopLevelCtxInfo();
+			void RestoreTopLevelCtxInfo();
 		private:
 			//===---------------------------------------------------------===//
 			/// \brief Emit code for function decl.
@@ -466,7 +502,7 @@ namespace compiler
 			//              ======================
 			//             |   ret                |
 			//              ======================
-			void EmitFunctionEpilogue();
+			void EmitFunctionEpilogue(CGFuncInfoConstPtr CGFnInfo);
 			//===---------------------------------------------------------===//
 			// Emit code for stmts.
 
@@ -536,7 +572,11 @@ namespace compiler
 			/// We should emit code for 'num'.
 			LValue EmitLValue(const Expr* E);
 
-			LValue EmitDeclRefLValue(const DeclRefExpr* DRE);
+			LValue EmitDeclRefLValue(const DeclRefExpr *DRE);
+
+			LValue EmitMemberExprLValue(const MemberExpr *ME);
+
+			LValue EmitCallExprLValue(const CallExpr* CE);
 
 			/// EmitDeclRefLValue - Emit code to compute the location of DeclRefExpr.
 			/// For example:
@@ -557,7 +597,7 @@ namespace compiler
 			/// \brief EmitPrePostIncDec - Emit code for '--' '++'.
 			ValPtr EmitPrePostIncDec(const UnaryExpr* UE, bool isInc, bool isPre);
 
-			void EmitMemberExpr(const MemberExpr* ME);
+			ValPtr EmitMemberExpr(const MemberExpr* ME);
 
 			/// \brief Handle the algebraic and boolean operation, include '+' '-' '*' '/' '%'
 			///	'<' '>' '<=' '>=' '==' '!='.
@@ -599,6 +639,40 @@ namespace compiler
 			/// At the end of the 'EmitBinaryExpr()', we need handle the assignment(
 			///	load from mem and store to the num).
 			void EmitStoreThroughLValue(RValue Src, LValue Dst, bool isInit = false);
+
+			//===-----------------------------------------------------------------------===//
+			// Aggregate Expr stuff.
+			// 对于Aggregate Type对象的处理，主要集中在函数传参，返回语句以及赋值语句上。
+			// (1) 函数传参，主要集中在 EmitFunctionProglog() 和 EmitCallExpr()上
+			// (2) 返回语句，主要集中在 EmitReturnStmt()上
+			// (3) 赋值语句，主要集中在 EmitBinaryExpr()上
+
+			/// EmitAggExpr - Emit the computation of the specified expression of aggregate
+			/// type. The result is computed into DestPtr. Note that if DestPtr is null, the
+			/// value of the aggregate expression is not needed.
+			void EmitAggExpr(const Expr *E, ValPtr DestPtr);
+
+			void EmitDeclRefExprAgg(const DeclRefExpr *DRE, ValPtr DestPtr);
+			void EmitMemberExprAgg(const MemberExpr *ME, ValPtr DestPtr);
+			void EmitCallExprAgg(const CallExpr* CE, ValPtr DestPtr);
+			void EmitBinaryExprAgg(const BinaryExpr* B);
+
+			/// EmitAggregateCopy - Emit an aggregate copy.
+			void EmitAggregateCopy(ValPtr DestPtr, ValPtr SrcPtr, ASTTyPtr Ty);
+
+			/// EmitAggregateClear
+			void EmitAggregateClear(ValPtr DestPtr, ASTTyPtr Ty);
+
+			// EmitAggLoadOfLValue - Given an expression with aggregate type that represents
+			// a value lvalue, thid method emits the address of the lvalue, then loads the
+			// result into DestPtr.
+			void EmitAggLoadOfLValue(const Expr *E, ValPtr DestPtr);
+
+			/// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
+			void EmitFinalDestCopy(const Expr *E, RValue Src, ValPtr DestPtr);
+
+			/// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
+			void EmitFinalDestCopy(const Expr *E, LValue Src, ValPtr DestPtr);
 
 			/// SimplifyForwardingBlocks - If the given basic block is only a branch to
 			/// another basic block, simplify it. This assumes that no other code could

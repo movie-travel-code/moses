@@ -42,10 +42,14 @@ void Type::Print(std::ostringstream& out)
 		out << " label";
 		break;
 	case compiler::IR::Type::IntegerTy:
-		out << "int";
+		out << " int";
 		break;
 	case compiler::IR::Type::BoolTy:
 		out << " bool";
+		break;
+	case compiler::IR::Type::FunctionTy:
+		// oops. Have no idea to handle the funciton type's name.
+		out << " function.type";
 		break;
 	default:
 		break;
@@ -88,7 +92,7 @@ std::shared_ptr<FunctionType> FunctionType::get(TyPtr retty)
 /// [2] = parm2
 IRTyPtr FunctionType::operator[](unsigned index) const
 {
-	assert(index != 0 && index <= NumContainedTys - 1 && 
+	assert(index < NumContainedTys - 1 && 
 		"Index out of range when we get parm IR type.");
 	return ContainedTys[index];
 }
@@ -247,17 +251,23 @@ std::shared_ptr<StructType> StructType::get(ASTTyPtr type)
 ///
 ///			var num = {int, bool};
 ///			%anony.1 = type {int, bool}
+void StructType::PrintCompleteInfo(std::ostringstream& out)
+{
+	out << Name << " struct.type {";
+	if (NumContainedTys > 0)
+	for (auto item : ContainedTys)
+		item->Print(out);
+	out << "}";
+}
+
 void StructType::Print(std::ostringstream& out)
 {
-	out << Name << " = type {";
-	if (NumContainedTys > 0)
-	{
-		for (auto item : ContainedTys)
-		{
-			item->Print(out);
-		}
-	}
-	out << "}";
+	out << " " << Name;
+}
+
+void StructType::setName(std::string Name)
+{
+	this->Name = Name;
 }
 
 //===---------------------------------------------------------------------===//

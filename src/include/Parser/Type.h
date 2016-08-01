@@ -42,7 +42,9 @@ namespace compiler
 			Type(TypeKind kind) : Kind(kind) {}
 
 			virtual TyPtr const_remove() const;
+			// Shit code!
 			virtual unsigned long size() const { return 0; }
+			virtual TyPtr StripOffShell() const { return nullptr; };
 
 			bool operator==(const Type& rhs) const;
  			TypeKind getKind() const { return Kind; }
@@ -55,7 +57,7 @@ namespace compiler
 		{
 		public:
 			BuiltinType(TypeKind kind) : Type(kind) {}
-			virtual unsigned long size()
+			virtual unsigned long size() const
 			{
 				switch (Kind)
 				{
@@ -88,9 +90,23 @@ namespace compiler
 				std::vector<std::pair<TyPtr, std::string>> subTypes) :
 				Type(kind), TypeName(TypeName) {}							
 
+			// StripOffShell - 有时需要去掉类型的表层无用的信息。
+			// e.g.		class A 
+			//			{
+			//				var m : int;
+			//			};
+			//			class B
+			//			{
+			//				var m : A;
+			//			};
+			// class B实际上只有 "var m : A" 这一种类型，在作为返回值或者参数传递时，有可能需要将
+			// B coerce 成 int.
+			TyPtr StripOffShell() const;
+
 			bool HaveMember(std::string name) const;
 			bool operator==(const Type& rhs) const;
 			TyPtr getMemberType(std::string name) const;
+			int getIdx(std::string name) const;
 			unsigned long size() const;
 
 			std::pair<TyPtr, std::string> operator[](unsigned index) const { return subTypes[index]; }
@@ -104,7 +120,6 @@ namespace compiler
 		/// Note: AnonymousType是moses很重要的特性
 		/// var num = {{132, 23}, num * 9, {false, 10}};
 		/// 其中num所具有的类型就是匿名类型.
-		/// Note: 当前匿名类型中不支持用户自定义类型。
 		class AnonymousType final : public Type
 		{
 			AnonymousType() = delete;
@@ -120,9 +135,10 @@ namespace compiler
 			}
 			std::vector<TyPtr> getSubTypes() const
 			{
-				return subTypes;
+				return subTypes;			
 			}
-
+			// To Do: 这里与UserDefinedType有冗余。
+			TyPtr StripOffShell() const;
 			unsigned getSubTypesNum() const { return subTypes.size(); };
 			void getTypes(std::vector<TyPtr>& types) const;
 

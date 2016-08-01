@@ -9,6 +9,18 @@ Value::Value(std::shared_ptr<Type> ty, ValueTy vty, std::string name) :
 Ty(ty), VTy(vty), Name(name)
 {}
 
+bool Value::hasOneUse() const
+{
+	if (Uses.size() == 1)
+		return true;
+	return false;
+}
+
+const Value* Value::use_begin() const
+{
+	return Uses.front()->getUser();
+}
+
 /// \brief Change all uses of this to point to a new Value.
 ///
 /// Go through the uses list for this definition and make each use point

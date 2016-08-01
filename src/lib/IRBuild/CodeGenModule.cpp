@@ -5,49 +5,27 @@ using namespace compiler::IR;
 
 //===---------------------------------------------------------------------===//
 // Implements class ModuleBuilder.
-ModuleBuilder::ModuleBuilder(std::shared_ptr<Scope> SymbolInfo, MosesIRContext &context) : 
-	SymbolTree(SymbolInfo), Context(context), Types(CodeGenTypes(context)), 
-	CurBB(std::make_shared<BasicBlock>("entry")), CurFunc(std::make_shared<FunctionBuilderStatus>()),
-	CurScope(SymbolInfo)
+ModuleBuilder::ModuleBuilder(std::shared_ptr<Scope> SymbolInfo, MosesIRContext &context) :
+	SymbolTree(SymbolInfo), Context(context), Types(CodeGenTypes(context)),
+	CurBB(CreateBasicBlock("entry", nullptr)), isAllocaInsertPointSetByNormalInsert(false),
+	CurFunc(std::make_shared<FunctionBuilderStatus>()), CurScope(SymbolInfo)
 {
 	SetInsertPoint(CurBB);
-	// Create a marker to make it easy to insert allocas into the entryblock later.
+	EntryBlock = CurBB;
 	AllocaInsertPoint = InsertPoint;
+
+	IRs.push_back(CurBB);
 }
 
 void ModuleBuilder::VisitChildren(std::vector<std::shared_ptr<StatementAST>> AST)
 {
 	unsigned ASTSize = AST.size();
 	for (unsigned i = 0; i < ASTSize; i++)
-	{
-		// 在遍历AST的过程中，会根据AST的具体节点来选择对应的Accept函数。
-		// 例如：如果这里是 "IfStmt" 的话，会选择IfStmt的Accept()函数
 		AST[i].get()->Accept(this);
-	}
 }
 
 //===---------------------------------------------------------------------===//
 // Helper for CodeGen.
-//TyPtr ModuleBuilder::ConvertTypeForMem(std::shared_ptr<compiler::ast::Type> T)
-//{
-//	TyPtr ResultType = nullptr;
-//	switch (T->getKind())
-//	{
-//	case compiler::ast::TypeKind::INT:
-//		break;
-//	case compiler::ast::TypeKind::BOOL:
-//		break;
-//	case compiler::ast::TypeKind::ANONYMOUS:
-//		break;
-//	case compiler::ast::TypeKind::USERDEFIED:
-//		break;
-//	case compiler::ast::TypeKind::VOID:
-//		break;
-//	default:
-//		break;
-//	}
-//	return nullptr;
-//}
 
 //===---------------------------------------------------------------------===//
 // private helper method.
@@ -55,7 +33,7 @@ void ModuleBuilder::VisitChildren(std::vector<std::shared_ptr<StatementAST>> AST
 void ModuleBuilder::SetInsertPoint(BBPtr TheBB)
 {
 	CurBB = TheBB;
-	InsertPoint = CurBB->end();
+	InsertPoint = CurBB->end();	
 }
 
 void ModuleBuilder::SetInsertPoint(InstPtr I)
@@ -68,12 +46,12 @@ void ModuleBuilder::SetInsertPoint(InstPtr I)
 // Instruction creation methods: Terminators.
 ReturnInstPtr ModuleBuilder::CreateRetVoid() 
 { 
-	return InsertHelper(ReturnInst::Create()); 
+	return InsertHelper(ReturnInst::Create(CurBB)); 
 }
 
 ReturnInstPtr ModuleBuilder::CreateRet(ValPtr V)
 {
-	return InsertHelper(ReturnInst::Create(V));
+	return InsertHelper(ReturnInst::Create(CurBB, V));
 }
 
 ReturnInstPtr ModuleBuilder::CreateAggregateRet(std::vector<ValPtr> retVals, unsigned N)
@@ -83,17 +61,17 @@ ReturnInstPtr ModuleBuilder::CreateAggregateRet(std::vector<ValPtr> retVals, uns
 
 BrInstPtr ModuleBuilder::Create(BBPtr Dest)
 {
-	return InsertHelper(BranchInst::Create(Dest));
+	return InsertHelper(BranchInst::Create(CurBB, Dest));
 }
 
 BrInstPtr ModuleBuilder::CreateCondBr(ValPtr Cond, BBPtr True, BBPtr False)
 {
-	return InsertHelper(BranchInst::Create(True, False, Cond));
+	return InsertHelper(BranchInst::Create(True, False, Cond, CurBB));
 }
 
 BrInstPtr ModuleBuilder::CreateBr(BBPtr Dest)
 {
-	return InsertHelper(BranchInst::Create(Dest));
+	return InsertHelper(BranchInst::Create(Dest, CurBB));
 }
 
 //===-------------------------------------------------------------===//
@@ -101,7 +79,7 @@ BrInstPtr ModuleBuilder::CreateBr(BBPtr Dest)
 BOInstPtr ModuleBuilder::CreateInsertBinOp(BinaryOperator::Opcode Opc, ValPtr LHS, ValPtr RHS,
 	std::string Name)
 {
-	BOInstPtr BO = InsertHelper(BinaryOperator::Create(Opc, LHS, RHS), Name);
+	BOInstPtr BO = InsertHelper(BinaryOperator::Create(Opc, LHS, RHS, CurBB), Name);
 	return BO;
 }
 
@@ -112,7 +90,7 @@ ValPtr ModuleBuilder::CreateAdd(ValPtr LHS, ValPtr RHS, std::string Name)
 		if (ConstantIntPtr RC = std::dynamic_pointer_cast<ConstantInt>(RHS))
 			return InsertHelper(ConstantFolder::CreateArithmetic(Context, Opcode::Add, LC, RC), Name);
 	}
-	return InsertHelper(BinaryOperator::Create(Opcode::Add, LHS, RHS), Name);
+	return InsertHelper(BinaryOperator::Create(Opcode::Add, LHS, RHS, CurBB), Name);
 }
 
 ValPtr ModuleBuilder::CreateSub(ValPtr LHS, ValPtr RHS, std::string Name)
@@ -122,7 +100,7 @@ ValPtr ModuleBuilder::CreateSub(ValPtr LHS, ValPtr RHS, std::string Name)
 		if (ConstantIntPtr RC = std::dynamic_pointer_cast<ConstantInt>(RHS))
 			return InsertHelper(ConstantFolder::CreateArithmetic(Context, Opcode::Sub, LC, RC), Name);
 	}
-	return InsertHelper(BinaryOperator::Create(Opcode::Sub, LHS, RHS), Name);
+	return InsertHelper(BinaryOperator::Create(Opcode::Sub, LHS, RHS, CurBB), Name);
 }
 
 ValPtr ModuleBuilder::CreateMul(ValPtr LHS, ValPtr RHS, std::string Name)
@@ -132,7 +110,7 @@ ValPtr ModuleBuilder::CreateMul(ValPtr LHS, ValPtr RHS, std::string Name)
 		if (ConstantIntPtr RC = std::dynamic_pointer_cast<ConstantInt>(RHS))
 			return InsertHelper(ConstantFolder::CreateArithmetic(Context, Opcode::Mul, LC, RC), Name);
 	}
-	return InsertHelper(BinaryOperator::Create(Opcode::Mul, LHS, RHS), Name);
+	return InsertHelper(BinaryOperator::Create(Opcode::Mul, LHS, RHS, CurBB), Name);
 }
 
 ValPtr ModuleBuilder::CreateDiv(ValPtr LHS, ValPtr RHS, std::string Name)
@@ -142,7 +120,7 @@ ValPtr ModuleBuilder::CreateDiv(ValPtr LHS, ValPtr RHS, std::string Name)
 		if (ConstantIntPtr RC = std::dynamic_pointer_cast<ConstantInt>(RHS))
 			return InsertHelper(ConstantFolder::CreateArithmetic(Context, Opcode::Div, LC, RC), Name);
 	}
-	return InsertHelper(BinaryOperator::Create(Opcode::Div, LHS, RHS), Name);
+	return InsertHelper(BinaryOperator::Create(Opcode::Div, LHS, RHS, CurBB), Name);
 }
 
 ValPtr ModuleBuilder::CreateRem(ValPtr LHS, ValPtr RHS, std::string Name)
@@ -152,7 +130,7 @@ ValPtr ModuleBuilder::CreateRem(ValPtr LHS, ValPtr RHS, std::string Name)
 		if (ConstantIntPtr RC = std::dynamic_pointer_cast<ConstantInt>(RHS))
 			return InsertHelper(ConstantFolder::CreateArithmetic(Context, Opcode::Rem, LC, RC), Name);
 	}
-	return InsertHelper(BinaryOperator::Create(Opcode::Rem, LHS, RHS), Name);
+	return InsertHelper(BinaryOperator::Create(Opcode::Rem, LHS, RHS, CurBB), Name);
 }
 
 ValPtr ModuleBuilder::CreateShl(ValPtr LHS, ValPtr RHS, std::string Name)
@@ -162,7 +140,7 @@ ValPtr ModuleBuilder::CreateShl(ValPtr LHS, ValPtr RHS, std::string Name)
 		if (ConstantIntPtr RC = std::dynamic_pointer_cast<ConstantInt>(RHS))
 			return InsertHelper(ConstantFolder::CreateArithmetic(Context, Opcode::Shl, LC, RC), Name);
 	}
-	return InsertHelper(BinaryOperator::Create(Opcode::Shl, LHS, RHS), Name);
+	return InsertHelper(BinaryOperator::Create(Opcode::Shl, LHS, RHS, CurBB), Name);
 }
 
 ValPtr ModuleBuilder::CreateShr(ValPtr LHS, ValPtr RHS, std::string Name)
@@ -172,7 +150,7 @@ ValPtr ModuleBuilder::CreateShr(ValPtr LHS, ValPtr RHS, std::string Name)
 		if (ConstantIntPtr RC = std::dynamic_pointer_cast<ConstantInt>(RHS))
 			return InsertHelper(ConstantFolder::CreateArithmetic(Context, Opcode::Shr, LC, RC), Name);
 	}
-	return InsertHelper(BinaryOperator::Create(Opcode::Shr, LHS, RHS), Name);
+	return InsertHelper(BinaryOperator::Create(Opcode::Shr, LHS, RHS, CurBB), Name);
 }
 
 ValPtr ModuleBuilder::CreateAnd(ValPtr LHS, ValPtr RHS, std::string Name)
@@ -182,7 +160,7 @@ ValPtr ModuleBuilder::CreateAnd(ValPtr LHS, ValPtr RHS, std::string Name)
 		if (ConstantBoolPtr RC = std::dynamic_pointer_cast<ConstantBool>(RHS))
 			return InsertHelper(ConstantFolder::CreateBoolean(Context, Opcode::And, LC, RC), Name);
 	}
-	return InsertHelper(BinaryOperator::Create(Opcode::And, LHS, RHS), Name);
+	return InsertHelper(BinaryOperator::Create(Opcode::And, LHS, RHS, CurBB), Name);
 }
 
 ValPtr ModuleBuilder::CreateOr(ValPtr LHS, ValPtr RHS, std::string Name)
@@ -192,80 +170,92 @@ ValPtr ModuleBuilder::CreateOr(ValPtr LHS, ValPtr RHS, std::string Name)
 		if (ConstantBoolPtr RC = std::dynamic_pointer_cast<ConstantBool>(RHS))
 			return InsertHelper(ConstantFolder::CreateBoolean(Context, Opcode::Or, LC, RC), Name);
 	}
-	return InsertHelper(BinaryOperator::Create(Opcode::Or, LHS, RHS), Name);
+	return InsertHelper(BinaryOperator::Create(Opcode::Or, LHS, RHS, CurBB), Name);
 }
 
 ValPtr ModuleBuilder::CreateNeg(ValPtr V, std::string Name)
 {
 	if (ConstantIntPtr VC = std::dynamic_pointer_cast<ConstantInt>(V))
 		return InsertHelper(ConstantFolder::CreateNeg(Context, VC), Name);
-	return InsertHelper(BinaryOperator::CreateNeg(Context, V));
+	return InsertHelper(BinaryOperator::CreateNeg(Context, V, CurBB));
 }
 
 ValPtr ModuleBuilder::CreateNot(ValPtr V, std::string Name)
 {
 	if (ConstantBoolPtr VC = std::dynamic_pointer_cast<ConstantBool>(V))
 		return InsertHelper(ConstantFolder::CreateNot(Context, VC), Name);
-	return InsertHelper(BinaryOperator::CreateNot(Context, V));
+	return InsertHelper(BinaryOperator::CreateNot(Context, V, CurBB));
 }
 
 //===------------------------------------------------------------------===//
 // Instruction creation methods: Memory Instructions.
 AllocaInstPtr ModuleBuilder::CreateAlloca(TyPtr Ty, std::string Name)
 {
-	return InsertHelper(AllocaInst::Create(Ty));
+	return InsertHelper(AllocaInst::Create(Ty, CurBB), Name);
 }
 
 LoadInstPtr ModuleBuilder::CreateLoad(ValPtr Ptr)
 {
-	return InsertHelper(LoadInst::Create(Ptr));
+	return InsertHelper(LoadInst::Create(Ptr, CurBB));
 }
 
 StoreInstPtr ModuleBuilder::CreateStore(ValPtr Val, ValPtr Ptr)
 {
-	return InsertHelper(StoreInst::Create(Val, Ptr));
+	return InsertHelper(StoreInst::Create(Val, Ptr, CurBB));
 }
 
-GEPInstPtr ModuleBuilder::CreateGEP(TyPtr Ty, ValPtr Ptr, std::vector<ValPtr> IdxList, std::string Name)
+GEPInstPtr ModuleBuilder::CreateGEP(TyPtr Ty, ValPtr Ptr, std::vector<unsigned> IdxList, 
+	std::string Name)
 {
-	// 判断地址计算能否预先计算完成
-	if (true)
+	std::vector<ValPtr> ValPtrIdxList;
+	// compute the ValPtr of Indices.
+	for (auto item : IdxList)
 	{
-
+		ValPtrIdxList.push_back(ConstantInt::get(Context, item));
 	}
-	return InsertHelper(GetElementPtrInst::Create(Ty, Ptr, IdxList), Name);
+	// return InsertHelper(GetElementPtrInst::Create(Ty, Ptr, IdxList), Name);
+	return nullptr;
+}
+
+GEPInstPtr ModuleBuilder::CreateGEP(TyPtr Ty, ValPtr Ptr, unsigned Idx, std::string Name)
+{
+	return InsertHelper(
+		GetElementPtrInst::Create(Ty, Ptr, 
+								ConstantInt::getZeroValueForNegative(Context), 
+								ConstantInt::get(Context, Idx), CurBB, Name), 
+								Name);
 }
 
 //===--------------------------------------------------------------===//
 // Instruction creation methods: Compare Instruction.
 ValPtr ModuleBuilder::CreateCmpEQ(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return CmpInst::Create(CmpInst::CMP_EQ, LHS, RHS, Name);
+	return CmpInst::Create(CmpInst::CMP_EQ, LHS, RHS, CurBB, Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpNE(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return CmpInst::Create(CmpInst::CMP_NE, LHS, RHS, Name);
+	return CmpInst::Create(CmpInst::CMP_NE, LHS, RHS, CurBB, Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpGT(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return CmpInst::Create(CmpInst::CMP_GT, LHS, RHS, Name);
+	return CmpInst::Create(CmpInst::CMP_GT, LHS, RHS, CurBB, Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpGE(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return CmpInst::Create(CmpInst::CMP_GE, LHS, RHS, Name);
+	return CmpInst::Create(CmpInst::CMP_GE, LHS, RHS, CurBB, Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpLT(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return CmpInst::Create(CmpInst::CMP_LT, LHS, RHS, Name);
+	return CmpInst::Create(CmpInst::CMP_LT, LHS, RHS, CurBB, Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpLE(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return CmpInst::Create(CmpInst::CMP_LE, LHS, RHS, Name);
+	return CmpInst::Create(CmpInst::CMP_LE, LHS, RHS, CurBB, Name);
 }
 
 ValPtr ModuleBuilder::CreateCmp(CmpInst::Predicate P, ValPtr LHS, ValPtr RHS, std::string Name)
@@ -274,7 +264,7 @@ ValPtr ModuleBuilder::CreateCmp(CmpInst::Predicate P, ValPtr LHS, ValPtr RHS, st
 	if (true)
 	{
 	}
-	return InsertHelper(CmpInst::Create(P, LHS, RHS), Name);
+	return InsertHelper(CmpInst::Create(P, LHS, RHS, CurBB), Name);
 }
 
 //===-----------------------------------------------------------------===//
@@ -284,10 +274,10 @@ PHINodePtr ModuleBuilder::CreatePHI(TyPtr Ty, unsigned NumReservedValues, std::s
 	return InsertHelper(PHINode::Create(Ty, NumReservedValues), Name);
 }
 
-CallInstPtr ModuleBuilder::CreateCall(ValPtr Callee, std::vector<ValPtr> Args, std::string Name)
+CallInstPtr ModuleBuilder::CreateCall(ValPtr Callee, std::vector<ValPtr> Args)
 {
 	Callee->getType();
-	return InsertHelper(CallInst::Create(Callee, Args), Name);
+	return InsertHelper(CallInst::Create(Callee, Args, CurBB), Callee->getName());
 }
 
 EVInstPtr ModuleBuilder::CreateExtractValueValue(ValPtr Agg, std::vector<unsigned> Idxs, std::string Name)
@@ -321,4 +311,27 @@ ValPtr ModuleBuilder::CreateIsNotNull(ValPtr Arg, std::string Name)
 BBPtr ModuleBuilder::CreateBasicBlock(std::string Name, FuncPtr parent, BBPtr before)
 {
 	return BasicBlock::Create(Name, parent, before);
+}
+
+//===-------------------------------------------------------------------===//
+void ModuleBuilder::SaveTopLevelCtxInfo()
+{
+	CurFunc->TopLevelAllocaIsPt = AllocaInsertPoint;
+	CurFunc->TopLevelCurBB = CurBB;
+	CurFunc->TopLevelEntry = EntryBlock;
+	CurFunc->TopLevelIsAllocaInsertPointSetByNormalInsert = isAllocaInsertPointSetByNormalInsert;
+}
+
+void ModuleBuilder::RestoreTopLevelCtxInfo()
+{
+	AllocaInsertPoint = CurFunc->TopLevelAllocaIsPt;
+	CurBB = CurFunc->TopLevelCurBB;
+	EntryBlock = CurFunc->TopLevelEntry;
+	isAllocaInsertPointSetByNormalInsert = CurFunc->TopLevelIsAllocaInsertPointSetByNormalInsert;
+}
+void print(std::shared_ptr<compiler::IR::Value> V)
+{
+	std::ostringstream out;
+	V->Print(out);
+	cout << out.str();
 }

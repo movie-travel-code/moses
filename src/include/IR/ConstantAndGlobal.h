@@ -126,7 +126,9 @@ namespace compiler
 			/// \brief Get a ConstantInt for a specific value.
 			static ConstantIntPtr get(MosesIRContext& Ctx, int value) 
 			{ 
-				return std::make_shared<ConstantInt>(Ctx, value);
+				auto CI = std::make_shared<ConstantInt>(Ctx, value);
+				CI->setName(std::to_string(value));
+				return CI;
 			}
 
 			bool equalsInt(int v) const { return Val == v; }

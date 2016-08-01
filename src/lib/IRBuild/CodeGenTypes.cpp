@@ -8,6 +8,7 @@
 using namespace compiler::IRBuild;
 std::shared_ptr<compiler::IR::Type> CodeGenTypes::ConvertType(std::shared_ptr<compiler::ast::Type> type)
 {
+	assert(type && "CovertType must be non-null!");
 	std::shared_ptr<StructType> IRType = nullptr;
 	// (1) Check type cache.
 	auto iter = RecordDeclTypes.find(type.get());
@@ -38,6 +39,7 @@ std::shared_ptr<compiler::IR::Type> CodeGenTypes::ConvertType(std::shared_ptr<co
 	{
 		// Create new named structure type.
 		IRType = IRStructTy::Create(type);
+		IRType->setName("struct.type");
 		// Cached this type into the RecordTypes.
 		RecordDeclTypes.insert({ type.get(), IRType });
 		// Storing this info.
@@ -47,6 +49,7 @@ std::shared_ptr<compiler::IR::Type> CodeGenTypes::ConvertType(std::shared_ptr<co
 	{
 		// Created new literal structure type.
 		IRType = IRStructTy::get(type);
+		IRType->setName("anony.type");
 		// Cached this type into the RecordTypes.
 		RecordDeclTypes.insert({type.get(), IRType});
 		IRCtx.AddStructType(IRType);

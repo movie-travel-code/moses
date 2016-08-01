@@ -121,6 +121,7 @@ namespace compiler
 				return (value >= TokenValue::BO_Assign) && (value <= TokenValue::BO_OrAssign);
 			}
 
+			// LHS and RHS must be int type.
 			bool isIntOperator()
 			{
 				if (value == TokenValue::BO_Add ||
@@ -130,30 +131,32 @@ namespace compiler
 					value == TokenValue::BO_Mul ||
 					value == TokenValue::BO_MulAssign ||
 					value == TokenValue::BO_Div ||
-					value == TokenValue::BO_DivAssign ||
-					value == TokenValue::BO_EQ ||
-					value == TokenValue::BO_GE ||
-					value == TokenValue::BO_GT ||
-					value == TokenValue::BO_LE ||
-					value == TokenValue::BO_LT ||
-					value == TokenValue::BO_NE)
-				{
+					value == TokenValue::BO_DivAssign)
 					return true;
-				}
 				return false;
 			}
 
+			// Operands must be bool type.
 			bool isBoolOperator()
 			{
 				if (value == TokenValue::BO_And ||
 					value == TokenValue::BO_Or ||
 					value == TokenValue::UO_Exclamatory ||
 					value == TokenValue::BO_AndAssign ||
-					value == TokenValue::BO_OrAssign ||
-					value == TokenValue::BO_NE)
-				{
+					value == TokenValue::BO_OrAssign)
 					return true;
-				}
+				return false;
+			}
+
+			bool isCmpOperator()
+			{
+				if (value == TokenValue::BO_EQ ||
+					value == TokenValue::BO_GE ||
+					value == TokenValue::BO_GT ||
+					value == TokenValue::BO_LE ||
+					value == TokenValue::BO_LT ||
+					value == TokenValue::BO_NE)
+					return true;
 				return false;
 			}
 

@@ -58,7 +58,7 @@ namespace compiler
 			unsigned getAddressSpace() const { return AddressSpace; }
 			IR::ValPtr getAddress() const { return V; }
 
-			static LValue MakeAddr(IR::AllocaInstPtr Alloca, unsigned AddressSpace = 0)
+			static LValue MakeAddr(IR::ValPtr Alloca, unsigned AddressSpace = 0)
 			{
 				LValue R;
 				R.V = Alloca;

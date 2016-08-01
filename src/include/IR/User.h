@@ -37,7 +37,7 @@ namespace compiler
 			/// This is used for subclasses which have a fixed number of operands.
 			// void *operator new(size_t Size, unsigned Us);
 		public:
-			User(TyPtr Ty, ValueTy vty, const std::string &name = "") : Value(Ty, vty, name)
+			User(TyPtr Ty, ValueTy vty, std::string name = "") : Value(Ty, vty, name)
 			{}
 
 			Use getOperand(unsigned i)

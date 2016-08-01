@@ -62,7 +62,7 @@ namespace compiler
 			TypeID getTypeID() const { return ID; }
 			bool isVoidType() const { return getTypeID() == VoidTy; }
 			bool isLabelTy() const { return getTypeID() == LabelTy; }
-			bool isIntegerTyID() const { return getTypeID() == IntegerTy; }
+			bool isIntegerTy() const { return getTypeID() == IntegerTy; }
 			bool isFunctionTy() const { return getTypeID() == FunctionTy; }
 			bool isStructTy() const { return getTypeID() == StructTy; }
 			bool isAnonyTy() const { return getTypeID() == AnonyTy; }
@@ -71,14 +71,13 @@ namespace compiler
 
 			/// isSingleValueType - Return true if the type is a valid type for a 
 			/// register in codegen. 
-			bool isSingleValueType() const { return isIntegerTyID() || isBoolTy(); }
+			bool isSingleValueType() const { return isIntegerTy() || isBoolTy(); }
 
 			/// isAggregateType - Return true if the type is an aggregate type.
 			bool isAggregateType() const
 			{
 				return getTypeID() == StructTy || getTypeID() == AnonyTy;
 			}
-
 			//===------------------------------------------------------------===//
 			// Helper for get types.
 			static IRTyPtr getVoidType();
@@ -190,6 +189,7 @@ namespace compiler
 
 			/// \brief Print the StructType Info.
 			void Print(std::ostringstream& out) override;
+			void PrintCompleteInfo(std::ostringstream& out);
 		};
 
 		/// PointerType - Class to represent pointers

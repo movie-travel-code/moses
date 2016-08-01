@@ -55,7 +55,6 @@ namespace compiler
 		class ValueSymbolTable;
 		class ValueSymbolTable;
 		class BinaryOperator;
-		class User;
 		class Argument;
 		class TerminatorInst;
 		class Constant;
@@ -69,6 +68,7 @@ namespace compiler
 		class StructType;
 		class Use;
 		class Value;
+		class User;
 
 		typedef std::shared_ptr<Type>				TyPtr;
 		typedef std::shared_ptr<Value>				ValPtr;
@@ -135,7 +135,8 @@ namespace compiler
 
 			// All values are typed, get the type of this value.
 			TyPtr getType() const { return Ty; }
-
+			// hasOneUse - Return true if there is exactly one user of this value.
+			bool hasOneUse() const;
 			bool hasName() const { return Name != ""; }
 			const std::string& getName() const { return Name; }
 			virtual void setName(const std::string &name) { Name = name; }
@@ -150,6 +151,7 @@ namespace compiler
 
 			//---------------------------------------------------------------------
 			// Methods for handling the vector of uses of this Value.
+			const Value* use_begin() const;
 			unsigned use_size()	const { return Uses.size(); }
 			bool use_empty() const { return Uses.empty(); }
 
@@ -191,7 +193,7 @@ namespace compiler
 			~Use();
 
 			ValPtr get() const { return Val; }
-			User* getUser() const { return U; }
+			const Value* getUser() const { return reinterpret_cast<Value*>(U); }
 			void set(ValPtr Val);
 
 			ValPtr operator=(ValPtr RHS);

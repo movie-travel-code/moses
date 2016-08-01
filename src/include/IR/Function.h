@@ -51,39 +51,25 @@ namespace compiler
 		private:
 			// Important things that make up a function!
 			TyPtr ReturnType;
+			FuncTypePtr FunctionTy;
 			std::list<BBPtr> BasicBlocks;
 			std::vector<ArgPtr> Arguments;
 		public:
-			Function(FuncTypePtr Ty, std::string Name = "") :
-				GlobalValue(Ty, Value::ValueTy::FunctionVal, Name), 
-				ReturnType(Ty->getReturnType())
-			{
-				// Create space for argument and set the name later.
-				for (unsigned i = 0; i < Ty->getNumParams(); i++)
-				{
-					Arguments.push_back(std::make_shared<Argument>((*Ty)[i + 1]));
-				}
-			}
+			Function(FuncTypePtr Ty, std::string Name, std::vector<std::string> Names);
 
-			static FuncPtr create(FuncTypePtr Ty, std::string Name);
-			ArgPtr operator[](unsigned index) const
-			{
-				assert(index <= Arguments.size() - 1 && 
-					"Index out of range when we get the specified Argument(IR).");
-				return Arguments[index];
-			}
+			static FuncPtr create(FuncTypePtr Ty, std::string Name, std::vector<std::string> Names);
+			ArgPtr operator[](unsigned index) const;
+			/// \brief Set argument name and type.
+			void setArgumentInfo(unsigned index, std::string name);
 
-			/// \brief Set arguemtn name and type.
-			void setArgumentInfo(unsigned index, std::string name)
+			void addBB(BBPtr B)
 			{
-				assert(index <= Arguments.size() - 1 && 
-					"Index out of range when set Argument(IR) name.");
-				Arguments[index]->setName(name);
+				BasicBlocks.push_back(B);
 			}
 
 			ArgPtr getArg(unsigned index) const { return (*this)[index]; }
 			TyPtr getReturnType() const;
-			TyPtr getFunctionType() const { return Ty; }
+			TyPtr getFunctionType() const { return FunctionTy; }
 
 			/// Get the underlying elements of the Function... the basic block list is empty
 			/// for external functions.

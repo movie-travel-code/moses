@@ -768,8 +768,7 @@ ExprASTPtr Parser::ParsePostfixExpressionSuffix(ExprASTPtr LHS)
 			LHS = Actions.ActOnDecOrIncExpr(LHS);
 			// Consume the '++' or '--'
 			scan.getNextToken();
-			// To Do: Handle Type
-			return std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(), nullptr,
+			return std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(), LHS->getType(),
 				OpName, LHS, Expr::ExprValueKind::VK_RValue);
 		default:	// Not a postfix-expression suffix.
 			return LHS;
@@ -922,7 +921,6 @@ ExprASTPtr Parser::ParseCallExpr(Token tok)
 {
 	auto startLoc = tok.getTokenLoc();
 	std::string funcName = tok.getLexem();
-
 	std::vector<ExprASTPtr> Args;
 	std::vector<std::shared_ptr<Type>> ParmTyps;
 	bool first = true;
@@ -972,6 +970,7 @@ ExprASTPtr Parser::ParseCallExpr(Token tok)
 	// (Check whether the function is defined or parameter types match).
 
 	// 查询符号表的时候从中获取到FunctionDecl的地址
+	// To Do: 这里存在一个递归的bug.
 	FunctionDeclPtr fd = nullptr;
 	auto returnType = Actions.ActOnCallExpr(funcName, ParmTyps, fd);
 

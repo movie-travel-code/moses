@@ -13,7 +13,29 @@ using namespace compiler::CodeGen;
 /// Aggregate 不参与算数运算（暂时不支持，如果重载运算符的话）。
 void ModuleBuilder::EmitAggExpr(const Expr* E, ValPtr DestPtr)
 {
+	if (const DeclRefExpr* DRE = dynamic_cast<const DeclRefExpr*>(E))
+	{
+		EmitAggLoadOfLValue(DRE, DestPtr);
+	}
+	else if (const MemberExpr* ME = dynamic_cast<const MemberExpr*>(E))
+	{
+	}
+	else if (const CallExpr* CE = dynamic_cast<const CallExpr*>(E))
+	{
+		// EmitCallExpr()返回的ValPtr，有三种情况
+		// (1) EmitCallExpr() 为Builtin类型，那么返回的就是CallExpr的到值
+		//     这一种普通的EmitCallExpr()就可以处理
+		// (2) EmitCallExpr() 为AggregateType，但是Coerce到某个BuiltinType，那么返回的是其中的值
+		//     这一种比较麻烦，因为面临的状况是：两者的类型不同，外部用于接收返回值得类型是AggregateType
+		//     而返回的类型是coerce得到的类型，两者类型不同。
+		// (3) EmitCallExpr() 为AggregateType，使用的是sret，那么返回的是TempAlloca指令
+		auto rvalue = EmitCallExpr(CE);		
 
+		EmitFinalDestCopy(CE, RValue::get(rvalue), DestPtr);
+	}
+	else
+	{
+	}
 }
 
 /// \brief 
@@ -42,11 +64,16 @@ void ModuleBuilder::EmitAggregateCopy(ValPtr DestPtr, ValPtr SrcPtr, ASTTyPtr Ty
 }
 
 /// ?
-void ModuleBuilder::EmitAggLoadOfLValue(const Expr* E, ValPtr DestPtr)
+ValPtr ModuleBuilder::EmitAggLoadOfLValue(const Expr* E, ValPtr DestPtr)
 {
-	// Get LValue of the 'E', for example DeclRefExpr.
-	LValue LV = EmitLValue(E);
-	EmitFinalDestCopy(E, LV, DestPtr);
+	// Ignore the value.
+	if (DestPtr)
+	{
+		// Get LValue of the 'E', for example DeclRefExpr.
+		LValue LV = EmitLValue(E);
+		EmitFinalDestCopy(E, LV, DestPtr);
+	}	
+	return DestPtr;
 }
 
 /// EmitFinalDestCopy - Perform the final copy to DestPtr( RValue ----> DestPtr ).

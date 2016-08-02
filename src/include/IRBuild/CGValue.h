@@ -16,6 +16,7 @@ namespace compiler
 	{
 		/// RValue - This trivial value class is used to represent the result of an
 		/// expression that is evaluated.
+		/// 如果是scalar那么V1就是简单的value，如果是aggregate那么V1就是agg.temp的地址
 		class RValue
 		{
 			enum { Scalar, Aggregate } Flavor;

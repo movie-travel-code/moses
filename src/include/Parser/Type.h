@@ -44,6 +44,12 @@ namespace compiler
 			virtual TyPtr const_remove() const;
 			// Shit code!
 			virtual unsigned long size() const { return 0; }
+			virtual unsigned MemberNum() const { return 1; }
+			virtual std::pair<TyPtr, std::string> operator[](unsigned idx) const
+			{
+				assert(0 && "There is no chance to call this function.");
+				return std::make_pair(nullptr, "");
+			}
 			virtual TyPtr StripOffShell() const { return nullptr; };
 
 			bool operator==(const Type& rhs) const;
@@ -108,6 +114,7 @@ namespace compiler
 			TyPtr getMemberType(std::string name) const;
 			int getIdx(std::string name) const;
 			unsigned long size() const;
+			virtual unsigned MemberNum() const { return subTypes.size(); }
 
 			std::pair<TyPtr, std::string> operator[](unsigned index) const { return subTypes[index]; }
 			std::string getTypeName() { return TypeName; }			
@@ -133,6 +140,12 @@ namespace compiler
 				assert(index < subTypes.size() && "Index out of range!");
 				return subTypes[index];
 			}
+
+			std::pair<TyPtr, std::string> operator[](unsigned idx) const
+			{
+				return std::make_pair(subTypes[idx], "");
+			}
+
 			std::vector<TyPtr> getSubTypes() const
 			{
 				return subTypes;			
@@ -143,6 +156,7 @@ namespace compiler
 			void getTypes(std::vector<TyPtr>& types) const;
 
 			unsigned long size() const;
+			virtual unsigned MemberNum() const { return subTypes.size(); }
 		};
 
 		namespace TypeKeyInfo

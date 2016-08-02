@@ -150,16 +150,21 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo, FuncPtr fun
 			auto ArgType = Types.ConvertType(ArgInfo->getType());
 			if (ArgType->isAggregateType())
 			{
+				// If this structure was wxpanded into multiple arguments then we
+				// need to create a temporary and reconstruct it from the arguments.
 				std::string Name = Arg->getName();
 				ValPtr Temp = CreateAlloca(ArgType, Name + ".addr");
 				
-				EmitParmDecl(Arg, Temp);
-				// 在function()中创建一个临时的Struct，然后讲展开的子filed，一一拷贝过去。
+				// 在function()中创建一个临时的Struct，然后将展开的子filed，一一拷贝过去。
 				// 下面是一系列的 GEP指令
-				for (unsigned index = 0; index < NumIRArgs; index++)
+				std::vector<ValPtr> SubArgs;
+				for (unsigned index = FirstIRArg; index < FirstIRArg + NumIRArgs; index++)
 				{
-
+					SubArgs.push_back(fun->getArg(index));
+					fun->getArg(index)->setName(Name + "." + std::to_string(index - FirstIRArg));
 				}
+				ExpandTypeFromArgs(ArgInfo->getType(), LValue::MakeAddr(Temp), SubArgs);
+				EmitParmDecl(Arg, Temp);
 			}
 			else
 			{
@@ -207,8 +212,57 @@ void ModuleBuilder::EmitFunctionEpilogue(CGFuncInfoConstPtr CGFnInfo)
 	}		
 }
 
+/// ExpandTypeFromArgs - Reconstruct a structure of type \arg Ty
+/// from function arguments into \arg Dst.
+void ModuleBuilder::ExpandTypeFromArgs(ASTTyPtr ASTTy, LValue LV, std::vector<ValPtr> &SubArgs)
+{
+	assert(ASTTy->getKind() == TypeKind::ANONYMOUS || ASTTy->getKind() == TypeKind::USERDEFIED &&
+		"Can only expand class types.");
+	auto Addr = LV.getAddress();
+	for (unsigned i = 0, size = ASTTy->MemberNum(); i < size; i++)
+	{
+		auto ty = Types.ConvertType((*ASTTy)[i].first);
+		auto LV = LValue::MakeAddr(CreateGEP(ty, Addr, i));
+		EmitStoreThroughLValue(RValue::get(SubArgs[i]), LV);
+	}
+}
+
+/// ExpandTypeToArgs - Expand an RValue \arg Src, with the IR type for 
+/// \arg Ty, into individual arguments on the provided vector \arg Args.
+void ModuleBuilder::ExpandTypeToArgs(ASTTyPtr ASTTy, RValue Src, std::vector<ValPtr> &Args)
+{
+	assert(ASTTy->getKind() == TypeKind::ANONYMOUS || ASTTy->getKind() == TypeKind::USERDEFIED &&
+		"Can only expand class types.");
+	auto Addr = Src.getAggregateAddr();
+	for (unsigned i = 0, size = ASTTy->MemberNum(); i < size; i++)
+	{
+		auto ty = Types.ConvertType((*ASTTy)[i].first);
+		auto LV = LValue::MakeAddr(CreateGEP(ty, Addr, i));
+		auto RV = EmitLoadOfLValue(LV);
+		Args.push_back(RV.getScalarVal());
+	}
+}
+
+/// CreateCoercedStore - Create a store to \arg DstPtr from \arg Src,
+/// where the souece and destination may have different types.
+/// e.g.	class A {var mem:int;};		--coerce to--> int
+///			func ret() -> A { }			--coerce to--> func ret() -> int {}
+/// int-value ----> class-A-value
+void ModuleBuilder::CreateCoercedStore(ValPtr Src, ValPtr DestPtr)
+{
+	// Handle specially and foolish
+	// (1) Create GEP instruction for DestPtr
+	//     DestPtr , 0, 0
+	// (2) EmitStoreOfScalar()
+	auto gep = CreateGEP(Src->getType(), DestPtr, 0);
+	print(gep);
+	auto store = CreateStore(Src, gep);
+	print(store);
+}
+
 /// \brief EmitCall - Emit code for CallExpr.
-ValPtr ModuleBuilder::EmitCall(const FunctionDecl* FD, ValPtr FuncAddr, const std::vector<ExprASTPtr> &ArgExprs)
+RValue ModuleBuilder::EmitCall(const FunctionDecl* FD, ValPtr FuncAddr, 
+	const std::vector<ExprASTPtr> &ArgExprs)
 {
 	CallArgList Args;
 	// (1) EmitCallArgs().
@@ -222,7 +276,7 @@ ValPtr ModuleBuilder::EmitCall(const FunctionDecl* FD, ValPtr FuncAddr, const st
 /// \brief EmitCall - Generate a call of the given funciton.
 /// e.g.	func add(n : Node) -> int {}    ----flattend---->   define @add(int n.1, int n.2) {}
 ///	When we come across 'add(n)', we should emit 'n' first and emit callexpr.
-ValPtr ModuleBuilder::EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr, CallArgList CallArgs)
+RValue ModuleBuilder::EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr, CallArgList CallArgs)
 {
 	std::vector<ValPtr> Args;
 	// Handle struct-return functions by passing a pointer to the location that we would like to
@@ -241,39 +295,77 @@ ValPtr ModuleBuilder::EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr, Ca
 	{
 		auto ArgInfo = ArgsInfo[i];
 		auto ArgVal = CallArgs[i].first;
+		auto ty = Types.ConvertType(ArgInfo->getType());
 		switch (ArgInfo->getKind())
 		{
 		case ArgABIInfo::Kind::Direct:
-			Args.push_back(CallArgs[i].first);
+			// 有两种情况，一种是flattened的aggregate type，另一种是builtin type
+			if (ty->isAggregateType())
+			{
+				// 讲ArgVal（aggregate tye的地址）中的值一一展开到vector中
+				ExpandTypeToArgs(ArgInfo->getType(), ArgVal, Args);
+			}
+			else
+			{
+				Args.push_back(CallArgs[i].first.getScalarVal());
+			}			
 			break;
 		case ArgABIInfo::Kind::Ignore:
 			break;
 		case ArgABIInfo::Kind::InDirect:
-
+			Args.push_back(CallArgs[i].first.getAggregateAddr());
 			break;
 		default:
 			break;
 		}
 	}
 
-	auto call = CreateCall(FuncAddr, Args);
-	print(call);
-	return call;
+	auto CallRest = CreateCall(FuncAddr, Args);
+	switch (RetInfo->getKind())
+	{
+	case ArgABIInfo::Kind::InDirect:
+		return RValue::getAggregate(Args[0]);
+	case ArgABIInfo::Kind::Direct:
+		// (1) AggregateType coerce
+		// (2) BuiltinType
+		if (Types.ConvertType(RetInfo->getType())->isAggregateType())
+		{
+			ValPtr V = CreateAlloca(Types.ConvertType(RetInfo->getType()), "coerce");
+			CreateCoercedStore(CallRest, V);
+			return RValue::getAggregate(V);
+		}
+		else
+		{
+			return RValue::get(CallRest);
+		}
+	case ArgABIInfo::Kind::Ignore:
+		break;
+	}
+	print(CallRest);
+	return RValue::get(0);
 }
 
 // EmitCallArgs - Emit call arguments for a function.
+// 有一点需要作特殊处理的就是AggregateType的处理，关于AggregateType得到的值都是AggregateAddr的形式呈现的
 void ModuleBuilder::EmitCallArgs(CallArgList &CallArgs, const std::vector<ExprASTPtr> &ArgExprs)
 {
+	ValPtr V = nullptr;
 	for (auto item : ArgExprs)
 	{
-		ValPtr V = EmitScalarExpr(item.get());
-		CallArgs.push_back({ V, item->getType() });
+		auto ty = Types.ConvertType(item->getType());
+		if (ty->isAggregateType())
+		{
+			auto AggTemp = CreateAlloca(ty, "agg.tmp");
+			EmitAggExpr(item.get(), AggTemp);
+			V = AggTemp;
+		}
+		else
+		{
+			V = EmitScalarExpr(item.get());
+		}		
+		CallArgs.push_back({ RValue::get(V), item->getType() });
 	}
 }
-
-/// EmitCallArg - Emit a single call argument.
-void ModuleBuilder::EmitCallArg(const Expr* E, compiler::IRBuild::ASTTyPtr ArgType)
-{}
 
 //===--------------------------------------------------------------------------===//
 // Implements the ArgABIInfo

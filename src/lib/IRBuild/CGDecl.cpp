@@ -80,9 +80,8 @@ void ModuleBuilder::EmitLocalVarDecl(const VarDecl* var)
 	// Note: We only handle the built-in type.
 	if (auto init = var->getInitExpr())
 	{
-		auto TypeKind = init->getType()->getKind();
-		if (TypeKind == TypeKind::ANONYMOUS ||
-			TypeKind == TypeKind::USERDEFIED)
+		auto ty = Types.ConvertType(init->getType());
+		if (ty->isAggregateType())
 		{
 			EmitAggExpr(init.get(), DeclPtr);
 		}

@@ -41,7 +41,7 @@ namespace compiler
 		using namespace CodeGen;		
 				
 		using Opcode = BinaryOperator::Opcode;
-		using CallArgList = std::vector<std::pair<ValPtr, compiler::IRBuild::ASTTyPtr>>;
+		using CallArgList = std::vector<std::pair<RValue, compiler::IRBuild::ASTTyPtr>>;
 
 		namespace CGStmt
 		{
@@ -259,9 +259,25 @@ namespace compiler
 			//===--------------------------------------------------------------===//
 			// Helper for function call generation.
 			//===--------------------------------------------------------------===//
-			ValPtr EmitCall(const FunctionDecl* FD, ValPtr FuncAddr, const std::vector<ExprASTPtr> &Args);
+			/// ExpandTypeToArgs - Expand an RValue \arg Src, with the IR type for 
+			/// \arg Ty, into individual arguments on the provided vector \arg Args.
+			/// 在Clang2.6中ABIArgInfo中有Expand选项， 对应于这里 AggregateType 的 Direct
+			/// 选项。
+			/// ----------------------clang2.6 Expand--------------------
+			/// Expand - only valid for aggregate argument types. The structure should be
+			/// expanded into consecutive arguments for its constituent fields. Currently
+			/// expand is only allowed on structures whose fields are all scalar types or
+			/// are all scalar types or are themselves expandable types.
+			/// ----------------------clang2.6 Expand--------------------
+			void ExpandTypeToArgs(ASTTyPtr ASTTy, RValue Src, std::vector<ValPtr> &Args);
 
-			ValPtr EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr, CallArgList CallArgs);
+			/// ExpandTypeFromArgs - Reconstruct a structure of type \arg Ty
+			/// from function arguments into \arg Dst.
+			void ExpandTypeFromArgs(ASTTyPtr ASTTy, LValue LV, std::vector<ValPtr> &SubArgs);
+
+			RValue EmitCall(const FunctionDecl* FD, ValPtr FuncAddr, const std::vector<ExprASTPtr> &Args);
+
+			RValue EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr, CallArgList CallArgs);
 
 			/// EmitCallArg - Emit a single call argument.
 			void EmitCallArg(const Expr* E, compiler::IRBuild::ASTTyPtr ArgType);
@@ -621,7 +637,7 @@ namespace compiler
 			/// \brief EmitLoadOfLValue - Given an expression that represents a value lvalue,
 			/// this method emits the address of the lvalue, then loads the result as an rvalue,
 			/// returning the rvalue.
-			RValue EmitLoadOfLValue(LValue LV, ASTTyPtr ExprTy);
+			RValue EmitLoadOfLValue(LValue LV);
 
 			/// EmitStoreOfScalar - Store a scalar value to an address.
 			void EmitStoreOfScalar(ValPtr Value, ValPtr Addr);
@@ -652,6 +668,10 @@ namespace compiler
 			/// value of the aggregate expression is not needed.
 			void EmitAggExpr(const Expr *E, ValPtr DestPtr);
 
+			/// CreateCoercedStore - Create a store to \arg DstPtr from \arg Src,
+			/// where the souece and destination may have different types.
+			void CreateCoercedStore(ValPtr Src, ValPtr DestPtr);
+
 			void EmitDeclRefExprAgg(const DeclRefExpr *DRE, ValPtr DestPtr);
 			void EmitMemberExprAgg(const MemberExpr *ME, ValPtr DestPtr);
 			void EmitCallExprAgg(const CallExpr* CE, ValPtr DestPtr);
@@ -666,7 +686,7 @@ namespace compiler
 			// EmitAggLoadOfLValue - Given an expression with aggregate type that represents
 			// a value lvalue, thid method emits the address of the lvalue, then loads the
 			// result into DestPtr.
-			void EmitAggLoadOfLValue(const Expr *E, ValPtr DestPtr);
+			ValPtr EmitAggLoadOfLValue(const Expr *E, ValPtr DestPtr);
 
 			/// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
 			void EmitFinalDestCopy(const Expr *E, RValue Src, ValPtr DestPtr);

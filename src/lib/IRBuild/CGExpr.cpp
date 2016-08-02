@@ -195,7 +195,7 @@ ValPtr ModuleBuilder::EmitBinAssignOp(const BinaryExpr* B)
 		// http://stackoverflow.com/questions/22616044/assignment-operator-sequencing-in-c11-expressions
 		//---------------------Assignment operators-------------------------
 		EmitStoreThroughLValue(RValue::get(RHSV), LHSAddr);
-		return EmitLoadOfLValue(LHSAddr, B->getType()).getScalarVal();
+		return EmitLoadOfLValue(LHSAddr).getScalarVal();
 	}		
 }
 
@@ -214,7 +214,7 @@ ValPtr ModuleBuilder::EmitCompoundAssignOp(const BinaryExpr* BE)
 
 	// (2) Load the LHS.
 	LValue LHSLV = EmitLValue(BE->getLHS().get());
-	ValPtr LHSV = EmitLoadOfLValue(LHSLV, BE->getLHS()->getType()).getScalarVal();
+	ValPtr LHSV = EmitLoadOfLValue(LHSLV).getScalarVal();
 
 	// (3) Perform the operation.
 	CGExpr::BinOpInfo info;
@@ -233,7 +233,7 @@ ValPtr ModuleBuilder::EmitCompoundAssignOp(const BinaryExpr* BE)
 	// not).
 	EmitStoreThroughLValue(RValue::get(ResultV), LHSLV);
 
-	return EmitLoadOfLValue(LHSLV, BE->getLHS()->getType()).getScalarVal();
+	return EmitLoadOfLValue(LHSLV).getScalarVal();
 }
 
 /// \brief Handle the binary expression.
@@ -279,7 +279,8 @@ LValue ModuleBuilder::EmitLValue(const Expr* E)
 
 	if (const CallExpr* CE = dynamic_cast<const CallExpr*>(E))
 	{
-
+		// (1) EmitCallExpr
+		
 	}
 	assert(0 && "Unreachable program point.");
 	return LValue();
@@ -345,13 +346,13 @@ LValue ModuleBuilder::EmitCallExprLValue(const CallExpr* CE)
 /// the result.
 ValPtr ModuleBuilder::EmitLoadOfLValue(const Expr* E)
 {
-	return EmitLoadOfLValue(EmitLValue(E), E->getType()).getScalarVal();
+	return EmitLoadOfLValue(EmitLValue(E)).getScalarVal();
 }
 
 /// \brief EmitLoadOfLValue - Given an expression that represents a value lvalue,
 /// this method emits the address of the lvalue, then loads the result as an rvalue,
 /// returning the rvalue.
-RValue ModuleBuilder::EmitLoadOfLValue(LValue LV, compiler::IRBuild::ASTTyPtr ExprTy)
+RValue ModuleBuilder::EmitLoadOfLValue(LValue LV)
 {
 	ValPtr Ptr = LV.getAddress();
 	auto V = CreateLoad(LV.getAddress());
@@ -421,7 +422,7 @@ ValPtr ModuleBuilder::EmitPrePostIncDec(const UnaryExpr* UE, bool isInc, bool is
 	compiler::IRBuild::ASTTyPtr ValTy = UE->getSubExpr()->getType();
 
 	// (2) Get the sub expression's value.
-	ValPtr InVal = EmitLoadOfLValue(LV, ValTy).getScalarVal();
+	ValPtr InVal = EmitLoadOfLValue(LV).getScalarVal();
 
 	// (3) Perform operation.
 	NextVal = ConstantInt::get(Context, AmoutVal);
@@ -452,7 +453,7 @@ ValPtr ModuleBuilder::EmitCallExpr(const CallExpr* CE)
 	assert(FuncSym && "function decl symbol doesn't exists.");
 	auto CalleeAddr = FuncSym->getFuncAddr();
 
-	return EmitCall(FD.get(), CalleeAddr, CE->getArgs());
+	return EmitCall(FD.get(), CalleeAddr, CE->getArgs()).getScalarVal();
 }
 
 /// \brief visit(const BinaryExpr*) - Generate code for BinaryExpr.
@@ -464,6 +465,9 @@ ValPtr ModuleBuilder::visit(const BinaryExpr* B)
 
 ValPtr ModuleBuilder::visit(const DeclRefExpr* DRE)
 {
+	auto ty = Types.ConvertType(DRE->getType());
+	if (ty->isAggregateType())
+		return EmitAggLoadOfLValue(DRE, nullptr);
 	return EmitLoadOfLValue(DRE);
 }
 
@@ -492,21 +496,18 @@ ValPtr ModuleBuilder::visit(const UnaryExpr* UE)
 
 ValPtr ModuleBuilder::visit(const MemberExpr* ME)
 {
+	auto ty = Types.ConvertType(ME->getType());
+	if (ty->isAggregateType())
+		return EmitAggLoadOfLValue(ME, nullptr);
 	return EmitLoadOfLValue(ME);
 }
 
 ValPtr ModuleBuilder::visit(const CallExpr* CE)
 {
-	if (CE->getType()->getKind() == TypeKind::ANONYMOUS ||
-		CE->getType()->getKind() == TypeKind::USERDEFIED)
-	{
-		EmitCallExprAgg(CE, nullptr);
-		return nullptr;
-	}
-	else
-	{
-		return EmitCallExpr(CE);
-	}	
+	auto ty = Types.ConvertType(CE->getType());
+	if (ty->isAggregateType())
+		return EmitAggLoadOfLValue(CE, nullptr);
+	return EmitCallExpr(CE);
 }
 
 /// Emit an expression as an initializer for a variable at the given location. 

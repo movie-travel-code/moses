@@ -81,7 +81,9 @@ namespace compiler
 			BBPtr TopLevelCurBB;
 			BBPtr TopLevelEntry;
 			std::list<InstPtr>::iterator TopLevelAllocaIsPt;
+			std::list<InstPtr>::iterator TopLevelCurIsPt;
 			bool TopLevelIsAllocaInsertPointSetByNormalInsert;
+			unsigned TopLevelTempCounter;
 
 			/// ReturnBlock - Unified return block.
 			/// ReturnBlock can omit later.
@@ -118,7 +120,7 @@ namespace compiler
 
 			explicit FunctionBuilderStatus() : 
 				CurFuncDecl(nullptr), CGFnInfo(nullptr), FnRetTy(nullptr), CurFn(nullptr), 
-				ReturnValue(nullptr), NumReturnExprs(0)
+				ReturnValue(nullptr), NumReturnExprs(0), TopLevelTempCounter(0)
 			{}
 		};
 
@@ -136,6 +138,7 @@ namespace compiler
 		{	
 		public:
 			using FuncStatusPtr = std::shared_ptr<FunctionBuilderStatus>;
+			static std::string LocalInstNamePrefix;
 		private:
 			// Symbol table from sema.
 			std::shared_ptr<Scope> SymbolTree;
@@ -187,11 +190,21 @@ namespace compiler
 			std::list<InstPtr>::iterator AllocaInsertPoint;
 			bool isAllocaInsertPointSetByNormalInsert;
 			BBPtr EntryBlock;
+			// This is just for naming the temporary result(the name of the instruction.).
+			unsigned TempCounter;			
 		public:
 			ModuleBuilder(std::shared_ptr<Scope> SymbolInfo, MosesIRContext &context);
 
 			/// \brief This method is used for get MosesIRContext.
 			MosesIRContext& getMosesIRContext() { return Context; }
+
+			/// \brief Get the current instruction'a name. Return the "%" + Name + TempCounter.
+			/// e.g.	Name = "num"
+			///	Return "%num0"
+			std::string getCurLocalName(std::string Name = "")
+			{
+				return LocalInstNamePrefix + Name + std::to_string(TempCounter++);
+			}
 
 			/// \brief 当前函数是总控性函数，可以通过遍历AST每个节点，调用相应的visitor
 			/// 使用unique_ptr的作用就是在IR生成之后，AST被析构掉。
@@ -297,8 +310,12 @@ namespace compiler
 			//===---------------------------------------------------------===//
 			/// \brief Insert a new instruction to the current block.
 			template<typename InstTy>
-			InstTy InsertHelper(InstTy I, std::string Name = "")
+			InstTy InsertHelper(InstTy I, std::string Name = "%")
 			{
+				if (Name == "%")
+				{
+					Name = getCurLocalName();
+				}
 				if (!isAllocaInsertPointSetByNormalInsert)
 				{
 					AllocaInsertPoint = CurBB->Insert(InsertPoint, I);
@@ -330,6 +347,10 @@ namespace compiler
 			{
 				if (EntryBlock)
 				{
+					if (Name == "")
+					{
+						Name = getCurLocalName();
+					}
 					EntryBlock->Insert(AllocaInsertPoint, I);
 					I->setName(Name);	
 					return I;
@@ -356,7 +377,7 @@ namespace compiler
 
 			/// \brief This specifies that created instructions should be inserted before
 			/// the specified instruction.
-			void SetInsertPoint(InstPtr I);
+			void SetInsertPoint(InstPtr I);			
 
 			bool HaveInsertPoint() const { return CurBB ? true : false; }
 			//===---------------------------------------------------------------===//
@@ -605,7 +626,7 @@ namespace compiler
 			ValPtr EmitBinaryExpr(const BinaryExpr* BE);
 
 			/// \brief EmitCallExpr - Emit the code for call expression.
-			ValPtr EmitCallExpr(const CallExpr* CE);
+			RValue EmitCallExpr(const CallExpr* CE);
 
 			/// \brief EmitUnaryExpr - Emit code for unary expression, including '-' '!' '--' '++'.
 			ValPtr EmitUnaryExpr(const UnaryExpr* UE);

@@ -5,10 +5,12 @@ using namespace compiler::IR;
 
 //===---------------------------------------------------------------------===//
 // Implements class ModuleBuilder.
+std::string ModuleBuilder::LocalInstNamePrefix = "%";
+
 ModuleBuilder::ModuleBuilder(std::shared_ptr<Scope> SymbolInfo, MosesIRContext &context) :
 	SymbolTree(SymbolInfo), Context(context), Types(CodeGenTypes(context)),
 	CurBB(CreateBasicBlock("entry", nullptr)), isAllocaInsertPointSetByNormalInsert(false),
-	CurFunc(std::make_shared<FunctionBuilderStatus>()), CurScope(SymbolInfo)
+	CurFunc(std::make_shared<FunctionBuilderStatus>()), CurScope(SymbolInfo), TempCounter(0)
 {
 	SetInsertPoint(CurBB);
 	EntryBlock = CurBB;
@@ -21,7 +23,7 @@ void ModuleBuilder::VisitChildren(std::vector<std::shared_ptr<StatementAST>> AST
 {
 	unsigned ASTSize = AST.size();
 	for (unsigned i = 0; i < ASTSize; i++)
-		AST[i].get()->Accept(this);
+ 		AST[i].get()->Accept(this);
 }
 
 //===---------------------------------------------------------------------===//
@@ -61,17 +63,17 @@ ReturnInstPtr ModuleBuilder::CreateAggregateRet(std::vector<ValPtr> retVals, uns
 
 BrInstPtr ModuleBuilder::Create(BBPtr Dest)
 {
-	return InsertHelper(BranchInst::Create(CurBB, Dest));
+	return InsertHelper(BranchInst::Create(CurBB, Dest), "");
 }
 
 BrInstPtr ModuleBuilder::CreateCondBr(ValPtr Cond, BBPtr True, BBPtr False)
 {
-	return InsertHelper(BranchInst::Create(True, False, Cond, CurBB));
+	return InsertHelper(BranchInst::Create(True, False, Cond, CurBB), "");
 }
 
 BrInstPtr ModuleBuilder::CreateBr(BBPtr Dest)
 {
-	return InsertHelper(BranchInst::Create(Dest, CurBB));
+	return InsertHelper(BranchInst::Create(Dest, CurBB), "");
 }
 
 //===-------------------------------------------------------------===//
@@ -201,7 +203,7 @@ LoadInstPtr ModuleBuilder::CreateLoad(ValPtr Ptr)
 
 StoreInstPtr ModuleBuilder::CreateStore(ValPtr Val, ValPtr Ptr)
 {
-	return InsertHelper(StoreInst::Create(Val, Ptr, CurBB));
+	return InsertHelper(StoreInst::Create(Val, Ptr, CurBB), "");
 }
 
 GEPInstPtr ModuleBuilder::CreateGEP(TyPtr Ty, ValPtr Ptr, std::vector<unsigned> IdxList, 
@@ -230,32 +232,32 @@ GEPInstPtr ModuleBuilder::CreateGEP(TyPtr Ty, ValPtr Ptr, unsigned Idx, std::str
 // Instruction creation methods: Compare Instruction.
 ValPtr ModuleBuilder::CreateCmpEQ(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return CmpInst::Create(CmpInst::CMP_EQ, LHS, RHS, CurBB, Name);
+	return InsertHelper(CmpInst::Create(CmpInst::CMP_EQ, LHS, RHS, CurBB, Name), Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpNE(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return CmpInst::Create(CmpInst::CMP_NE, LHS, RHS, CurBB, Name);
+	return InsertHelper(CmpInst::Create(CmpInst::CMP_NE, LHS, RHS, CurBB, Name), Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpGT(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return CmpInst::Create(CmpInst::CMP_GT, LHS, RHS, CurBB, Name);
+	return InsertHelper(CmpInst::Create(CmpInst::CMP_GT, LHS, RHS, CurBB, Name), Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpGE(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return CmpInst::Create(CmpInst::CMP_GE, LHS, RHS, CurBB, Name);
+	return InsertHelper(CmpInst::Create(CmpInst::CMP_GE, LHS, RHS, CurBB, Name), Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpLT(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return CmpInst::Create(CmpInst::CMP_LT, LHS, RHS, CurBB, Name);
+	return InsertHelper(CmpInst::Create(CmpInst::CMP_LT, LHS, RHS, CurBB, Name), Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpLE(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return CmpInst::Create(CmpInst::CMP_LE, LHS, RHS, CurBB, Name);
+	return InsertHelper(CmpInst::Create(CmpInst::CMP_LE, LHS, RHS, CurBB, Name), Name);
 }
 
 ValPtr ModuleBuilder::CreateCmp(CmpInst::Predicate P, ValPtr LHS, ValPtr RHS, std::string Name)
@@ -277,7 +279,7 @@ PHINodePtr ModuleBuilder::CreatePHI(TyPtr Ty, unsigned NumReservedValues, std::s
 CallInstPtr ModuleBuilder::CreateCall(ValPtr Callee, std::vector<ValPtr> Args)
 {
 	Callee->getType();
-	return InsertHelper(CallInst::Create(Callee, Args, CurBB), Callee->getName());
+	return InsertHelper(CallInst::Create(Callee, Args, CurBB));
 }
 
 EVInstPtr ModuleBuilder::CreateExtractValueValue(ValPtr Agg, std::vector<unsigned> Idxs, std::string Name)
@@ -319,7 +321,9 @@ void ModuleBuilder::SaveTopLevelCtxInfo()
 	CurFunc->TopLevelAllocaIsPt = AllocaInsertPoint;
 	CurFunc->TopLevelCurBB = CurBB;
 	CurFunc->TopLevelEntry = EntryBlock;
+	CurFunc->TopLevelCurIsPt = InsertPoint;
 	CurFunc->TopLevelIsAllocaInsertPointSetByNormalInsert = isAllocaInsertPointSetByNormalInsert;
+	CurFunc->TopLevelTempCounter = TempCounter;
 }
 
 void ModuleBuilder::RestoreTopLevelCtxInfo()
@@ -327,7 +331,9 @@ void ModuleBuilder::RestoreTopLevelCtxInfo()
 	AllocaInsertPoint = CurFunc->TopLevelAllocaIsPt;
 	CurBB = CurFunc->TopLevelCurBB;
 	EntryBlock = CurFunc->TopLevelEntry;
+	InsertPoint = CurFunc->TopLevelCurIsPt;
 	isAllocaInsertPointSetByNormalInsert = CurFunc->TopLevelIsAllocaInsertPointSetByNormalInsert;
+	TempCounter = CurFunc->TopLevelTempCounter;
 }
 void print(std::shared_ptr<compiler::IR::Value> V)
 {

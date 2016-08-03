@@ -92,7 +92,7 @@ std::shared_ptr<FunctionType> FunctionType::get(TyPtr retty)
 /// [2] = parm2
 IRTyPtr FunctionType::operator[](unsigned index) const
 {
-	assert(index < NumContainedTys - 1 && 
+	assert(index < NumContainedTys && 
 		"Index out of range when we get parm IR type.");
 	return ContainedTys[index];
 }

@@ -30,7 +30,7 @@ namespace
 			unsigned NumberOfArgs;
 
 			IRArgs(unsigned first, unsigned length) : FirstArgIndex(first),
-				NumberOfArgs(length - 1)
+				NumberOfArgs(length)
 			{}
 		};
 		std::vector<IRArgs> ArgInfo;
@@ -73,10 +73,9 @@ namespace
 				if (item->getType()->getKind() == TypeKind::USERDEFIED ||
 					item->getType()->getKind() == TypeKind::ANONYMOUS)
 				{
-					auto StructTy = std::dynamic_pointer_cast<StructType>(item->getType());
-					assert(StructTy && "Type error when ASTToIRMapping!");
-					ArgInfo.push_back(IRArgs(IRCursorArgNo, StructTy->getNumElements()));
-					IRCursorArgNo += StructTy->getNumElements();
+					auto ty = item->getType();
+					ArgInfo.push_back(IRArgs(IRCursorArgNo, ty->MemberNum()));
+					IRCursorArgNo += ty->MemberNum();
 				}
 				else
 				{
@@ -126,8 +125,12 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo, FuncPtr fun
 	//					~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	//			}
 	auto FuncType = fun->getFunctionType();
+	bool isSRet = false;
 	if (FunInfo->getReturnInfo()->getKind() == ArgABIInfo::Kind::InDirect)
-		fun->getArg(0)->setName("agg.result");
+	{
+		fun->getArg(0)->setName(getCurLocalName("agg.result"));
+		isSRet = true;
+	}		
 
 	ASTToIRMapping IRFunctionArgs(*FunInfo);
 	for (unsigned i = 0; i < FunInfo->getArgNums(); i++)
@@ -135,7 +138,7 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo, FuncPtr fun
 		auto ArgInfo = FunInfo->getArgABIInfo(i);
 		auto Arg = CurFunc->CurFuncDecl->getParmDecl(i).get();
 		unsigned FirstIRArg, NumIRArgs;
-		std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(i);
+		std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(isSRet ? i + 1 : i);
 		switch (ArgInfo->getKind())
 		{
 		case ArgABIInfo::InDirect:
@@ -153,7 +156,8 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo, FuncPtr fun
 				// If this structure was wxpanded into multiple arguments then we
 				// need to create a temporary and reconstruct it from the arguments.
 				std::string Name = Arg->getName();
-				ValPtr Temp = CreateAlloca(ArgType, Name + ".addr");
+				ValPtr Temp = CreateAlloca(ArgType, LocalInstNamePrefix + Name + ".addr");
+				print(Temp);
 				
 				// 在function()中创建一个临时的Struct，然后将展开的子filed，一一拷贝过去。
 				// 下面是一系列的 GEP指令
@@ -237,7 +241,11 @@ void ModuleBuilder::ExpandTypeToArgs(ASTTyPtr ASTTy, RValue Src, std::vector<Val
 	for (unsigned i = 0, size = ASTTy->MemberNum(); i < size; i++)
 	{
 		auto ty = Types.ConvertType((*ASTTy)[i].first);
-		auto LV = LValue::MakeAddr(CreateGEP(ty, Addr, i));
+		auto forPrint = CreateGEP(ty, Addr, i);
+		print(forPrint);
+
+		auto LV = LValue::MakeAddr(forPrint);
+
 		auto RV = EmitLoadOfLValue(LV);
 		Args.push_back(RV.getScalarVal());
 	}
@@ -286,7 +294,11 @@ RValue ModuleBuilder::EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr, Ca
 	// If the call return a temporary with struct return, create a temporary alloca to hold the 
 	// result.
 	if (RetInfo->getKind() == ArgABIInfo::Kind::InDirect)
-		Args.push_back(CreateAlloca(Types.ConvertType(RetInfo->getType()), "%temp_for_ret"));
+	{
+		auto forPrint = CreateAlloca(Types.ConvertType(RetInfo->getType()), getCurLocalName("ret.tmp"));
+		print(forPrint);
+		Args.push_back(forPrint);
+	}		
 
 	auto ArgsInfo = CGFunInfo->getArgsInfo();
 	assert(ArgsInfo.size() == CallArgs.size() && "Arguments number don't match!");
@@ -321,6 +333,7 @@ RValue ModuleBuilder::EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr, Ca
 	}
 
 	auto CallRest = CreateCall(FuncAddr, Args);
+	print(CallRest);
 	switch (RetInfo->getKind())
 	{
 	case ArgABIInfo::Kind::InDirect:
@@ -330,7 +343,7 @@ RValue ModuleBuilder::EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr, Ca
 		// (2) BuiltinType
 		if (Types.ConvertType(RetInfo->getType())->isAggregateType())
 		{
-			ValPtr V = CreateAlloca(Types.ConvertType(RetInfo->getType()), "coerce");
+			ValPtr V = CreateAlloca(Types.ConvertType(RetInfo->getType()), "%coerce");
 			CreateCoercedStore(CallRest, V);
 			return RValue::getAggregate(V);
 		}
@@ -355,7 +368,8 @@ void ModuleBuilder::EmitCallArgs(CallArgList &CallArgs, const std::vector<ExprAS
 		auto ty = Types.ConvertType(item->getType());
 		if (ty->isAggregateType())
 		{
-			auto AggTemp = CreateAlloca(ty, "agg.tmp");
+			auto AggTemp = CreateAlloca(ty, getCurLocalName("agg.tmp"));
+			print(AggTemp);
 			EmitAggExpr(item.get(), AggTemp);
 			V = AggTemp;
 		}
@@ -416,7 +430,7 @@ AAIPtr CGFunctionInfo::classifyReturnTye(ASTTyPtr RetTy)
 		if (coreTy->getKind() == TypeKind::VOID)
 			return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "", IR::Type::getVoidType());
 	}
-	return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::InDirect, "ret.addr");
+	return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::InDirect, "%ret.addr");
 }
 
 /// \brief classifyArgumentType - compute the ArgABIInfo for ArgumentType.
@@ -447,8 +461,9 @@ AAIPtr CGFunctionInfo::classifyArgumentType(ASTTyPtr ArgTy, std::string Name)
 	}
 
 	if (ArgTy->size() <= 64)
-		return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Direct, Name);
-	return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::InDirect, Name + ".addr");
+		return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Direct, Name, nullptr, true);
+	return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::InDirect, 
+		ModuleBuilder::LocalInstNamePrefix + Name + ".addr");
 }
 
 CGFuncInfoConstPtr CGFunctionInfo::create(const FunctionDecl *FD)
@@ -545,8 +560,8 @@ GetFuncTypeRet CodeGenTypes::getFunctionType(const FunctionDecl* FD, CGFuncInfoC
 
 	// Add parm type.
 	auto ArgsInfo = Info->getArgsInfo();
-	auto NumArgs = ArgsInfo.size();
-	for (unsigned i = 0; i < NumArgs; i++)
+	
+	for (unsigned i = 0, NumArgs = ArgsInfo.size(); i < NumArgs; i++)
 	{
 		unsigned FirstIRArg, NumIRArgs;
 		std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(i);
@@ -558,7 +573,7 @@ GetFuncTypeRet CodeGenTypes::getFunctionType(const FunctionDecl* FD, CGFuncInfoC
 			{
 				// Can be flattened.
 				// Shit Code! Shit Code! Shit Code!
-				unsigned count = 1;
+				unsigned count = 0;
 				if (ArgsInfo[i]->canBeFlattened())
 				{
 					auto StructTy = std::dynamic_pointer_cast<UserDefinedType>(ArgsInfo[i]->getType());
@@ -566,14 +581,14 @@ GetFuncTypeRet CodeGenTypes::getFunctionType(const FunctionDecl* FD, CGFuncInfoC
 					{						
 						for (auto item : StructTy->getMemberTypes())
 						{
-							ArgTypes.push_back(ConvertType(item.first->StripOffShell()));
+							auto StripOffTy = item.first->StripOffShell();
+							ArgTypes.push_back(ConvertType(StripOffTy == nullptr ? item.first : StripOffTy));
 							ArgNames.push_back(ArgsInfo[i]->getArgName() + "." + std::to_string(count++));
-							count++;
 						}
 						break;
 					}
 					auto AnonyTy = std::dynamic_pointer_cast<AnonymousType>(ArgsInfo[i]->getType());
-					count = 1;
+					count = 0;
 					if (AnonyTy)
 					{
 						for (auto item : AnonyTy->getSubTypes())

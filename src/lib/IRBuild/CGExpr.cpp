@@ -101,62 +101,41 @@ ValPtr ModuleBuilder::EmitAlgAndBooleanOp(const CGExpr::BinOpInfo& BInfo)
 {
 	std::string Opcode = BInfo.BE->getOpcode();
 
-	ValPtr ret;
+	ValPtr ret = nullptr;
 
 	if (Opcode == "+")
-	{
-		//return CreateAdd(BInfo.LHS, BInfo.RHS, "add.result");
-		ret = CreateAdd(BInfo.LHS, BInfo.RHS, "add.result");
-	}
+		ret = CreateAdd(BInfo.LHS, BInfo.RHS, getCurLocalName("add.tmp"));
 	if (Opcode == "-")
-	{
-		// return CreateSub(BInfo.LHS, BInfo.RHS, "sub.result");
-		ret = CreateSub(BInfo.LHS, BInfo.RHS, "sub.result");
-	}
+		ret = CreateSub(BInfo.LHS, BInfo.RHS, getCurLocalName("sub.tmp"));
 	if (Opcode == "*")
-	{
-		// return CreateMul(BInfo.LHS, BInfo.RHS, "mul.result");
-		ret = CreateMul(BInfo.LHS, BInfo.RHS, "mul.result");
-	}
+		ret = CreateMul(BInfo.LHS, BInfo.RHS, getCurLocalName("mul.tmp"));	
 	if (Opcode == "/")
-	{
-		// return CreateDiv(BInfo.LHS, BInfo.RHS, "div.result");
-		ret =  CreateDiv(BInfo.LHS, BInfo.RHS, "div.result");
-	}
+		ret =  CreateDiv(BInfo.LHS, BInfo.RHS, getCurLocalName("div.tmp"));
 	if (Opcode == "%")
-	{
-		// return CreateRem(BInfo.LHS, BInfo.RHS, "rem.result");
-		ret = CreateRem(BInfo.LHS, BInfo.RHS, "rem.result");
-	}
+		ret = CreateRem(BInfo.LHS, BInfo.RHS, getCurLocalName("rem.tmp"));
 	if (Opcode == "<")
-	{
-		// return CreateCmpLT(BInfo.LHS, BInfo.RHS, "lt.result");
-		ret = CreateCmpLT(BInfo.LHS, BInfo.RHS, "lt.result");
-	}
+		ret = CreateCmpLT(BInfo.LHS, BInfo.RHS, getCurLocalName("lt.tmp"));
 	if (Opcode == ">")
-	{
-		// return CreateCmpGT(BInfo.LHS, BInfo.RHS, "gt.result");
-		ret = CreateCmpGT(BInfo.LHS, BInfo.RHS, "gt.result");
-	}
+		ret = CreateCmpGT(BInfo.LHS, BInfo.RHS, getCurLocalName("gt.result"));
 	if (Opcode == "<=")
 	{
 		// return CreateCmpLE(BInfo.LHS, BInfo.RHS, "le.result");
-		ret = CreateCmpLE(BInfo.LHS, BInfo.RHS, "le.result");
+		ret = CreateCmpLE(BInfo.LHS, BInfo.RHS, getCurLocalName("le.result"));
 	}
 	if (Opcode == ">=")
 	{
 		// return CreateCmpGE(BInfo.LHS, BInfo.RHS, "ge.result");
-		ret = CreateCmpGE(BInfo.LHS, BInfo.RHS, "ge.result");
+		ret = CreateCmpGE(BInfo.LHS, BInfo.RHS, getCurLocalName("ge.result"));
 	}
 	if (Opcode == "==")
 	{
 		// return CreateCmpEQ(BInfo.LHS, BInfo.RHS, "eq.result");
-		ret = CreateCmpEQ(BInfo.LHS, BInfo.RHS, "eq.result");
+		ret = CreateCmpEQ(BInfo.LHS, BInfo.RHS, getCurLocalName("eq.result"));
 	}
 	if (Opcode == "!=")
 	{
 		// return CreateCmpNE(BInfo.LHS, BInfo.RHS, "ne.result");
-		ret = CreateCmpNE(BInfo.LHS, BInfo.RHS, "ne.result");
+		ret = CreateCmpNE(BInfo.LHS, BInfo.RHS, getCurLocalName("ne.result"));
 	}
 
 	print(ret);
@@ -181,7 +160,7 @@ ValPtr ModuleBuilder::EmitBinAssignOp(const BinaryExpr* B)
 	auto ty = Types.ConvertType(B->getType());
 	if (ty->isAggregateType())
 	{
-		EmitAggLoadOfLValue(B->getRHS().get(), LHSAddr.getAddress());
+		EmitAggExpr(B->getRHS().get(), LHSAddr.getAddress());
 		return LHSAddr.getAddress();
 	}
 	else
@@ -279,8 +258,7 @@ LValue ModuleBuilder::EmitLValue(const Expr* E)
 
 	if (const CallExpr* CE = dynamic_cast<const CallExpr*>(E))
 	{
-		// (1) EmitCallExpr
-		
+		// To Do:		
 	}
 	assert(0 && "Unreachable program point.");
 	return LValue();
@@ -382,15 +360,15 @@ ValPtr ModuleBuilder::EmitUnaryExpr(const UnaryExpr* UE)
 	if (Opcode == "--")
 	{
 		if (UE->isLValue())
-			EmitPrePostIncDec(UE, false, true);
+			return EmitPrePostIncDec(UE, false, true);
 		else
-			EmitPrePostIncDec(UE, false, false);
+			return EmitPrePostIncDec(UE, false, false);
 	}
 
 	if (Opcode == "!")
 	{
 		ValPtr OperandV = UE->getSubExpr()->Accept(this);
-		auto ret = CreateNot(OperandV, "not");
+		auto ret = CreateNot(OperandV, getCurLocalName("not"));
 		print(ret);
 		return ret;
 	}
@@ -427,7 +405,7 @@ ValPtr ModuleBuilder::EmitPrePostIncDec(const UnaryExpr* UE, bool isInc, bool is
 	// (3) Perform operation.
 	NextVal = ConstantInt::get(Context, AmoutVal);
 	NextVal->setName(std::to_string(AmoutVal));
-	NextVal = CreateAdd(InVal, NextVal, isInc ? "inc" : "dec");
+	NextVal = CreateAdd(InVal, NextVal, getCurLocalName(isInc ? "inc" : "dec"));
 	print(NextVal);
 	return NextVal;
 }
@@ -443,7 +421,7 @@ ValPtr ModuleBuilder::EmitPrePostIncDec(const UnaryExpr* UE, bool isInc, bool is
 ///
 ///		(2) Emit code for call expression.
 ///			%call = call i32 @add(i32 %tmp, i32 %tmp1)
-ValPtr ModuleBuilder::EmitCallExpr(const CallExpr* CE)
+RValue ModuleBuilder::EmitCallExpr(const CallExpr* CE)
 {
 	// Get the funciton decl's address.
 	auto FD = CE->getFuncDecl();
@@ -453,7 +431,7 @@ ValPtr ModuleBuilder::EmitCallExpr(const CallExpr* CE)
 	assert(FuncSym && "function decl symbol doesn't exists.");
 	auto CalleeAddr = FuncSym->getFuncAddr();
 
-	return EmitCall(FD.get(), CalleeAddr, CE->getArgs()).getScalarVal();
+	return EmitCall(FD.get(), CalleeAddr, CE->getArgs());
 }
 
 /// \brief visit(const BinaryExpr*) - Generate code for BinaryExpr.
@@ -507,32 +485,7 @@ ValPtr ModuleBuilder::visit(const CallExpr* CE)
 	auto ty = Types.ConvertType(CE->getType());
 	if (ty->isAggregateType())
 		return EmitAggLoadOfLValue(CE, nullptr);
-	return EmitCallExpr(CE);
-}
-
-/// Emit an expression as an initializer for a variable at the given location. 
-///
-/// \param init - the initializing expression.
-/// \param var - the variable to act if we're initializing.
-/// \param lvalue - the location.
-///
-/// For example:
-///		int mem = 10;
-///		int num = add(mem) + mem * 10;
-///	We need to handle the "func() + mem * 10" code generation.
-/// First, we should alloca space for 'num'.
-///	----	%num = alloca i32
-///	Second, walk the AST of 'add(mem) + mem * 10' to generator IR.
-/// ----	(1) %2 = load i32* %mem.
-/// ----	(2) %3 = call i32 add(i32 %2)
-/// ----	(3) %4 = load i32* %mem.
-/// ----	(4) %5 = mul i32 %4, 10
-/// ----	(5) %6 = add i32 %3, %5
-///	----	(6) store i32 %6, i32* %num
-/// Note: As shown above, we need the '%num' to initialize the value.
-void ModuleBuilder::EmitExprAsInit(const Expr* init, const VarDecl* D, LValue lvalue)
-{
-
+	return EmitCallExpr(CE).getScalarVal();
 }
 
 /// EmitScalarExpr - Emit the computation of the specified expression of

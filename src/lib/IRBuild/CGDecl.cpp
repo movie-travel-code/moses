@@ -87,7 +87,7 @@ void ModuleBuilder::EmitLocalVarDecl(const VarDecl* var)
 		}
 		else
 		{
-			ValPtr V = EmitScalarExpr(init.get());
+ 			ValPtr V = EmitScalarExpr(init.get());
 			EmitStoreOfScalar(V, DeclPtr);
 		}		
 	}
@@ -100,7 +100,7 @@ AllocaInstPtr ModuleBuilder::EmitLocalVarAlloca(const VarDecl* var)
 
 	// (1) 将VarDecl类型转换为IR Type，并创建一条对应的Alloca 指令
 	IRTyPtr IRTy = Types.ConvertType(Ty);
-	AllocaInstPtr allocInst = CreateAlloca(IRTy, var->getName() + ".addr");
+	AllocaInstPtr allocInst = CreateAlloca(IRTy, LocalInstNamePrefix + var->getName() + ".addr");
 
 	print(allocInst);
 
@@ -132,7 +132,7 @@ void ModuleBuilder::EmitParmDecl(const VarDecl* VD, ValPtr Arg)
 		//		{
 		//			%lhs.addr = alloca i32
 		//		}
-		Name += ".addr";
+		Name = LocalInstNamePrefix + Name + ".addr";
 		DeclPtr = CreateAlloca(Ty);
 		print(DeclPtr);
 
@@ -214,17 +214,18 @@ void ModuleBuilder::StartFunction(std::shared_ptr<CGFunctionInfo const> FnInfo, 
 	SetInsertPoint(EntryBlock);
 	AllocaInsertPoint = InsertPoint;
 	isAllocaInsertPointSetByNormalInsert = false;
+	TempCounter = 0;
 
 	CurFunc->ReturnBlock = CreateBasicBlock("return", CurFunc->CurFn);
-
-	if (FnInfo->getReturnInfo()->getType()->getKind() == TypeKind::VOID)
+	auto RetTy = FnInfo->getReturnInfo()->getType();
+	if (RetTy->getKind() == TypeKind::VOID)
 	{
 		// Void type; nothing to return
 		CurFunc->ReturnValue = nullptr;
 	}
 	else
 	{
-		CurFunc->ReturnValue = CreateAlloca(Fn->getReturnType(), "retval");
+		CurFunc->ReturnValue = CreateAlloca(Types.ConvertType(RetTy), "%retval");
 		print(CurFunc->ReturnValue);
 	}
 	EmitFunctionPrologue(FnInfo, Fn);

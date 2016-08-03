@@ -89,7 +89,7 @@ void CmpInst::Print(std::ostringstream& out)
 		assert(0 && "Unreachable code!");
 		break;
 	}
-	out << "%" << Name << " = cmp";
+	out << Name << " = cmp";
 	out << PreStr;
 	Operands[0].get()->getType()->Print(out);
 	out << " " << Operands[0].get()->getName() << ",";
@@ -156,7 +156,7 @@ BOInstPtr BinaryOperator::CreateNot(MosesIRContext& Ctx, ValPtr Operand, BBPtr p
 ///			%sub = sub i32 %tmp1, 1
 void BinaryOperator::Print(std::ostringstream& out)
 {
-	out << "%" << Name << " =";
+	out << Name << " =";
 	switch (op)
 	{
 	case compiler::IR::Instruction::Opcode::Add:
@@ -337,7 +337,7 @@ CallInst::CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args, BBPtr
 	unsigned ArgsNum = Args.size();
 	for (unsigned i = 0; i < ArgsNum; i++)
 	{
-		assert((*FTy)[i].get() == Args[i]->getType().get() && "The parameter type is different! ");
+		// To Do: 判断Arg的类型相同，即使是PointerType
 		Operands.push_back(Use(Args[i], this));
 	}
 }
@@ -378,11 +378,11 @@ void CallInst::Print(std::ostringstream& out)
 {
 	if (!Ty->isVoidType())
 	{
-		out << "%" << Name << " =";
+		out << Name << " =";
 	}
 	out << " call";
 	Ty->Print(out);
-	out << " " << Name << "(";
+	out << " " << Operands[0].get()->getName() << "(";
 	if (Operands.size() > 1)
 	{
 		// Print the parameter information.
@@ -407,7 +407,10 @@ ReturnInst::ReturnInst(BBPtr parent, ValPtr retVal, BBPtr InsertAtEnd) :
 	TerminatorInst(Opcode::Ret, parent)
 {
 	// Operands.resize(1);
-	Operands.push_back(Use(retVal, this));
+	if (retVal)
+	{
+		Operands.push_back(Use(retVal, this));
+	}	
 }
 
 ReturnInstPtr ReturnInst::Create(BBPtr parent, ValPtr retVal, BBPtr InsertAtEnd)

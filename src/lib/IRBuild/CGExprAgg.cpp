@@ -17,50 +17,45 @@ void ModuleBuilder::EmitAggExpr(const Expr* E, ValPtr DestPtr)
 	{
 		EmitAggLoadOfLValue(DRE, DestPtr);
 	}
-	else if (const MemberExpr* ME = dynamic_cast<const MemberExpr*>(E))
-	{
-	}
-	else if (const CallExpr* CE = dynamic_cast<const CallExpr*>(E))
-	{
-		// EmitCallExpr()返回的ValPtr，有三种情况
-		// (1) EmitCallExpr() 为Builtin类型，那么返回的就是CallExpr的到值
-		//     这一种普通的EmitCallExpr()就可以处理
-		// (2) EmitCallExpr() 为AggregateType，但是Coerce到某个BuiltinType，那么返回的是其中的值
-		//     这一种比较麻烦，因为面临的状况是：两者的类型不同，外部用于接收返回值得类型是AggregateType
-		//     而返回的类型是coerce得到的类型，两者类型不同。
-		// (3) EmitCallExpr() 为AggregateType，使用的是sret，那么返回的是TempAlloca指令
-		auto rvalue = EmitCallExpr(CE);		
 
-		EmitFinalDestCopy(CE, RValue::get(rvalue), DestPtr);
-	}
-	else
+	if (const MemberExpr* ME = dynamic_cast<const MemberExpr*>(E))
 	{
+		EmitMemberExprAgg(ME, DestPtr);
+	}
+
+	if (const CallExpr* CE = dynamic_cast<const CallExpr*>(E))
+	{
+		EmitCallExprAgg(CE, DestPtr);
 	}
 }
 
-/// \brief 
 void ModuleBuilder::EmitDeclRefExprAgg(const DeclRefExpr *DRE, ValPtr DestPtr)
 {
 	EmitAggLoadOfLValue(DRE, DestPtr);
 }
 
-/// \brief
 void ModuleBuilder::EmitMemberExprAgg(const MemberExpr *ME, ValPtr DestPtr)
 {
-
+	EmitAggLoadOfLValue(ME, DestPtr);
 }
 
-/// \brief
 void ModuleBuilder::EmitCallExprAgg(const CallExpr* CE, ValPtr DestPtr)
 {
-
+	// EmitCallExpr()返回的ValPtr，有三种情况
+	// (1) EmitCallExpr() 为Builtin类型，那么返回的就是CallExpr的到值
+	//     这一种普通的EmitCallExpr()就可以处理
+	// (2) EmitCallExpr() 为AggregateType，但是Coerce到某个BuiltinType，那么返回的是其中的值
+	//     这一种比较麻烦，因为面临的状况是：两者的类型不同，外部用于接收返回值得类型是AggregateType
+	//     而返回的类型是coerce得到的类型，两者类型不同。
+	// (3) EmitCallExpr() 为AggregateType，使用的是sret，那么返回的是TempAlloca指令
+	auto rvalue = EmitCallExpr(CE);
+	EmitFinalDestCopy(CE, rvalue, DestPtr);
 }
 
 void ModuleBuilder::EmitAggregateCopy(ValPtr DestPtr, ValPtr SrcPtr, ASTTyPtr Ty)
 {
 	// Aggregate assignment turns into Intrinsic::ir.memcpy.
 	// Get the memcpy intrinsic function.
-	std::cout << "memcpy \n";
 }
 
 /// ?

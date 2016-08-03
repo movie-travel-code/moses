@@ -24,16 +24,17 @@ Function::Function(FuncTypePtr Ty, std::string Name, std::vector<std::string> Na
 	ReturnType(Ty->getReturnType()), FunctionTy(Ty)
 {
 	// Create space for argument and set the name later.
-	for (unsigned i = 0; i < Ty->getNumParams(); i++)
+	for (unsigned i = 0, size = Ty->getNumParams(); i < size; i++)
 	{
-		Arguments.push_back(std::make_shared<Argument>((*Ty)[i], Names[i]));
+		auto ty = (*Ty)[i + 1];
+		Arguments.push_back(std::make_shared<Argument>(ty, Names[i]));
 	}
 }
 
 /// \brief Get the argument.
 ArgPtr Function::operator[](unsigned index) const
 {
-	assert(index <= Arguments.size() - 1 &&
+	assert(index < Arguments.size() &&
 		"Index out of range when we get the specified Argument(IR).");
 	return Arguments[index];
 }
@@ -41,7 +42,7 @@ ArgPtr Function::operator[](unsigned index) const
 /// \brief Set argument info.
 void Function::setArgumentInfo(unsigned index, std::string name)
 {
-	assert(index <= Arguments.size() - 1 &&
+	assert(index < Arguments.size() &&
 		"Index out of range when set Argument(IR) name.");
 	Arguments[index]->setName(name);
 }
@@ -49,7 +50,8 @@ void Function::setArgumentInfo(unsigned index, std::string name)
 /// \brief Create a new function.
 FuncPtr Function::create(FuncTypePtr Ty, std::string Name, std::vector<std::string> Names)
 {
-	return std::make_shared<Function>(Ty, Name, Names);
+	auto func = std::make_shared<Function>(Ty, Name, Names);
+	return func;
 }
 
 TyPtr Function::getReturnType() const

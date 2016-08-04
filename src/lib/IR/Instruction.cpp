@@ -336,24 +336,36 @@ CallInst::CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args, BBPtr
 	assert(Args.size() == FTy->getNumParams() && "The number of parameters is different!");
 	unsigned ArgsNum = Args.size();
 	for (unsigned i = 0; i < ArgsNum; i++)
-	{
 		// To Do: 判断Arg的类型相同，即使是PointerType
 		Operands.push_back(Use(Args[i], this));
-	}
+}
+
+CallInst::CallInst(IntrinsicPtr Intr, std::vector<ValPtr> Args, BBPtr parent,
+	std::string Name, InstPtr InsertBefore):
+	Instruction(nullptr, Opcode::Call, parent)
+{
+	Operands.push_back(Use(Intr, this));
+	for (unsigned i = 0, size = Args.size(); i < size; i++)
+		Operands.push_back(Use(Args[i], this));
 }
 
 CallInst::~CallInst() {}
 
 CallInstPtr CallInst::Create(ValPtr Func, std::vector<ValPtr> Args, BBPtr parent,
-			std::string Name, InstPtr InsertBefore)
+	std::string Name, InstPtr InsertBefore)
 {
 	auto func = std::dynamic_pointer_cast<Function>(Func);
 	assert(func && "The Value must be the 'Function'!");
 	auto functy = std::dynamic_pointer_cast<FunctionType>(func->getFunctionType());
 	assert(functy && "The function must have 'FunctionType'");
-	return std::make_shared<CallInst>(functy, Func, Args, parent);
+	return std::make_shared<CallInst>(functy, Func, Args, parent, Name);
 }
 
+CallInstPtr CallInst::Create(IntrinsicPtr Intr, std::vector<ValPtr> Args, BBPtr parent,
+	std::string Name, InstPtr InsertBefore)
+{
+	return std::make_shared<CallInst>(Intr, Args, parent, Name);
+}
 ValPtr CallInst::getArgOperand(unsigned i) const
 {
 	assert(i < FTy->getNumParams() && "Index out of range!");
@@ -376,6 +388,29 @@ void CallInst::setArgOperand(unsigned i, ValPtr v)
 ///			call void @add(i32 %tmp)
 void CallInst::Print(std::ostringstream& out)
 {
+	// Shit!
+	if (!Ty)
+	{
+		out << "call";
+		out << " " << Operands[0].get()->getName() << "(";
+		if (Operands.size() > 1)
+		{
+			// Print the parameter information.
+			unsigned Length = Operands.size();
+			for (unsigned i = 1; i < Length; i++)
+			{
+				Operands[i].get()->getType()->Print(out);
+				out << " " << Operands[i].get()->getName();
+				if (i != Length - 1)
+				{
+					out << ",";
+				}
+			}
+		}
+		out << ")" << "        ; \n";
+		return;
+	}
+
 	if (!Ty->isVoidType())
 	{
 		out << Name << " =";

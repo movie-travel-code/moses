@@ -9,6 +9,7 @@
 #include "../User.h"
 #include "../Instruction.h"
 #include "../IRType.h"
+#include "../MosesIRContext.h"
 namespace compiler
 {
 	namespace IR
@@ -17,6 +18,7 @@ namespace compiler
 		class IRPrinter
 		{
 		public:
+			static void Print(const MosesIRContext& Ctx, std::ostringstream& out);
 			static void Print(const std::list<ValPtr>& IR, std::ostringstream& out);
 		};
 	}	

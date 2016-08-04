@@ -47,6 +47,7 @@ namespace compiler
 		class GetElementPtrInst;
 		class CallInst;
 		class Function;
+		class Intrinsic;
 		class FunctionType;
 		class ExtractValueInst;
 		class PHINode;
@@ -68,7 +69,7 @@ namespace compiler
 		class StructType;
 		class Use;
 		class Value;
-		class User;
+		class User;		
 
 		typedef std::shared_ptr<Type>				TyPtr;
 		typedef std::shared_ptr<Value>				ValPtr;
@@ -99,6 +100,7 @@ namespace compiler
 		typedef std::shared_ptr<FunctionType>		FuncTypePtr;
 		typedef std::shared_ptr<StructType>			StructTypePtr;
 		typedef std::list<InstPtr>::iterator		Iterator;
+		typedef std::shared_ptr<Intrinsic>			IntrinsicPtr;
 		class Value
 		{
 		public:

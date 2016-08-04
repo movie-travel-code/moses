@@ -54,15 +54,18 @@ namespace compiler
 			// Hold CGFunctionInfo results.
 			std::map<const FunctionDecl*, CGFuncInfoConstPtr> FunctionInfos;
 			std::map<const FunctionDecl*, FuncTypePtr> FunctionTypes;
+			unsigned AnonyTypesCounter;
+			std::string TypeNamePrefix;
 		public:
-			CodeGenTypes(MosesIRContext& IRCtx) : IRCtx(IRCtx) {}
+			CodeGenTypes(MosesIRContext& IRCtx) : 
+				IRCtx(IRCtx), AnonyTypesCounter(0), TypeNamePrefix("@") {}
 			/// ConvertType - Convert type T into a moses-IR type.
 			/// Note: 如果发现当前Type是StructType，则记录到Map中。
-			IRTyPtr ConvertType(ASTTyPtr type);
-						
-			GetFuncTypeRet getFunctionType(const FunctionDecl* FD, std::shared_ptr<CGFunctionInfo const> Info);
-
+			IRTyPtr ConvertType(ASTTyPtr type);						
+			GetFuncTypeRet getFunctionType(const FunctionDecl* FD, 
+				std::shared_ptr<CGFunctionInfo const> Info);
 			std::shared_ptr<const CGFunctionInfo> arrangeFunctionInfo(const FunctionDecl* FD);			
+			std::string getAnonyName();
 		};
 	}
 }

@@ -23,6 +23,21 @@ TypeKind Type::checkTypeKind(TokenValue kind)
 	}
 }
 
+std::string Type::getTypeName() const 
+{
+	switch (Kind)
+	{
+	case TypeKind::INT:
+		return "int";
+	case TypeKind::BOOL:
+		return "bool";
+	case TypeKind::VOID:
+		return "void";
+	case TypeKind::ANONYMOUS:
+		return "";
+	}
+}
+
 // remove const attribute.
 TyPtr Type::const_remove() const 
 {

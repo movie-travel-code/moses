@@ -88,3 +88,8 @@ void Function::Print(std::ostringstream& out)
 	}
 	out << "}\n";
 }
+
+void Intrinsic::Print(std::ostringstream &out)
+{
+
+}

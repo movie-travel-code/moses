@@ -7,7 +7,7 @@
 using namespace compiler::IR;
 using namespace compiler::IRBuild;
 using namespace compiler::CodeGen;
-
+extern void print(std::shared_ptr<compiler::IR::Value> V);
 /// \brief EmitAggExpr -  Emit the computation of the specified expression of aggregate type
 /// 2016-7-28 Aggregate 直接参与的表达式也就只有 return stmt和赋值，参数传递
 /// Aggregate 不参与算数运算（暂时不支持，如果重载运算符的话）。
@@ -54,8 +54,13 @@ void ModuleBuilder::EmitCallExprAgg(const CallExpr* CE, ValPtr DestPtr)
 
 void ModuleBuilder::EmitAggregateCopy(ValPtr DestPtr, ValPtr SrcPtr, ASTTyPtr Ty)
 {
+	assert(Types.ConvertType(Ty)->isAggregateType() && "The Object must have aggregate type.");
 	// Aggregate assignment turns into Intrinsic::ir.memcpy.
 	// Get the memcpy intrinsic function.
+	auto IRMemcpy = Context.getMemcpy();
+	std::vector<ValPtr> Args = {DestPtr, SrcPtr};
+	auto call = CreateIntrinsic(IRMemcpy, Args);
+	print(call);
 }
 
 /// ?

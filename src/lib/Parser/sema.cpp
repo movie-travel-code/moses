@@ -481,6 +481,8 @@ ExprASTPtr Sema::ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok)
 		idx = BaseType->getIdx(tok.getLexem());
 	}
 
+	if (!memberType)
+		return nullptr;
 	return std::make_shared<MemberExpr>(lhs->getLocStart(), lhs->getLocEnd(), memberType, lhs, 
 		tok.getTokenLoc(), tok.getLexem(), memberType->getKind() != TypeKind::USERDEFIED, idx);
 }
@@ -715,25 +717,27 @@ UnpackDeclPtr Sema::unpackDeclTypeChecking(UnpackDeclPtr decl, std::shared_ptr<T
 		// 例如： {{start, end}, {lhs, rhs}} = num;
 		// 拆出来后是start, end, lhs, rhs
 		// 1: 收集decl names
-		std::vector<std::string> unpackDeclNames;
-		decl->getDeclNames(unpackDeclNames);
+		std::vector<VarDeclPtr> unpackDecls;
+		decl->getDecls(unpackDecls);
 
 		// 2: 收集types
 		std::vector<std::shared_ptr<Type>> types;
 		anonyt->getTypes(types);
 
 		// 3: check
-		if (unpackDeclNames.size() != types.size())
+		if (unpackDecls.size() != types.size())
 		{
 			errorReport("Unpack declaration type error.");
 		}
 		// 3: 创建symbol
-		unsigned size = unpackDeclNames.size();
+		unsigned size = unpackDecls.size();
 		for (unsigned index = 0; index < size; index++)
 		{
-			// (1): 创建variable symbol并插入当前scope
-			CurScope->addDef(std::make_shared<VariableSymbol>(unpackDeclNames[index],
-				CurScope, types[index], true, nullptr));
+			// 创建variable symbol并插入当前scope
+			// 这里有一个问题：unpackdecl var {num1, num2} 中有两个VarSymbol
+			// 这两个VarSymbol都需要存储UnpackDecl.
+			CurScope->addDef(std::make_shared<VariableSymbol>(unpackDecls[index]->getName(),
+				CurScope, types[index], true, unpackDecls[index]));
 		}
 	}
 	else

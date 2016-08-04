@@ -467,6 +467,7 @@ namespace compiler
 			//===---------------------------------------------------------------===//
 			PHINodePtr CreatePHI(TyPtr Ty, unsigned NumReservedValues, std::string Name = "");
 			CallInstPtr CreateCall(ValPtr Callee, std::vector<ValPtr> Args);
+			CallInstPtr CreateIntrinsic(IntrinsicPtr Intr, std::vector<ValPtr> Args);
 			EVInstPtr CreateExtractValueValue(ValPtr Agg, std::vector<unsigned> Idxs, 
 						std::string Name = "");
 

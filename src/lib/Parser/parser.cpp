@@ -1031,7 +1031,7 @@ DeclASTPtr Parser::ParseVarDecl()
 		}
 
 		/// (1) 解析unpack decl的左部，例如：var {num, lhs} = ;
-		auto unpackDecl = ParseUnpackDecl();
+		auto unpackDecl = ParseUnpackDecl(isConst);
 		// complicated actions routines.
 		if (!(validateToken(TokenValue::BO_Assign)))
 		{
@@ -1134,7 +1134,7 @@ DeclASTPtr Parser::ParseVarDecl()
 /// Note: 匿名类型可以用N叉树来表示
 /// {int, {int, bool, {int, bool}, int}, {int, int}}
 /// 一个匿名类型树可以根据嵌套来进行分层
-UnpackDeclPtr Parser::ParseUnpackDecl()
+UnpackDeclPtr Parser::ParseUnpackDecl(bool isConst)
 {
 	// current token is '{'
 	if (!(expectToken(TokenValue::PUNCTUATOR_Left_Brace, "{", true)))
@@ -1148,14 +1148,14 @@ UnpackDeclPtr Parser::ParseUnpackDecl()
 	{
 		if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false))
 		{
-			decls.push_back(ParseUnpackDecl());
+			decls.push_back(ParseUnpackDecl(isConst));
 		}
 		else if (validateToken(TokenValue::IDENTIFIER, false))
 		{
 			Actions.ActOnUnpackDeclElement(scan.getToken().getLexem());
 			/// 注意unpack decl的type只能通过右侧的匿名类型变量来设置。
 			decls.push_back(std::make_shared<VarDecl>(startloc, scan.getToken().getTokenLoc(),
-				scan.getToken().getLexem(), nullptr, true, nullptr));
+				scan.getToken().getLexem(), nullptr, isConst, nullptr));
 			scan.getNextToken();
 		}
 		else

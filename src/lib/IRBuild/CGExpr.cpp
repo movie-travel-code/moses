@@ -103,15 +103,15 @@ ValPtr ModuleBuilder::EmitAlgAndBooleanOp(const CGExpr::BinOpInfo& BInfo)
 
 	ValPtr ret = nullptr;
 
-	if (Opcode == "+")
+	if (Opcode == "+" || Opcode == "+=")
 		ret = CreateAdd(BInfo.LHS, BInfo.RHS, getCurLocalName("add.tmp"));
-	if (Opcode == "-")
+	if (Opcode == "-" || Opcode == "-=")
 		ret = CreateSub(BInfo.LHS, BInfo.RHS, getCurLocalName("sub.tmp"));
-	if (Opcode == "*")
+	if (Opcode == "*" || Opcode == "*=")
 		ret = CreateMul(BInfo.LHS, BInfo.RHS, getCurLocalName("mul.tmp"));	
-	if (Opcode == "/")
+	if (Opcode == "/" || Opcode == "/=")
 		ret =  CreateDiv(BInfo.LHS, BInfo.RHS, getCurLocalName("div.tmp"));
-	if (Opcode == "%")
+	if (Opcode == "%" || Opcode == "%=")
 		ret = CreateRem(BInfo.LHS, BInfo.RHS, getCurLocalName("rem.tmp"));
 	if (Opcode == "<")
 		ret = CreateCmpLT(BInfo.LHS, BInfo.RHS, getCurLocalName("lt.tmp"));
@@ -198,7 +198,7 @@ ValPtr ModuleBuilder::EmitCompoundAssignOp(const BinaryExpr* BE)
 	// (3) Perform the operation.
 	CGExpr::BinOpInfo info;
 	info.LHS = LHSV;
-	info.RHS = LHSV;
+	info.RHS = RHSV;
 	info.BE = BE;
 	info.Ty = BE->getType();
 

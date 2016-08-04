@@ -56,6 +56,7 @@ namespace compiler
  			TypeKind getKind() const { return Kind; }
 			static TypeKind checkTypeKind(tok::TokenValue kind);
 
+			virtual std::string getTypeName() const;
 			virtual ~Type() {}
 		};
 
@@ -117,7 +118,7 @@ namespace compiler
 			virtual unsigned MemberNum() const { return subTypes.size(); }
 
 			std::pair<TyPtr, std::string> operator[](unsigned index) const { return subTypes[index]; }
-			std::string getTypeName() { return TypeName; }			
+			std::string getTypeName() const { return TypeName; }			
 			std::vector<std::pair<TyPtr, std::string>> getMemberTypes() const { return subTypes; }
 			void addSubType(TyPtr subType, std::string name) { subTypes.push_back({ subType, name }); }
 			

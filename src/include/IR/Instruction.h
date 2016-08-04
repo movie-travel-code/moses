@@ -365,11 +365,14 @@ namespace compiler
 		public:
 			CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args, BBPtr parent,
 				std::string Name = "", BBPtr InsertAtEnd = nullptr);
-			/*CallInst(ValPtr Func, std::list<ValPtr> Args,
-				std::string Name = "", InstPtr InsertBefore = nullptr);*/
+			CallInst(IntrinsicPtr Intr, std::vector<ValPtr> Args, BBPtr parent,
+				std::string Name = "", InstPtr InsertBefore = nullptr);
 
 			static CallInstPtr Create(ValPtr Func, std::vector<ValPtr> Args, BBPtr parent, 
 				std::string Name = "", InstPtr InsertBefore = nullptr);
+
+			static CallInstPtr CallInst::Create(IntrinsicPtr Intr, std::vector<ValPtr> Args, 
+				BBPtr parent, std::string Name = "", InstPtr InsertBefore = nullptr);
 
 			/*static CallInstPtr Create(FuncTypePtr *Ty, ValPtr Func, std::list<ValPtr> Args,
 				std::string NameStr, InstPtr InsertBefore = nullptr);*/

@@ -68,35 +68,35 @@ bool UnpackDecl::TypeCheckingAndTypeSetting(AnonTyPtr type)
 }
 
 /// \brief 获取decl name
-std::vector<std::string> UnpackDecl::operator[](unsigned index) const
+std::vector<VarDeclPtr> UnpackDecl::operator[](unsigned index) const
 {
-	std::vector<std::string> names;
+	std::vector<VarDeclPtr> SubDecls;
 	if (UnpackDeclPtr unpackd = std::dynamic_pointer_cast<UnpackDecl>(decls[index]))
 	{
-		unpackd->getDeclNames(names);
+		unpackd->getDecls(SubDecls);
 	}
 
 	if (VarDeclPtr var = std::dynamic_pointer_cast<VarDecl>(decls[index]))
 	{
-		names.push_back(var->getName());
+		SubDecls.push_back(var);
 	}
-	return names;
+	return SubDecls;
 }
 
 /// \brief 获取decl names
-void UnpackDecl::getDeclNames(std::vector<std::string>& names) const
+void UnpackDecl::getDecls(std::vector<VarDeclPtr>& SubDecls) const
 {
 	unsigned size = decls.size();
 	for (unsigned index = 0; index < size; index++)
 	{
 		if (UnpackDeclPtr unpackd = std::dynamic_pointer_cast<UnpackDecl>(decls[index]))
 		{
-			unpackd->getDeclNames(names);
+			unpackd->getDecls(SubDecls);
 		}
 
 		if (VarDeclPtr var = std::dynamic_pointer_cast<VarDecl>(decls[index]))
 		{
-			names.push_back(var->getName());
+			SubDecls.push_back(var);
 		}
 	}
 }

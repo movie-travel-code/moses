@@ -10,6 +10,7 @@
 #include <string>
 #include <memory>
 #include <algorithm>
+#include "../IR/Function.h"
 #include "../Support/Hasing.h"
 #include "../IR/ConstantAndGlobal.h"
 #include "IRType.h"
@@ -120,7 +121,7 @@ namespace compiler
 		{
 			typedef std::shared_ptr<StructType> StructTypePtr;
 		private:
-			std::vector<StructTypePtr> GlobalStructTypes;
+			std::vector<IntrinsicPtr> Intrinsics;
 
 			// Basic type instances.
 			// To Do: 为了减少对内存的占用，我们在MosesIRContext中存放VoidTy和IntTy，
@@ -132,17 +133,21 @@ namespace compiler
 			TypeSet<FuncTypePtr, FunctionTypeKeyInfo> FunctionTypeSet;
 			TypeSet<StructTypePtr, AnonStructTypeKeyInfo> StructTypeSet;
 			TypeSet<StructTypePtr, NamedStructTypeKeyInfo> NamedStructTypeSet;
-			// ExprConstants;
 		public:
 			MosesIRContext() : VoidTy(std::make_shared<Type>(Type::TypeID::VoidTy)), 
 				IntTy(std::make_shared<Type>(Type::TypeID::IntegerTy)),
 				BoolTy(std::make_shared<Type>(Type::TypeID::BoolTy))
-			{}
+			{
+				std::vector<std::string> Names = {"dst", "src"};
+				Intrinsics.push_back(std::make_shared<Intrinsic>("mosesir.memcpy", Names));
+			}
 			/// \brief Add literal structure type(AnonymousType).
 			void AddStructType(StructTypePtr Type)
 			{
 				StructTypeSet.insert(Type);
 			}
+
+			IntrinsicPtr getMemcpy() const { return Intrinsics[0]; }
 
 			/// \brief Add named structure type(UserdefinedType - class).
 			void AddNamedStructType(StructTypePtr Type)
@@ -157,6 +162,16 @@ namespace compiler
 			std::shared_ptr<Type> getVoidTy() const { return VoidTy; }
 			std::shared_ptr<Type> getIntTy() const { return IntTy; }
 			std::shared_ptr<Type> getBoolTy() const { return BoolTy; }
+
+			std::vector<StructTypePtr> getAnonyTypes() const
+			{
+				return StructTypeSet.getBuckets();
+			}
+
+			std::vector<StructTypePtr> getNamedTypes() const
+			{
+				return NamedStructTypeSet.getBuckets();
+			}
 		};
 	}
 }

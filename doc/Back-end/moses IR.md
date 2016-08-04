@@ -773,7 +773,12 @@ call void %foo(i8 97)
 #Intrinsic Functions
 LLVM IR支持“内置函数”这一概念，这些内置有众所周知的名字和功能，相对应的moses IR也支持这一概念。其实这个概念有点儿类似于C语言中的 **sizeof()** 关键字，但是在C语言中 *sizeof* 被明确定义为关键字。
 
-moses IR中的内置函数以 **mosesir.** 前缀开头。这个前缀是保留字，也就是用户自定义函数不能以这个前缀开头。内置函数在LLVM中定义为external函数，也就是说没有函数体，其实函数体是由编译器或者解释器来规定的。moses IR中的内置函数很少，也没有重载的必要。
+moses IR中的内置函数以 **mosesir.** 前缀开头。这个前缀是保留字，也就是用户自定义函数不能以这个前缀开头。内置函数在LLVM中定义为external函数，也就是说没有函数体，其实函数体是由编译器或者解释器来规定的。moses IR中的内置函数很少，也没有重载的必要。现阶段的Intrinsic Functions只有memcpy一种，该函数执行Aggregate Object的拷贝操作。
+
+例如：
+```
+mosesir.memcpy(int %dest, int %src);
+```
 
 
 ----------

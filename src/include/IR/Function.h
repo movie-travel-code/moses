@@ -94,7 +94,23 @@ namespace compiler
 			static bool classof(ValPtr V) { return V->getValueType() == Value::ValueTy::FunctionVal; }
 			/// \brief Print the function info.
 			void Print(std::ostringstream& out);
-		};		
+		};	
+
+		// Intrinsic现在还很简陋
+		class Intrinsic : public GlobalValue
+		{
+			std::vector<std::string> Names;
+		public:
+			Intrinsic(std::string IntrName, std::vector<std::string> ArgNames) :
+				GlobalValue(nullptr, ValueTy::FunctionVal, IntrName)
+			{
+				for (auto item : ArgNames)
+				{
+					Names.push_back(item);
+				}
+			}
+			void Print(std::ostringstream &out);
+		};
 	}
 }
 

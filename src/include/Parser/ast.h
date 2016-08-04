@@ -750,9 +750,9 @@ namespace compiler
 
 			unsigned getDeclNumber() const { return decls.size(); };
 
-			std::vector<std::string> operator[](unsigned index) const;
+			std::vector<VarDeclPtr> operator[](unsigned index) const;
 
-			void getDeclNames(std::vector<std::string>& names) const;
+			void getDecls(std::vector<VarDeclPtr>& names) const;
 
 			virtual IRValue Accept(Visitor<IRValue>* v) const
 			{

@@ -43,9 +43,15 @@ int main()
 	moduleBuilder.VisitChildren(parse.getAST());
 
 	// (4) IR write;
-	std::ostringstream out;
+	std::ostringstream out;	
+	IRPrinter::Print(IRContext, out);
 	IRPrinter::Print(moduleBuilder.getIRs(), out);
 	cout << out.str();
+
+	std::ofstream mosesIR("E:/test/moses.mi");
+	mosesIR << out.str();
+	mosesIR.close();
+
 	system("pause");
 	return 0;
 }

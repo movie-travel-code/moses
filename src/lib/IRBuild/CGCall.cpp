@@ -59,11 +59,9 @@ namespace
 			// SRet
 			HasSRet = true;
 			IRCursorArgNo++;
-		}
+			ArgInfo.push_back(IRArgs(0, 1));
+		}		
 
-		ArgInfo.push_back(IRArgs(0, 1));
-
-		unsigned ArgNo = 0;
 		for (auto item : FI.getArgsInfo())
 		{
 			switch (item->getKind())

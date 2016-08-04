@@ -224,8 +224,7 @@ GEPInstPtr ModuleBuilder::CreateGEP(TyPtr Ty, ValPtr Ptr, unsigned Idx, std::str
 	return InsertHelper(
 		GetElementPtrInst::Create(Ty, Ptr, 
 								ConstantInt::getZeroValueForNegative(Context), 
-								ConstantInt::get(Context, Idx), CurBB, Name), 
-								Name);
+								ConstantInt::get(Context, Idx), CurBB, Name));
 }
 
 //===--------------------------------------------------------------===//
@@ -278,17 +277,17 @@ PHINodePtr ModuleBuilder::CreatePHI(TyPtr Ty, unsigned NumReservedValues, std::s
 
 CallInstPtr ModuleBuilder::CreateCall(ValPtr Callee, std::vector<ValPtr> Args)
 {
-	Callee->getType();
 	return InsertHelper(CallInst::Create(Callee, Args, CurBB));
 }
 
+CallInstPtr ModuleBuilder::CreateIntrinsic(IntrinsicPtr Intr, std::vector<ValPtr> Args)
+{
+	return InsertHelper(CallInst::Create(Intr, Args, CurBB));
+}
 EVInstPtr ModuleBuilder::CreateExtractValueValue(ValPtr Agg, std::vector<unsigned> Idxs, std::string Name)
 {
-	// Constant folder
-	if (ConstantPtr AggC = std::dynamic_pointer_cast<Constant>(Agg))
-	{
-		// folder
-	}
+	// To Do: Constant folder
+	if (ConstantPtr AggC = std::dynamic_pointer_cast<Constant>(Agg)) {}
 	return InsertHelper(ExtractValueInst::Create(Agg, Idxs), Name);
 }
 
@@ -335,9 +334,9 @@ void ModuleBuilder::RestoreTopLevelCtxInfo()
 	isAllocaInsertPointSetByNormalInsert = CurFunc->TopLevelIsAllocaInsertPointSetByNormalInsert;
 	TempCounter = CurFunc->TopLevelTempCounter;
 }
-void print(std::shared_ptr<compiler::IR::Value> V)
+void print(ValPtr V)
 {
-	std::ostringstream out;
+	/*std::ostringstream out;
 	V->Print(out);
-	cout << out.str();
+	cout << out.str();*/
 }

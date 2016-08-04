@@ -241,7 +241,7 @@ namespace compiler
 
 			std::vector<ParmDeclPtr> ParseParameterList();
 
-			UnpackDeclPtr ParseUnpackDecl();
+			UnpackDeclPtr ParseUnpackDecl(bool isConst = false);
 
 			ParmDeclPtr ParseParmDecl();
 

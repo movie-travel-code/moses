@@ -32,11 +32,15 @@ namespace compiler
 				return false;
 			}
 
+			std::vector<ValueT> getBuckets() const { return Buckets; }
+
 			ValueT lookup(const ValueT &V) const
 			{
 				for (auto item : Buckets)
 				{
-					if (ValueInfoT::getHashValue(item) == ValueInfoT::getHashValue(V))
+					// auto item_hash = ValueInfoT::getHashValue(item);
+					// auto v_hash = ValueInfoT::getHashValue(item);
+					if (ValueInfoT::getHashValue(item) == ValueInfoT::getHashValue(item))
 						return item;
 				}
 				return nullptr;
@@ -46,9 +50,7 @@ namespace compiler
 			void insert(ValueT V) 
 			{
 				if (lookup(V))
-				{
 					return;
-				}
 				Buckets.push_back(V); 
 			}
 		};

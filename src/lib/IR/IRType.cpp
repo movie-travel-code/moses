@@ -253,11 +253,17 @@ std::shared_ptr<StructType> StructType::get(ASTTyPtr type)
 ///			%anony.1 = type {int, bool}
 void StructType::PrintCompleteInfo(std::ostringstream& out)
 {
-	out << Name << " struct.type {";
+	out << Name << " = struct.type {";
 	if (NumContainedTys > 0)
-	for (auto item : ContainedTys)
-		item->Print(out);
-	out << "}";
+	for (unsigned i = 0, size = ContainedTys.size(); i < size; i++)
+	{
+		ContainedTys[i]->Print(out);
+		if (i == size - 1)
+			break;
+		out << ", ";
+	}
+		
+	out << " }\n";
 }
 
 void StructType::Print(std::ostringstream& out)

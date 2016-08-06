@@ -85,6 +85,8 @@ namespace compiler
 			static IRTyPtr getIntType();
 			static IRTyPtr getBoolType();
 
+			virtual unsigned getSize() const;
+
 			/// \brief Print the type info.
 			virtual void Print(std::ostringstream& out);
 		};
@@ -164,6 +166,8 @@ namespace compiler
 			/// Create literal struct type.
 			static IRStructTyPtr get(ASTTyPtr type);
 
+			virtual unsigned getSize() const;
+
 			bool isLiteral() const { return Literal; }
 
 			/// Return the name for this struct type if it has an identity.
@@ -202,7 +206,6 @@ namespace compiler
 			IRTyPtr getElementTy() const { return ElementTy; };
 			static bool classof(IRPtTyPtr) { return true; }
 			static bool classof(IRTyPtr Ty) { return Ty->isPointerTy(); }
-			
 			/// \brief Print the PointerType.
 			void Print(std::ostringstream& out) override;
 		};

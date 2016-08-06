@@ -329,7 +329,7 @@ TerminatorInst::~TerminatorInst() {}
 // Implements CallInst.
 CallInst::CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args, BBPtr parent, 
 	std::string Name, BBPtr InsertAtEnd) : 
-	Instruction(FTy->getReturnType(), Opcode::Call, parent), FTy(FTy)
+	Instruction(FTy->getReturnType(), Opcode::Call, parent), FTy(FTy), IsIntrisicCall(false)
 {
 	// Operands.resize(1 + Args.size());
 	Operands.push_back(Use(Func, this));
@@ -342,7 +342,7 @@ CallInst::CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args, BBPtr
 
 CallInst::CallInst(IntrinsicPtr Intr, std::vector<ValPtr> Args, BBPtr parent,
 	std::string Name, InstPtr InsertBefore):
-	Instruction(nullptr, Opcode::Call, parent)
+	Instruction(nullptr, Opcode::Call, parent), IsIntrisicCall(true)
 {
 	Operands.push_back(Use(Intr, this));
 	for (unsigned i = 0, size = Args.size(); i < size; i++)
@@ -516,11 +516,14 @@ BrInstPtr BranchInst::Create(BBPtr IfTrue, BBPtr IfFalse, ValPtr CondV, BBPtr pa
 	return std::make_shared<BranchInst>(IfTrue, IfFalse, CondV, parent, InsertAtEnd);
 }
 
-ValPtr BranchInst::getSuccessor(unsigned i) const
+BBPtr BranchInst::getSuccessor(unsigned i) const
 {
 	assert((Operands.size() == 1 && i == 0) || 
 		(Operands.size() == 3 && (i == 0 || i == 1)) && "Get successors error!");
-	return Operands[i].get();
+	auto Succ =  Operands[i].get();
+	auto SuccBB = std::dynamic_pointer_cast<BasicBlock>(Succ);
+	assert(SuccBB && "Successor must be BasicBlock.");
+	return SuccBB;
 }
 
 void BranchInst::setSuccessor(unsigned idx, BBPtr NewSucc)

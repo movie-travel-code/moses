@@ -177,7 +177,7 @@ namespace compiler
 			virtual unsigned getNumSuccessors() const = 0;
 
 			/// Return the specified successor.
-			virtual ValPtr getSuccessor(unsigned idx) const = 0;
+			virtual BBPtr getSuccessor(unsigned idx) const = 0;
 
 			/// Update the specified successor to point at the provided block.
 			virtual void setSuccessor(unsigned idx, BBPtr B) = 0;
@@ -362,6 +362,7 @@ namespace compiler
 		{
 		private:
 			FuncTypePtr FTy;	
+			bool IsIntrisicCall;
 		public:
 			CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args, BBPtr parent,
 				std::string Name = "", BBPtr InsertAtEnd = nullptr);
@@ -382,6 +383,8 @@ namespace compiler
 			FuncTypePtr getFunctionType() const { return FTy; }
 
 			enum TailCallKind {TCK_None = 0, TCK_Tail = 1, TCK_MustTail = 2, TCK_NoTail = 3 };
+			
+			bool isIntrinsicCall() const { return IsIntrisicCall; }
 
 			// To Do:
 			TailCallKind getTailCallKind() const { return TCK_None; }
@@ -570,7 +573,7 @@ namespace compiler
 
 			ValPtr getReturnValue() const { return Operands.empty() ? nullptr : Operands[0].get(); }
 
-			ValPtr getSuccessor(unsigned index) const override
+			BBPtr getSuccessor(unsigned index) const override
 			{
 				assert(0 && "ReturnInst has no successor!");
 				return 0;
@@ -627,7 +630,7 @@ namespace compiler
 				Operands[2] = V;
 			}
 			unsigned getNumSuccessors() const { return 1 + isConditional(); }
-			ValPtr getSuccessor(unsigned i) const;
+			BBPtr getSuccessor(unsigned i) const;
 			void setSuccessor(unsigned idx, BBPtr NewSucc);
 
 			// Methods for support type inquiry through isa, cast and dyn_cast:

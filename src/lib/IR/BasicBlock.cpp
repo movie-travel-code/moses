@@ -37,6 +37,11 @@ Iterator BasicBlock::getIterator(InstPtr I)
 	return InstList.end();
 }
 
+std::list<InstPtr>::iterator BasicBlock::begin()
+{
+	return InstList.begin();
+}
+
 std::list<InstPtr>::iterator BasicBlock::end()
 {
 	return InstList.end();

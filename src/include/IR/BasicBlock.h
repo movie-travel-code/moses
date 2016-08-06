@@ -88,6 +88,7 @@ namespace compiler
 			std::list<InstPtr>::iterator Insert(Iterator InsertP, InstPtr I);
 			void Push(InstPtr I) { InstList.push_back(I); }
 			Iterator getIterator(InstPtr I);
+			std::list<InstPtr>::iterator begin();
 			std::list<InstPtr>::iterator end();
 			// methods for support type inquiry thorough isa, cast, and dyn_cast
 			static bool classof(ValPtr V) { return V->getValueType() == Value::ValueTy::BasicBlockVal; }

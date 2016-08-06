@@ -30,6 +30,28 @@ IRTyPtr Type::getBoolType()
 	return std::make_shared<Type>(TypeID::BoolTy);
 }
 
+unsigned Type::getSize() const
+{
+	switch (ID)
+	{
+	case compiler::IR::Type::VoidTy:
+		return 0;
+	case compiler::IR::Type::IntegerTy:
+		return sizeof(int);
+	case compiler::IR::Type::BoolTy:
+		return sizeof(int);
+	case compiler::IR::Type::PointerTy:
+		return sizeof(void*);
+	case compiler::IR::Type::LabelTy:
+	case compiler::IR::Type::FunctionTy:
+	case compiler::IR::Type::StructTy:
+	case compiler::IR::Type::AnonyTy:
+		break;
+	default:
+		break;
+	}
+}
+
 /// \brief Print the Type info, i32 bool void and so on.
 void Type::Print(std::ostringstream& out)
 {
@@ -274,6 +296,16 @@ void StructType::Print(std::ostringstream& out)
 void StructType::setName(std::string Name)
 {
 	this->Name = Name;
+}
+
+unsigned StructType::getSize() const
+{
+	unsigned sum = 0;
+	for (auto item : ContainedTys)
+	{
+		sum += item->getSize();
+	}
+	return sum;
 }
 
 //===---------------------------------------------------------------------===//

@@ -39,7 +39,7 @@ std::shared_ptr<compiler::IR::Type> CodeGenTypes::ConvertType(std::shared_ptr<co
 	if (tyKind == ast::TypeKind::USERDEFIED)
 	{
 		// Create new named structure type.
-		IRType = IRStructTy::Create(type);
+		IRType = IRStructTy::Create(IRCtx, type);
 		IRType->setName(TypeNamePrefix + "struct." + type->getTypeName());
 		// Cached this type into the RecordTypes.
 		RecordDeclTypes.insert({ type.get(), IRType });
@@ -49,7 +49,7 @@ std::shared_ptr<compiler::IR::Type> CodeGenTypes::ConvertType(std::shared_ptr<co
 	if (tyKind == ast::TypeKind::ANONYMOUS)
 	{
 		// Created new literal structure type.
-		IRType = IRStructTy::get(type);
+		IRType = IRStructTy::get(IRCtx, type);
 		IRType->setName(getAnonyName());
 		// Cached this type into the RecordTypes.
 		RecordDeclTypes.insert({type.get(), IRType});

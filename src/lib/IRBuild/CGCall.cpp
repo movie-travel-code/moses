@@ -388,16 +388,17 @@ std::shared_ptr<ArgABIInfo> ArgABIInfo::Create(ASTTyPtr type, Kind kind)
 
 //===--------------------------------------------------------------------------===//
 // Implements the CGFunctionInfo below.
-CGFunctionInfo::CGFunctionInfo(std::vector<std::pair<ASTTyPtr, std::string>> ArgsTy, ASTTyPtr RetTy)
+CGFunctionInfo::CGFunctionInfo(MosesIRContext &Ctx, 
+	std::vector<std::pair<ASTTyPtr, std::string>> ArgsTy, ASTTyPtr RetTy)
 {
 	// Generate the ArgABIInfo.
 	// (1) Create the ArgABIInfo for Return Type.
-	ReturnInfo = classifyReturnTye(RetTy);
+	ReturnInfo = classifyReturnTye(Ctx, RetTy);
 
 	// (2) Create the ArgABIInfos for Args.
 	for (auto item : ArgsTy)
 	{
-		ArgInfos.push_back(classifyArgumentType(item.first, item.second));
+		ArgInfos.push_back(classifyArgumentType(Ctx, item.first, item.second));
 	}
 }
 
@@ -406,15 +407,15 @@ CGFunctionInfo::CGFunctionInfo(std::vector<std::pair<ASTTyPtr, std::string>> Arg
 ///			void							----> Ignore
 ///			struct{int/bool}				----> Direct(coerce to int)
 ///			struct{int/bool, int/bool}		----> InDirect(sret hidden pointer)
-AAIPtr CGFunctionInfo::classifyReturnTye(ASTTyPtr RetTy)
+AAIPtr CGFunctionInfo::classifyReturnTye(MosesIRContext &Ctx, ASTTyPtr RetTy)
 {
 	if (RetTy->getKind() == TypeKind::VOID)
 		return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Ignore);
 
 	if (RetTy->getKind() == TypeKind::INT)
-		return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "", IR::Type::getIntType());
+		return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "", IR::Type::getIntType(Ctx));
 	if (RetTy->getKind() == TypeKind::BOOL)
-		return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "", IR::Type::getIntType());
+		return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "", IR::Type::getIntType(Ctx));
 	
 	// small structures which are register sized are generally returned
 	// in register.
@@ -422,11 +423,11 @@ AAIPtr CGFunctionInfo::classifyReturnTye(ASTTyPtr RetTy)
 	{
 		auto coreTy = RetTy->StripOffShell();
 		if (coreTy->getKind() == TypeKind::INT)
-			return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "", IR::Type::getIntType());
+			return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "", IR::Type::getIntType(Ctx));
 		if (coreTy->getKind() == TypeKind::BOOL)
-			return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "", IR::Type::getIntType());
+			return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "", IR::Type::getIntType(Ctx));
 		if (coreTy->getKind() == TypeKind::VOID)
-			return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "", IR::Type::getVoidType());
+			return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "", IR::Type::getVoidType(Ctx));
 	}
 	return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::InDirect, "%ret.addr");
 }
@@ -437,15 +438,15 @@ AAIPtr CGFunctionInfo::classifyReturnTye(ASTTyPtr RetTy)
 ///			struct{int/bool}				----> Direct(coerce to int-i32)
 ///			struct{int/bool, int/bool}		----> Direct(flatten int, int)
 ///			struct{int/bool, int/bool,,,}	----> Indirect(hidden pointer)
-AAIPtr CGFunctionInfo::classifyArgumentType(ASTTyPtr ArgTy, std::string Name)
+AAIPtr CGFunctionInfo::classifyArgumentType(MosesIRContext &Ctx, ASTTyPtr ArgTy, std::string Name)
 {
 	if (ArgTy->getKind() == TypeKind::VOID)
 		return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Ignore, Name);
 
 	if (ArgTy->getKind() == TypeKind::BOOL)
-		return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Direct, Name, IR::Type::getBoolType());
+		return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Direct, Name, IR::Type::getBoolType(Ctx));
 	if (ArgTy->getKind() == TypeKind::INT)
-		return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Direct, Name, IR::Type::getIntType());
+		return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Direct, Name, IR::Type::getIntType(Ctx));
 
 	// small structures which are register sized are generally returned
 	// in register or flatten as two registers.
@@ -455,7 +456,7 @@ AAIPtr CGFunctionInfo::classifyArgumentType(ASTTyPtr ArgTy, std::string Name)
 		// case 2: class A { var m:bool; }; class B{ var m:A; };
 		// case 3: var num = {{{int}}}
 		// To Do: We need to strip off the '{' and '}' to get the core type.
-		return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Direct, Name, IR::Type::getIntType());
+		return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Direct, Name, IR::Type::getIntType(Ctx));
 	}
 
 	if (ArgTy->size() <= 64)
@@ -464,14 +465,14 @@ AAIPtr CGFunctionInfo::classifyArgumentType(ASTTyPtr ArgTy, std::string Name)
 		ModuleBuilder::LocalInstNamePrefix + Name + ".addr");
 }
 
-CGFuncInfoConstPtr CGFunctionInfo::create(const FunctionDecl *FD)
+CGFuncInfoConstPtr CGFunctionInfo::create(MosesIRContext &Ctx, const FunctionDecl *FD)
 {
 	std::vector<std::pair<ASTTyPtr, std::string>> ArgsTy;
 	for (auto item : FD->getParms())
 	{
 		ArgsTy.push_back({item->getDeclType(), item->getName()});
 	}
-	return std::make_shared<CGFunctionInfo>(ArgsTy, FD->getReturnType());
+	return std::make_shared<CGFunctionInfo>(Ctx, ArgsTy, FD->getReturnType());
 }
 
 const ASTTyPtr CGFunctionInfo::getParm(unsigned index) const
@@ -540,12 +541,12 @@ GetFuncTypeRet CodeGenTypes::getFunctionType(const FunctionDecl* FD, CGFuncInfoC
 	switch (RetInfo->getKind())
 	{
 	case ArgABIInfo::Kind::Ignore:
-		ResultTy = IR::Type::getVoidType();
+		ResultTy = IR::Type::getVoidType(IRCtx);
 		break;
 	case ArgABIInfo::Kind::InDirect:
 		ArgTypes.push_back(PointerType::get(ConvertType(RetTy)));
 		ArgNames.push_back(RetInfo->getArgName());
-		ResultTy = IR::Type::getVoidType();
+		ResultTy = IR::Type::getVoidType(IRCtx);
 		break;
 	case ArgABIInfo::Kind::Direct:
 		ResultTy = ConvertType(RetTy);
@@ -615,7 +616,7 @@ GetFuncTypeRet CodeGenTypes::getFunctionType(const FunctionDecl* FD, CGFuncInfoC
 			ArgNames.push_back(ArgsInfo[i]->getArgName() + ".addr");
 			break;
 		case ArgABIInfo::Ignore:
-			ArgTypes.push_back(IR::Type::getVoidType());
+			ArgTypes.push_back(IR::Type::getVoidType(IRCtx));
 			ArgNames.push_back(ArgsInfo[i]->getArgName());
 			break;
 		}
@@ -636,7 +637,7 @@ CGFuncInfoConstPtr CodeGenTypes::arrangeFunctionInfo(const FunctionDecl *FD)
 		return iter->second;
 
 	// (2) otherwise, save this info.
-	auto CGFuncInfo = CGFunctionInfo::create(FD);
+	auto CGFuncInfo = CGFunctionInfo::create(IRCtx, FD);
 	FunctionInfos.insert({ FD, CGFuncInfo });
 	return CGFuncInfo;
 }

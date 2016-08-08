@@ -22,6 +22,7 @@ namespace compiler
 		class StructType;
 		class FunctionType;
 		class PointerType;
+		class MosesIRContext;
 
 		using ASTType = compiler::ast::Type;
 		using ASTTyPtr = std::shared_ptr<ASTType>;
@@ -80,10 +81,10 @@ namespace compiler
 			}
 			//===------------------------------------------------------------===//
 			// Helper for get types.
-			static IRTyPtr getVoidType();
-			static IRTyPtr getLabelType();
-			static IRTyPtr getIntType();
-			static IRTyPtr getBoolType();
+			static IRTyPtr getVoidType(MosesIRContext &Ctx);
+			static IRTyPtr getLabelType(MosesIRContext &Ctx);
+			static IRTyPtr getIntType(MosesIRContext &Ctx);
+			static IRTyPtr getBoolType(MosesIRContext &Ctx);
 
 			virtual unsigned getSize() const;
 
@@ -128,7 +129,7 @@ namespace compiler
 			/// \brief Print the FunctionType info.
 			void Print(std::ostringstream& out) override;
 		private:
-			std::vector<IRTyPtr> ConvertParmTypeToIRType(std::vector<ASTTyPtr> ParmTypes);
+			std::vector<IRTyPtr> ConvertParmTypeToIRType(MosesIRContext &Ctx, std::vector<ASTTyPtr> ParmTypes);
 		};
 
 		/// Class to represent struct types.
@@ -156,15 +157,15 @@ namespace compiler
 		public:
 			StructType(std::vector<IRTyPtr> members, std::string Name, bool isliteral);
 			/// Create identified struct.
-			static IRStructTyPtr Create(std::string Name);
-			static IRStructTyPtr Create(std::vector<IRTyPtr> Elements,
-				std::string Name);
-			static IRStructTyPtr Create(ASTTyPtr type);
+			/*static IRStructTyPtr Create(std::string Name);
+			static IRStructTyPtr Create(MosesIRContext &Ctx, std::vector<IRTyPtr> Elements,
+				std::string Name);*/
+			static IRStructTyPtr Create(MosesIRContext &Ctx, ASTTyPtr type);
 
 			/// Create literal struct type.
 			static IRStructTyPtr get(std::vector<IRTyPtr> Elements);
 			/// Create literal struct type.
-			static IRStructTyPtr get(ASTTyPtr type);
+			static IRStructTyPtr get(MosesIRContext &Ctx, ASTTyPtr type);
 
 			virtual unsigned getSize() const;
 

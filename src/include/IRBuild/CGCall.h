@@ -100,8 +100,11 @@ namespace compiler
 		private:			
 			bool NoReturn;
 		public:
-			CGFunctionInfo(std::vector<std::pair<ASTTyPtr, std::string>> ArgsTy, ASTTyPtr RetTy);
-			static std::shared_ptr<CGFunctionInfo const> create(const FunctionDecl* FD);
+			CGFunctionInfo(MosesIRContext &Ctx, 
+				std::vector<std::pair<ASTTyPtr, std::string>> ArgsTy, ASTTyPtr RetTy);
+
+			static std::shared_ptr<CGFunctionInfo const> create(MosesIRContext &Ctx, const FunctionDecl* FD);
+
 			bool isNoReturn() const { return NoReturn; }
 
 			unsigned getArgNums() const { return ArgInfos.size(); }
@@ -116,8 +119,8 @@ namespace compiler
 			std::vector<std::string> getArgNames() const;
 
 			// Generate ArgABIInfo for return type.
-			static AAIPtr classifyReturnTye(ASTTyPtr RetTy);
-			static AAIPtr classifyArgumentType(ASTTyPtr ArgTy, std::string Name);
+			static AAIPtr classifyReturnTye(MosesIRContext &Ctx, ASTTyPtr RetTy);
+			static AAIPtr classifyArgumentType(MosesIRContext &Ctx, ASTTyPtr ArgTy, std::string Name);
 		};
 	}
 }

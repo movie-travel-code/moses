@@ -35,8 +35,8 @@ bool Instruction::mayWriteToMemory() const
 
 //===---------------------------------------------------------------------===//
 // Implements CmpInst.
-CmpInst::CmpInst(InstPtr InsertBefore, Predicate pred, ValPtr LHS, ValPtr RHS, BBPtr parent, std::string Name) : 
-	Instruction(Type::getBoolType(), Opcode::Cmp, parent, Name), predicate(pred)
+CmpInst::CmpInst(MosesIRContext &Ctx, InstPtr InsertBefore, Predicate pred, ValPtr LHS, ValPtr RHS, BBPtr parent, std::string Name) :
+	Instruction(Type::getBoolType(Ctx), Opcode::Cmp, parent, Name), predicate(pred)
 {
 	// Operands.resize(2);
 	Operands.push_back(Use(LHS, this));
@@ -46,16 +46,16 @@ CmpInst::CmpInst(InstPtr InsertBefore, Predicate pred, ValPtr LHS, ValPtr RHS, B
 
 CmpInst::~CmpInst() {}
 
-CmpInstPtr CmpInst::Create(Predicate predicate, ValPtr S1, ValPtr S2, BBPtr parent, 
+CmpInstPtr CmpInst::Create(MosesIRContext &Ctx, Predicate predicate, ValPtr S1, ValPtr S2, BBPtr parent,
 	std::string name, InstPtr InsertBefore)
 {
-	return std::make_shared<CmpInst>(nullptr, predicate, S1, S2, parent, name);
+	return std::make_shared<CmpInst>(Ctx, nullptr, predicate, S1, S2, parent, name);
 }
 
-CmpInstPtr CmpInst::Create(Predicate predicate, ValPtr S1, ValPtr S2, BBPtr parent,
+CmpInstPtr CmpInst::Create(MosesIRContext &Ctx, Predicate predicate, ValPtr S1, ValPtr S2, BBPtr parent,
 	std::string name, BBPtr InsertAtEnd)
 {
-	return std::make_shared<CmpInst>(nullptr, predicate, S1, S2, parent, name);
+	return std::make_shared<CmpInst>(Ctx, nullptr, predicate, S1, S2, parent, name);
 }
 
 /// \brief Print CmpInst.
@@ -96,7 +96,7 @@ void CmpInst::Print(std::ostringstream& out)
 	Operands[1].get()->getType()->Print(out);
 	out << " " << Operands[1].get()->getName();
 	out << "        ; < ";
-	Type::getBoolType()->Print(out);
+	Ty->Print(out); 
 	out << " > \n";
 }
 
@@ -202,8 +202,8 @@ void BinaryOperator::Print(std::ostringstream& out)
 }
 //===---------------------------------------------------------------------===//
 // StoreInst Implementation
-StoreInst::StoreInst(ValPtr Val, ValPtr Ptr, BBPtr parent, BBPtr InsertAtEnd) :
-		Instruction(Type::getVoidType(), Opcode::Store, parent)
+StoreInst::StoreInst(MosesIRContext &Ctx, ValPtr Val, ValPtr Ptr, BBPtr parent, BBPtr InsertAtEnd) :
+		Instruction(Type::getVoidType(Ctx), Opcode::Store, parent)
 {
 	// Operands.resize(2);
 	Operands.push_back(Use(Val, this));
@@ -214,18 +214,18 @@ StoreInst::StoreInst(ValPtr Val, ValPtr Ptr, BBPtr parent, BBPtr InsertAtEnd) :
 	// %retval must have i32* type.
 	assert(Ptr->getType()->isPointerTy() && "Ptr must have pointer type!");
 
-	auto valty = Val->getType();
-	auto ptrty = Ptr->getType();
+	auto valty = Val->getType().get();
 	auto dynptrty = std::dynamic_pointer_cast<PointerType>(Ptr->getType());
+	auto ptrty = dynptrty->getElementTy().get();
 
 	assert(Val->getType().get() == 
 			std::dynamic_pointer_cast<PointerType>(Ptr->getType())->getElementTy().get()
 			&& "Ptr must be a pointer to Val type!");
 }
 
-StoreInstPtr StoreInst::Create(ValPtr Val, ValPtr Ptr, BBPtr parent)
+StoreInstPtr StoreInst::Create(MosesIRContext &Ctx, ValPtr Val, ValPtr Ptr, BBPtr parent)
 {
-	return std::make_shared<StoreInst>(Val, Ptr, parent);
+	return std::make_shared<StoreInst>(Ctx, Val, Ptr, parent);
 }
 
 /// \brief Print the StoreInst info.
@@ -368,13 +368,13 @@ CallInstPtr CallInst::Create(IntrinsicPtr Intr, std::vector<ValPtr> Args, BBPtr 
 }
 ValPtr CallInst::getArgOperand(unsigned i) const
 {
-	assert(i < FTy->getNumParams() && "Index out of range!");
+	assert(i < Operands.size() - 1 && "Index out of range!");
 	return Operands[i + 1].get();
 }
 
 void CallInst::setArgOperand(unsigned i, ValPtr v)
 {
-	assert(i < FTy->getNumParams() && "Index out of range!");
+	assert(i < Operands.size() && "Index out of range!");
 	Operands[i + 1] = v;
 }
 
@@ -439,7 +439,7 @@ void CallInst::Print(std::ostringstream& out)
 //===---------------------------------------------------------------------===//
 // Implements ReturnInst.
 ReturnInst::ReturnInst(BBPtr parent, ValPtr retVal, BBPtr InsertAtEnd) :
-	TerminatorInst(Opcode::Ret, parent)
+	TerminatorInst(retVal->getType(), Opcode::Ret, parent)
 {
 	// Operands.resize(1);
 	if (retVal)
@@ -484,16 +484,17 @@ void ReturnInst::Print(std::ostringstream& out)
 }
 //===---------------------------------------------------------------------===//
 // Implements the BranchInst class.
-BranchInst::BranchInst(BBPtr IfTrue, BBPtr parent, BBPtr InsertAtEnd) : 
-	TerminatorInst(Opcode::Br, parent)
+BranchInst::BranchInst(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr parent, BBPtr InsertAtEnd) :
+	TerminatorInst(Type::getVoidType(Ctx), Opcode::Br, parent)
 {
 	assert(IfTrue && "Dest basic block may not be null!");
 	// Operands.resize(1);
 	Operands.push_back(Use(IfTrue, this));
 }
 
-BranchInst::BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr CondV, BBPtr parent, BBPtr InsertAtEnd) : 
-		TerminatorInst(Opcode::Br, parent)
+BranchInst::BranchInst(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr IfFalse, ValPtr CondV, 
+	BBPtr parent, BBPtr InsertAtEnd) :
+	TerminatorInst(Type::getVoidType(Ctx), Opcode::Br, parent)
 {
 	assert(IfTrue && IfFalse && "Dest basic blocks may not be null!");
 	assert(CondV->getType()->isBoolTy() && "May only branch on boolean predicates!");
@@ -505,15 +506,15 @@ BranchInst::BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr CondV, BBPtr parent, 
 
 BranchInst::~BranchInst() {}
 
-BrInstPtr BranchInst::Create(BBPtr IfTrue, BBPtr parent, BBPtr InsertAtEnd)
+BrInstPtr BranchInst::Create(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr parent, BBPtr InsertAtEnd)
 {
-	return std::make_shared<BranchInst>(IfTrue, parent, InsertAtEnd);	
+	return std::make_shared<BranchInst>(Ctx, IfTrue, parent, InsertAtEnd);	
 }
 
-BrInstPtr BranchInst::Create(BBPtr IfTrue, BBPtr IfFalse, ValPtr CondV, BBPtr parent, 
-	BBPtr InsertAtEnd)
+BrInstPtr BranchInst::Create(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr IfFalse, ValPtr CondV, 
+	BBPtr parent, BBPtr InsertAtEnd)
 {
-	return std::make_shared<BranchInst>(IfTrue, IfFalse, CondV, parent, InsertAtEnd);
+	return std::make_shared<BranchInst>(Ctx, IfTrue, IfFalse, CondV, parent, InsertAtEnd);
 }
 
 BBPtr BranchInst::getSuccessor(unsigned i) const

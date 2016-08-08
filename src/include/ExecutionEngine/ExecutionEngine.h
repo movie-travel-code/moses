@@ -7,6 +7,8 @@
 #define EXECUTION_ENGINE_H
 
 #include <vector>
+#include <iostream>
+#include <sstream>
 #include <string>
 #include <map>
 #include <memory>
@@ -65,6 +67,7 @@ namespace compiler
 			{
 				if (CurInst != CurBB->end())
 					return *CurInst++;
+				return nullptr;
 			}
 			ExecutionContext() : CurFunction(nullptr), CurBB(nullptr) {}
 		};
@@ -85,13 +88,21 @@ namespace compiler
 			// registered with the atexit() library function.
 			// moses暂时不支持注册结束函数。
 			// std::vector<Function*> AtExitHandlers;
-			std::vector<ValPtr> &Insts;
+			const std::list<ValPtr> &Insts;
 			const MosesIRContext &Ctx;
 
 		private:
+			/// Methods used to execute code:
+			/// Place a call on the stack.
+			void callFunction(Function *F, const std::vector<GenericValue> &ArgVals);
+			/// Execute Intrinsic call.
+			void callIntrinsic(CallInstPtr I);
 
+			void LoadValueFromMemory(GenericValue &Dest, GenericValue SrcAddr, IR::TyPtr Ty);
+			void StoreValueToMemory(GenericValue V, GenericValue DestAddr, IR::TyPtr Ty);
+			void PopStackAndSetReturnValue(GenericValue ReturnValue, bool isVoid);
 		public:
-			Interpreter(std::vector<ValPtr> &Insts, const MosesIRContext &Ctx);
+			Interpreter(const std::list<ValPtr> &Insts, const MosesIRContext &Ctx);
 			~Interpreter(){}
 
 			/// runAtExitHandlers - Run any functions registered by the program's calls
@@ -99,20 +110,17 @@ namespace compiler
 			/// void runAtExitHandlers();
 
 			/// create - Create an interpreter ExecutionEngine. This can never fail.
-			static std::shared_ptr<Interpreter> create(std::vector<ValPtr> &Insts, const MosesIRContext &Ctx);
+			static std::shared_ptr<Interpreter> create(const std::list<ValPtr> &Insts, const MosesIRContext &Ctx);
 
 			/// StoreValueToMemory - Stores the data in Val of type Ty at address Ptr.
 			/// Ptr is the address of the memory at which to store Val, cast to 
 			/// GenericValue *(It is not a pointer to a GenericValue containing the
 			/// address at which to store Val).
-			void StoreValueToMemory(GenericValue Val, GenericValue *Ptr, TyPtr Ty);
+			void StoreValueToMemory(GenericValue Val, GenericValue *Ptr, IR::TyPtr Ty);
 
 			/// run - Start execution with the specified funciton and arguments.
 			GenericValue runFunction(Function *F, const std::vector<GenericValue> &ArgValues);
 
-			/// Methods used to execute code:
-			/// Place a call on the stack.
-			void callFunction(Function *F, const std::vector<GenericValue> &ArgVals);
 			// Execute one instruction.
 			void executeInstruction();
 			/// Execute instructions until nothing left to do.

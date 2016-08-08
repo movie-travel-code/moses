@@ -163,8 +163,8 @@ namespace compiler
 		class TerminatorInst : public Instruction
 		{
 		protected:
-			TerminatorInst(Instruction::Opcode op, BBPtr parent, BBPtr InsertAtEnd = nullptr) : 
-				Instruction(Type::getVoidType(), op, parent)
+			TerminatorInst(TyPtr Ty, Instruction::Opcode op, BBPtr parent, BBPtr InsertAtEnd = nullptr) : 
+				Instruction(Ty, op, parent)
 			{}
 			// Out of line virtual method, so the vtable, etc has a home.
 			~TerminatorInst() override;
@@ -267,8 +267,8 @@ namespace compiler
 			CmpInst() = delete;
 			Predicate predicate;
 		public:
-			CmpInst(InstPtr InsertBefore, Predicate pred, ValPtr LHS, ValPtr RHS,
-				BBPtr parent, std::string Name = "");
+			CmpInst(MosesIRContext &Ctx, InstPtr InsertBefore, Predicate pred, ValPtr LHS, 
+				ValPtr RHS, BBPtr parent, std::string Name = "");
 			// Out-of-line method.
 			~CmpInst() override;
 
@@ -276,10 +276,10 @@ namespace compiler
 			/// the two operands. Optionally (if InstBefore is specified) insert the
 			/// instruction into a BasicBlock right before the specified instruction
 			/// @brief Create a CmpInst
-			static CmpInstPtr Create(Predicate predicate, ValPtr S1, ValPtr S2, BBPtr parent,
-				std::string name = "", InstPtr InsertBefore = nullptr);
+			static CmpInstPtr Create(MosesIRContext &Ctx, Predicate predicate, ValPtr S1, 
+				ValPtr S2, BBPtr parent, std::string name = "", InstPtr InsertBefore = nullptr);
 
-			static CmpInstPtr Create(Predicate predicate, ValPtr S1, ValPtr S2, BBPtr parent,
+			static CmpInstPtr Create(MosesIRContext &Ctx, Predicate predicate, ValPtr S1, ValPtr S2, BBPtr parent,
 				std::string name, BBPtr InsertAtEnd);
 
 			Predicate getPredicate() const { return predicate; }
@@ -395,7 +395,7 @@ namespace compiler
 			void setTailCallKind(TailCallKind TCK) {}
 
 			/// getNumArgOperands - Return the number of call arguments.
-			unsigned getNumArgOperands() const { return getNumOperands(); }
+			unsigned getNumArgOperands() const { return getNumOperands() - 1; }
 			ValPtr getArgOperand(unsigned i) const;
 			void setArgOperand(unsigned i, ValPtr v);
 
@@ -611,10 +611,10 @@ namespace compiler
 			// BranchINst(BB *B, BB *I)						- 'br B'		insert at end
 			// BranchhInst(BB *T, BB *F, Value *C, BB *I)	- 'br C, T, F'	insert at end			
 		public:
-			BranchInst(BBPtr IfTrue, BBPtr parent, BBPtr InsertAtEnd = nullptr);
-			BranchInst(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond, BBPtr parent, BBPtr InsertAtEnd = nullptr);
-			static BrInstPtr Create(BBPtr IfTrue, BBPtr parent, BBPtr InsertAtEnd = nullptr);
-			static BrInstPtr Create(BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond, BBPtr parent,
+			BranchInst(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr parent, BBPtr InsertAtEnd = nullptr);
+			BranchInst(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond, BBPtr parent, BBPtr InsertAtEnd = nullptr);
+			static BrInstPtr Create(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr parent, BBPtr InsertAtEnd = nullptr);
+			static BrInstPtr Create(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr IfFalse, ValPtr Cond, BBPtr parent,
 				BBPtr InsertAtEnd = nullptr);
 			~BranchInst() override;
 			bool isUncoditional() const { return getNumOperands() == 1; }
@@ -675,8 +675,10 @@ namespace compiler
 			void init(ValPtr Val, ValPtr Ptr);
 		public:
 			// StoreInst(ValPtr Val, ValPtr Ptr, InstPtr InsertBefore = nullptr);
-			StoreInst(ValPtr Val, ValPtr Ptr, BBPtr parent, BBPtr InsertAtEnd = nullptr);
-			static StoreInstPtr Create(ValPtr Val, ValPtr Ptr, BBPtr parent);
+			StoreInst(MosesIRContext &Ctx, ValPtr Val, ValPtr Ptr, BBPtr parent, 
+				BBPtr InsertAtEnd = nullptr);
+
+			static StoreInstPtr Create(MosesIRContext &Ctx, ValPtr Val, ValPtr Ptr, BBPtr parent);
 			static bool classof(StoreInstPtr) { return true; }
 			static bool classof(InstPtr I) { return I->getOpcode() == Instruction::Opcode::Store; }
 

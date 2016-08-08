@@ -6,8 +6,8 @@
 #include "../../include/ExecutionEngine/ExecutionEngine.h"
 
 using namespace compiler::Interpreter;
-
-Interpreter::Interpreter(std::vector<ValPtr> &Insts, const MosesIRContext &Ctx):
+extern void print(std::shared_ptr<compiler::IR::Value> V);
+Interpreter::Interpreter(const std::list<ValPtr> &Insts, const MosesIRContext &Ctx):
 	Insts(Insts), Ctx(Ctx)
 {
 	// Initialize the top-level-frame.
@@ -32,9 +32,41 @@ Interpreter::Interpreter(std::vector<ValPtr> &Insts, const MosesIRContext &Ctx):
 }
 
 /// create - Create an interpreter ExecutionEngine. This can never fail.
-std::shared_ptr<Interpreter> create(std::vector<ValPtr> &Insts, const MosesIRContext &Ctx)
+std::shared_ptr<Interpreter> Interpreter::create(const std::list<ValPtr> &Insts, const MosesIRContext &Ctx)
 {
 	return std::make_shared<Interpreter>(Insts, Ctx);
+}
+
+void Interpreter::LoadValueFromMemory(GenericValue &Dest, GenericValue SrcAddr, IRTyPtr Ty)
+{
+	// 注意现在Moses中int bool 都是无差别的，都是以int形式存在，所以提取value的时候，现在可以
+	// 无差别的进行提取。
+	if (Ty->isIntegerTy())
+		Dest.IntVal = *(int*)GVTOP(SrcAddr);
+	if (Ty->isBoolTy())
+		Dest.BoolVal = *(int*)GVTOP(SrcAddr);
+
+	// To Do: 更为复杂的类型
+}
+
+void Interpreter::StoreValueToMemory(GenericValue V, GenericValue DestAddr, IRTyPtr Ty)
+{
+	if (Ty->isIntegerTy())
+		*(int*)(GVTOP(DestAddr)) = V.IntVal;
+	else
+		*(int*)(GVTOP(DestAddr)) = V.BoolVal;
+}
+
+void Interpreter::PopStackAndSetReturnValue(GenericValue ReturnValue, bool isVoid)
+{
+	ECStack.pop_back();
+	ExecutionContext &SF = ECStack.back();
+	
+	if (!isVoid)
+	{
+		auto CallSite = SF.Caller;
+		SetGenericValue(CallSite, ReturnValue, SF);
+	}
 }
 
 void Interpreter::run()
@@ -45,12 +77,17 @@ void Interpreter::run()
 		// Current stack frame.
 		ExecutionContext &SF = ECStack.back();
 		InstPtr I = SF.IssueInstruction();
-		visit(I);
+		if (I)
+			visit(I);
+		else
+			break;
 	}
+	std::cout << "Done." << std::endl;
 }
 
 void Interpreter::visit(InstPtr I)
 {
+	print(I);
 	switch (I->getOpcode())
 	{
 	case Opcode::Add:
@@ -62,6 +99,7 @@ void Interpreter::visit(InstPtr I)
 	case Opcode::Or:
 	case Opcode::And:	
 	case Opcode::Rem:
+	case Opcode::Xor:
 	{
 		auto BOInst = std::dynamic_pointer_cast<BinaryOperator>(I);	
 		assert(BOInst && "Instruction's kind is wrong");
@@ -104,13 +142,26 @@ void Interpreter::visit(InstPtr I)
 		break;
 	}
 	case Opcode::Load:
-		break;	
+	{
+		auto LoadI = std::dynamic_pointer_cast<LoadInst>(I);
+		assert(LoadI && "Instruction's kind is wrong.");
+		visitLoadInst(LoadI);
+		break;
+	}
 	case Opcode::Store:
+	{
+		auto StoreI = std::dynamic_pointer_cast<StoreInst>(I);
+		assert(StoreI && "Instruction's kind is wrong.");
+		visitStoreInst(StoreI);
 		break;
-	case Opcode::Xor:
-		break;
+	}
 	case Opcode::Ret:
-		break;	
+	{
+		auto RetI = std::dynamic_pointer_cast<ReturnInst>(I);
+		assert(RetI && "Instruction's kind is wrong.");
+		visitReturnInst(RetI);
+		break;
+	}
 	case Opcode::PHI:
 		break;
 	default:
@@ -121,7 +172,7 @@ void Interpreter::visit(InstPtr I)
 void Interpreter::visitBinaryOperator(BOInstPtr I)
 {
 	ExecutionContext &SF = ECStack.back();
-	TyPtr Ty = I->getType();
+	auto Ty = I->getType();
 	GenericValue Src1 = getOperandValue(I->getOperand(0).get(), SF);
 	GenericValue Src2 = getOperandValue(I->getOperand(1).get(), SF);
 	GenericValue R;
@@ -137,9 +188,12 @@ void Interpreter::visitBinaryOperator(BOInstPtr I)
 	case Opcode::Rem: R.IntVal = Src1.IntVal % Src2.IntVal; break;
 	case Opcode::Shr: R.IntVal = Src1.IntVal >> Src2.IntVal; break;
 	case Opcode::Shl: R.IntVal = Src1.IntVal << Src2.IntVal; break;
+	case Opcode::Xor: R.IntVal = Src1.IntVal ^ Src2.IntVal; break;
 	default:
 		assert(0 && "Unreachable code.");
 	}
+
+	SetGenericValue(I, R, SF);
 }
 
 /// visitAllocaInst - Alloca the memory and update the information.
@@ -155,6 +209,7 @@ void Interpreter::visitAllocaInst(AllocaInstPtr I)
 	// Alloca enough memory to hold the type...
 	void *Memory = malloc(TypeSize);
 	GenericValue Result = PTOGV(Memory);
+	SetGenericValue(I, Result, SF);
 	ECStack.back().Allocas.add(Memory);
 }
 
@@ -175,9 +230,12 @@ void Interpreter::visitCallInst(CallInstPtr I)
 {
 	ExecutionContext &SF = ECStack.back();
 	// Check the current call is Intrinsic.
+	// 现在moses只有memcpy这一个内置函数
 	if (I->isIntrinsicCall())
 	{
-	}
+		callIntrinsic(I);
+		return;
+	}		
 	
 	SF.Caller = I;
 	// prepare the arg values.
@@ -193,7 +251,7 @@ void Interpreter::visitCallInst(CallInstPtr I)
 void Interpreter::visitCmpInst(CmpInstPtr I)
 {
 	ExecutionContext &SF = ECStack.back();
-	TyPtr Ty = I->getOperand(0).get()->getType();
+	auto Ty = I->getOperand(0).get()->getType();
 
 	CmpInst::Predicate PreD = I->getPredicate();
 	GenericValue LHS = getOperandValue(I->getOperand(0).get(), SF);
@@ -237,11 +295,45 @@ void Interpreter::visitGEPInst(GEPInstPtr I)
 	unsigned long TotalIndex = 0;
 	GenericValue Result;
 	// GEP instruction just have two operand. Shit.
-	GenericValue index = getOperandValue(I->getOperand(1).get(), SF);
+	GenericValue index = getOperandValue(I->getOperand(2).get(), SF);
 	
 	TotalIndex = index.IntVal;
 	Result.PointerVal = (char*)BaseAddr + index.IntVal * sizeof(int);
 	SetGenericValue(I, Result, SF);
+}
+
+void Interpreter::visitLoadInst(LoadInstPtr I)
+{
+	ExecutionContext &SF = ECStack.back();
+	GenericValue SrcAddr = getOperandValue(I->getOperand(0).get(), SF);
+	GenericValue Result;
+	LoadValueFromMemory(Result, SrcAddr, I->getType());
+
+	SetGenericValue(I, Result, SF);
+}
+
+void Interpreter::visitStoreInst(StoreInstPtr I)
+{
+	ExecutionContext &SF = ECStack.back();
+	GenericValue V = getOperandValue(I->getOperand(0).get(), SF);
+	GenericValue DestAddr = getOperandValue(I->getOperand(1).get(), SF);
+
+	StoreValueToMemory(V, DestAddr, I->getOperand(0).get()->getType());
+}
+
+void Interpreter::visitReturnInst(ReturnInstPtr I)
+{
+	ExecutionContext &SF = ECStack.back();
+	GenericValue ReturnV;
+	bool isVoid = true;
+	if (!I->getType()->isVoidType())
+	{
+		ReturnV = getOperandValue(I->getReturnValue(), SF);
+		isVoid = false;
+	}
+		
+	// Restore previous stack and set the return value of the previous stack.
+	PopStackAndSetReturnValue(ReturnV, isVoid);
 }
 
 void Interpreter::SwitchToNewBasicBlock(BBPtr New, ExecutionContext &SF)
@@ -298,4 +390,22 @@ void Interpreter::callFunction(FuncPtr Function, std::vector<GenericValue> ArgVa
 	// Handle the argument passing.
 	for (unsigned i = 0, size = Function->getArgumentList().size(); i < size; i++)
 		SetGenericValue(Function->getArg(i), ArgVals[i], SF);
+}
+
+void Interpreter::callIntrinsic(CallInstPtr I)
+{
+	ExecutionContext &SF = ECStack.back();
+	if (I->getOperand(0).get()->getName() == "mosesir.memcpy")
+	{
+		GenericValue SrcAddr = getOperandValue(I->getOperand(2).get(), SF);
+		GenericValue DestAddr = getOperandValue(I->getOperand(1).get(), SF);
+
+		auto Ty = I->getOperand(2).get()->getType();
+		auto PTy = std::dynamic_pointer_cast<IR::PointerType>(Ty);
+		assert(PTy && "The operand of mosesir.memcpy must have pointer type.");
+		auto ElementTy = PTy->getElementTy();
+		unsigned size = ElementTy->getSize();
+
+		memcpy((char*)GVTOP(DestAddr), (char*)GVTOP(SrcAddr), size);
+	}
 }

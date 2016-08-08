@@ -10,26 +10,6 @@ using StructTyPtr = std::shared_ptr<StructType>;
 
 //===---------------------------------------------------------------------===//
 // Implements class Type.
-IRTyPtr Type::getVoidType()
-{
-	return std::make_shared<Type>(TypeID::VoidTy);
-}
-
-IRTyPtr Type::getLabelType()
-{
-	return std::make_shared<Type>(TypeID::LabelTy);
-}
-
-IRTyPtr Type::getIntType()
-{
-	return std::make_shared<Type>(TypeID::IntegerTy);
-}
-
-IRTyPtr Type::getBoolType()
-{
-	return std::make_shared<Type>(TypeID::BoolTy);
-}
-
 unsigned Type::getSize() const
 {
 	switch (ID)
@@ -124,7 +104,7 @@ bool FunctionType::classof(IRTyPtr Ty)
 	return Ty->getTypeID() == FunctionTy;
 }
 
-std::vector<IRTyPtr> FunctionType::ConvertParmTypeToIRType(std::vector<ASTTyPtr> ParmTyps)
+std::vector<IRTyPtr> FunctionType::ConvertParmTypeToIRType(MosesIRContext &Ctx, std::vector<ASTTyPtr> ParmTyps)
 {
 	// Note:这里没有进行错误处理（也就是在if elseif else，else 中没有报错）
 	// 因为能够进行到这一步的说明没有语法和语义错误.
@@ -135,10 +115,10 @@ std::vector<IRTyPtr> FunctionType::ConvertParmTypeToIRType(std::vector<ASTTyPtr>
 		switch (item->getKind())
 		{
 		case ASTTyKind::INT:
-			IRTypes.push_back(Type::getIntType());
+			IRTypes.push_back(Type::getIntType(Ctx));
 			break;
 		case ASTTyKind::BOOL:
-			IRTypes.push_back(Type::getBoolType());
+			IRTypes.push_back(Type::getBoolType(Ctx));
 			break;
 		case ASTTyKind::USERDEFIED:
 			break;
@@ -200,7 +180,7 @@ StructType::StructType(std::vector<IRTyPtr> members, std::string Name, bool isli
 ///			var flag : bool;
 ///			var a : A;
 ///		}
-std::shared_ptr<StructType> StructType::Create(ASTTyPtr type)
+std::shared_ptr<StructType> StructType::Create(MosesIRContext &Ctx, ASTTyPtr type)
 {
 	std::vector<IRTyPtr> members;
 	std::string Name;
@@ -214,13 +194,13 @@ std::shared_ptr<StructType> StructType::Create(ASTTyPtr type)
 			switch (item.first->getKind())
 			{
 			case ASTTyKind::BOOL:
-				members.push_back(Type::getBoolType());
+				members.push_back(Type::getBoolType(Ctx));
 				break;
 			case ASTTyKind::INT:
-				members.push_back(Type::getIntType());
+				members.push_back(Type::getIntType(Ctx));
 				break;
 			case ASTTyKind::USERDEFIED:
-				members.push_back(StructType::Create(item.first));
+				members.push_back(StructType::Create(Ctx, item.first));
 				break;
 			default:
 				break;
@@ -230,7 +210,7 @@ std::shared_ptr<StructType> StructType::Create(ASTTyPtr type)
 	return std::make_shared<StructType>(members, Name, false);
 }
 
-std::shared_ptr<StructType> StructType::get(ASTTyPtr type)
+std::shared_ptr<StructType> StructType::get(MosesIRContext &Ctx, ASTTyPtr type)
 {
 	std::vector<IRTyPtr> members;
 	if (ASTUDTyPtr UD = std::dynamic_pointer_cast<ASTUDTy>(type))
@@ -242,16 +222,16 @@ std::shared_ptr<StructType> StructType::get(ASTTyPtr type)
 			switch (item.first->getKind())
 			{
 			case ASTTyKind::BOOL:
-				members.push_back(Type::getBoolType());
+				members.push_back(Type::getBoolType(Ctx));
 				break;
 			case ASTTyKind::INT:
-				members.push_back(Type::getIntType());
+				members.push_back(Type::getIntType(Ctx));
 				break;
 			case ASTTyKind::USERDEFIED:
-				members.push_back(StructType::Create(item.first));
+				members.push_back(StructType::Create(Ctx, item.first));
 				break;
 			case ASTTyKind::ANONYMOUS:
-				members.push_back(StructType::get(item.first));
+				members.push_back(StructType::get(Ctx, item.first));
 				break;
 			default:
 				break;

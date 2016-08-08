@@ -318,7 +318,6 @@ LValue ModuleBuilder::EmitCallExprLValue(const CallExpr* CE)
 	return LValue::MakeAddr(nullptr);
 }
 
-
 /// \brief EmitLoadOfLValue - Given an expression with complex type that represents
 /// a l-value, this method emits the address of the l-value, then loads and returns
 /// the result.
@@ -402,11 +401,20 @@ ValPtr ModuleBuilder::EmitPrePostIncDec(const UnaryExpr* UE, bool isInc, bool is
 	// (2) Get the sub expression's value.
 	ValPtr InVal = EmitLoadOfLValue(LV).getScalarVal();
 
-	// (3) Perform operation.
+	// (3) Perform the operationn.
 	NextVal = ConstantInt::get(Context, AmoutVal);
 	NextVal->setName(std::to_string(AmoutVal));
 	NextVal = CreateAdd(InVal, NextVal, getCurLocalName(isInc ? "inc" : "dec"));
 	print(NextVal);
+
+	// (4) Save the ResultValue.
+	EmitStoreThroughLValue(RValue::get(NextVal), LV);
+	// i.	++pre;		(1) Perform operation.
+	// ii.	post++;		(2) Return the Val and perform operation.
+	if (!isPre)
+		return InVal;
+
+	// There is no need to return the Result Value.
 	return NextVal;
 }
 

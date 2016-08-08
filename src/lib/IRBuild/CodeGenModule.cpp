@@ -63,17 +63,17 @@ ReturnInstPtr ModuleBuilder::CreateAggregateRet(std::vector<ValPtr> retVals, uns
 
 BrInstPtr ModuleBuilder::Create(BBPtr Dest)
 {
-	return InsertHelper(BranchInst::Create(CurBB, Dest), "");
+	return InsertHelper(BranchInst::Create(Context, CurBB, Dest), "");
 }
 
 BrInstPtr ModuleBuilder::CreateCondBr(ValPtr Cond, BBPtr True, BBPtr False)
 {
-	return InsertHelper(BranchInst::Create(True, False, Cond, CurBB), "");
+	return InsertHelper(BranchInst::Create(Context, True, False, Cond, CurBB), "");
 }
 
 BrInstPtr ModuleBuilder::CreateBr(BBPtr Dest)
 {
-	return InsertHelper(BranchInst::Create(Dest, CurBB), "");
+	return InsertHelper(BranchInst::Create(Context, Dest, CurBB), "");
 }
 
 //===-------------------------------------------------------------===//
@@ -203,7 +203,7 @@ LoadInstPtr ModuleBuilder::CreateLoad(ValPtr Ptr)
 
 StoreInstPtr ModuleBuilder::CreateStore(ValPtr Val, ValPtr Ptr)
 {
-	return InsertHelper(StoreInst::Create(Val, Ptr, CurBB), "");
+	return InsertHelper(StoreInst::Create(Context, Val, Ptr, CurBB), "");
 }
 
 GEPInstPtr ModuleBuilder::CreateGEP(TyPtr Ty, ValPtr Ptr, std::vector<unsigned> IdxList, 
@@ -231,32 +231,32 @@ GEPInstPtr ModuleBuilder::CreateGEP(TyPtr Ty, ValPtr Ptr, unsigned Idx, std::str
 // Instruction creation methods: Compare Instruction.
 ValPtr ModuleBuilder::CreateCmpEQ(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return InsertHelper(CmpInst::Create(CmpInst::CMP_EQ, LHS, RHS, CurBB, Name), Name);
+	return InsertHelper(CmpInst::Create(Context, CmpInst::CMP_EQ, LHS, RHS, CurBB, Name), Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpNE(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return InsertHelper(CmpInst::Create(CmpInst::CMP_NE, LHS, RHS, CurBB, Name), Name);
+	return InsertHelper(CmpInst::Create(Context, CmpInst::CMP_NE, LHS, RHS, CurBB, Name), Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpGT(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return InsertHelper(CmpInst::Create(CmpInst::CMP_GT, LHS, RHS, CurBB, Name), Name);
+	return InsertHelper(CmpInst::Create(Context, CmpInst::CMP_GT, LHS, RHS, CurBB, Name), Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpGE(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return InsertHelper(CmpInst::Create(CmpInst::CMP_GE, LHS, RHS, CurBB, Name), Name);
+	return InsertHelper(CmpInst::Create(Context, CmpInst::CMP_GE, LHS, RHS, CurBB, Name), Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpLT(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return InsertHelper(CmpInst::Create(CmpInst::CMP_LT, LHS, RHS, CurBB, Name), Name);
+	return InsertHelper(CmpInst::Create(Context, CmpInst::CMP_LT, LHS, RHS, CurBB, Name), Name);
 }
 
 ValPtr ModuleBuilder::CreateCmpLE(ValPtr LHS, ValPtr RHS, std::string Name)
 {
-	return InsertHelper(CmpInst::Create(CmpInst::CMP_LE, LHS, RHS, CurBB, Name), Name);
+	return InsertHelper(CmpInst::Create(Context, CmpInst::CMP_LE, LHS, RHS, CurBB, Name), Name);
 }
 
 ValPtr ModuleBuilder::CreateCmp(CmpInst::Predicate P, ValPtr LHS, ValPtr RHS, std::string Name)
@@ -265,7 +265,7 @@ ValPtr ModuleBuilder::CreateCmp(CmpInst::Predicate P, ValPtr LHS, ValPtr RHS, st
 	if (true)
 	{
 	}
-	return InsertHelper(CmpInst::Create(P, LHS, RHS, CurBB), Name);
+	return InsertHelper(CmpInst::Create(Context, P, LHS, RHS, CurBB), Name);
 }
 
 //===-----------------------------------------------------------------===//
@@ -336,7 +336,7 @@ void ModuleBuilder::RestoreTopLevelCtxInfo()
 }
 void print(ValPtr V)
 {
-	/*std::ostringstream out;
+	std::ostringstream out;
 	V->Print(out);
-	cout << out.str();*/
+	cout << out.str();
 }

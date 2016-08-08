@@ -9,28 +9,27 @@
 #include <vector>
 #include <string>
 #include <memory>
-#include <algorithm>
-#include "../IR/Function.h"
-#include "../Support/Hasing.h"
-#include "../IR/ConstantAndGlobal.h"
+#include <algorithm>	
 #include "IRType.h"
+#include "Function.h"
+#include "ConstantAndGlobal.h"
+#include "../Support/Hasing.h"
 #include "../Support/TypeSet.h"
 namespace compiler
 {
 	namespace IR
-	{
-		typedef std::shared_ptr<Type> TyPtr;
-		typedef std::shared_ptr<FunctionType> FuncTypePtr;
+	{		
 		using namespace std;
 		using namespace Hashing;
 		using namespace SupportStructure;
+
 		struct FunctionTypeKeyInfo
 		{
 			struct KeyTy
 			{
-				TyPtr ReturnType;
-				std::vector<TyPtr> Params;
-				KeyTy(TyPtr R, std::vector<TyPtr> P) : ReturnType(R), Params(P) {}
+				std::shared_ptr<Type> ReturnType;
+				std::vector< std::shared_ptr<Type>> Params;
+				KeyTy(std::shared_ptr<Type> R, std::vector< std::shared_ptr<Type>> P) : ReturnType(R), Params(P) {}
 
 				KeyTy(std::shared_ptr<FunctionType> FT) :
 					ReturnType(FT->getReturnType()), Params(FT->getParams()) {}
@@ -50,19 +49,19 @@ namespace compiler
 				return hash_combine_range(hash_value(Key.ReturnType), Key.Params.begin(), 
 					Key.Params.end());
 			}
-			static unsigned long long getHashValue(FuncTypePtr FT) { return getHashValue(KeyTy(FT)); }
-			static bool isEqual(const KeyTy& LHS, FuncTypePtr RHS) { return LHS == KeyTy(RHS); }
-			static bool isEqual(FuncTypePtr LHS, FuncTypePtr RHS) { return LHS == RHS; }
+			static unsigned long long getHashValue(std::shared_ptr<FunctionType> FT) { return getHashValue(KeyTy(FT)); }
+			static bool isEqual(const KeyTy& LHS, std::shared_ptr<FunctionType> RHS) { return LHS == KeyTy(RHS); }
+			static bool isEqual(std::shared_ptr<FunctionType> LHS, std::shared_ptr<FunctionType> RHS) { return LHS == RHS; }
 		};
 
 		struct AnonStructTypeKeyInfo
 		{
 			struct KeyTy
 			{
-				std::vector<TyPtr> ETypes;
+				std::vector< std::shared_ptr<Type>> ETypes;
 				// bool ispacked;
-				KeyTy(const std::vector<TyPtr>& E) : ETypes(E) {}
-				KeyTy(StructTypePtr ST) : ETypes(ST->getContainedTys()) {}
+				KeyTy(const std::vector< std::shared_ptr<Type>>& E) : ETypes(E) {}
+				KeyTy(std::shared_ptr<StructType> ST) : ETypes(ST->getContainedTys()) {}
 				bool operator==(const KeyTy& rhs) const
 				{
 					if (ETypes == rhs.ETypes)
@@ -75,20 +74,20 @@ namespace compiler
 			{
 				return hash_combine_range(0, Key.ETypes.begin(), Key.ETypes.end());
 			}
-			static unsigned long long getHashValue(StructTypePtr RHS) { return getHashValue(KeyTy(RHS)); }
-			static bool isEqual(const KeyTy& LHS, StructTypePtr RHS) { return LHS == KeyTy(RHS); }
-			static bool isEqual(StructTypePtr LHS, StructTypePtr RHS) { return LHS == RHS; }
+			static unsigned long long getHashValue(std::shared_ptr<StructType> RHS) { return getHashValue(KeyTy(RHS)); }
+			static bool isEqual(const KeyTy& LHS, std::shared_ptr<StructType> RHS) { return LHS == KeyTy(RHS); }
+			static bool isEqual(std::shared_ptr<StructType> LHS, std::shared_ptr<StructType> RHS) { return LHS == RHS; }
 		};
 
 		struct NamedStructTypeKeyInfo
 		{
 			struct KeyTy
 			{
-				std::vector<TyPtr> ETypes;
+				std::vector< std::shared_ptr<Type>> ETypes;
 				std::string Name;
 				// bool ispacked;
-				KeyTy(const std::vector<TyPtr>& E, std::string Name) : ETypes(E), Name(Name) {}
-				KeyTy(StructTypePtr ST) : ETypes(ST->getContainedTys()) {}
+				KeyTy(const std::vector< std::shared_ptr<Type>>& E, std::string Name) : ETypes(E), Name(Name) {}
+				KeyTy(std::shared_ptr<StructType> ST) : ETypes(ST->getContainedTys()) {}
 				bool operator==(const KeyTy& rhs) const
 				{
 					if (Name == rhs.Name)
@@ -103,15 +102,15 @@ namespace compiler
 			{
 				return hash_combine_range(hash_value(Key.Name), Key.ETypes.begin(), Key.ETypes.end());
 			}
-			static unsigned long long getHashValue(StructTypePtr RHS)
+			static unsigned long long getHashValue(std::shared_ptr<StructType> RHS)
 			{
 				return getHashValue(KeyTy(RHS));
 			}
-			static bool isEqual(const KeyTy& LHS, StructTypePtr RHS)
+			static bool isEqual(const KeyTy& LHS, std::shared_ptr<StructType> RHS)
 			{
 				return LHS == KeyTy(RHS);
 			}
-			static bool isEqual(StructTypePtr LHS, StructTypePtr RHS)
+			static bool isEqual(std::shared_ptr<StructType> LHS, std::shared_ptr<StructType> RHS)
 			{
 				return LHS == RHS;
 			}
@@ -119,56 +118,56 @@ namespace compiler
 
 		class MosesIRContext
 		{
-			typedef std::shared_ptr<StructType> StructTypePtr;
-		private:
-			std::vector<IntrinsicPtr> Intrinsics;
+			std::vector<std::shared_ptr<Intrinsic>> Intrinsics;
 
 			// Basic type instances.
 			// To Do: 为了减少对内存的占用，我们在MosesIRContext中存放VoidTy和IntTy，
 			// 但是我们统一使用std::shared_ptr<>进行内存管理，所以反而增加了对内存的
 			// 占用，这样的内存占用显然是很大的。
-			std::shared_ptr<Type> VoidTy, IntTy, BoolTy;
+			std::shared_ptr<Type> VoidTy, IntTy, BoolTy, LabelTy;
 			std::shared_ptr<ConstantBool> TheTrueVal, TheFalseVal;
 
-			TypeSet<FuncTypePtr, FunctionTypeKeyInfo> FunctionTypeSet;
-			TypeSet<StructTypePtr, AnonStructTypeKeyInfo> StructTypeSet;
-			TypeSet<StructTypePtr, NamedStructTypeKeyInfo> NamedStructTypeSet;
+			TypeSet<std::shared_ptr<FunctionType>, FunctionTypeKeyInfo> FunctionTypeSet;
+			TypeSet<std::shared_ptr<StructType>, AnonStructTypeKeyInfo> StructTypeSet;
+			TypeSet<std::shared_ptr<StructType>, NamedStructTypeKeyInfo> NamedStructTypeSet;
 		public:
 			MosesIRContext() : VoidTy(std::make_shared<Type>(Type::TypeID::VoidTy)), 
 				IntTy(std::make_shared<Type>(Type::TypeID::IntegerTy)),
-				BoolTy(std::make_shared<Type>(Type::TypeID::BoolTy))
+				BoolTy(std::make_shared<Type>(Type::TypeID::BoolTy)),
+				LabelTy(std::make_shared<Type>(Type::TypeID::LabelTy))
 			{
 				std::vector<std::string> Names = {"dst", "src"};
 				Intrinsics.push_back(std::make_shared<Intrinsic>("mosesir.memcpy", Names));
 			}
 			/// \brief Add literal structure type(AnonymousType).
-			void AddStructType(StructTypePtr Type)
+			void AddStructType(std::shared_ptr<StructType> Type)
 			{
 				StructTypeSet.insert(Type);
 			}
 
-			IntrinsicPtr getMemcpy() const { return Intrinsics[0]; }
+			std::shared_ptr<Intrinsic> getMemcpy() const { return Intrinsics[0]; }
 
 			/// \brief Add named structure type(UserdefinedType - class).
-			void AddNamedStructType(StructTypePtr Type)
+			void AddNamedStructType(std::shared_ptr<StructType> Type)
 			{
 				NamedStructTypeSet.insert(Type);
 			}
 			
 			/// \brief 检查某种类型在GlobalType中是否存在.
-			bool CheckHave(StructTypePtr forchecking);
+			bool CheckHave(std::shared_ptr<StructType> forchecking);
 
 			// helper method.
 			std::shared_ptr<Type> getVoidTy() const { return VoidTy; }
 			std::shared_ptr<Type> getIntTy() const { return IntTy; }
 			std::shared_ptr<Type> getBoolTy() const { return BoolTy; }
+			std::shared_ptr<Type> getLabelTy() const { return LabelTy; }
 
-			std::vector<StructTypePtr> getAnonyTypes() const
+			std::vector<std::shared_ptr<StructType>> getAnonyTypes() const
 			{
 				return StructTypeSet.getBuckets();
 			}
 
-			std::vector<StructTypePtr> getNamedTypes() const
+			std::vector<std::shared_ptr<StructType>> getNamedTypes() const
 			{
 				return NamedStructTypeSet.getBuckets();
 			}

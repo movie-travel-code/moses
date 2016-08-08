@@ -9,15 +9,16 @@
 #include "../include/Parser/parser.h"
 #include "../include/IRBuild/IRBuilder.h"
 #include "../include//Parser/constant-evaluator.h"
-// ------ include header file for testing------------------//
-#include "../include/IR/MosesIRContext.h"
+// #include "../include/IR/MosesIRContext.h"
 #include "../include/Parser/ASTContext.h"
 #include "../include/IR/Support/IRPrinter.h"
-// ------ include header file for testing------------------//
+#include "../include/ExecutionEngine/ExecutionEngine.h"
+
 using namespace compiler::parse;
 using namespace compiler::sema;
 using namespace compiler::IR;
 using namespace compiler::IRBuild;
+using namespace compiler::Interpreter;
 int main()
 {
 	Scanner scanner("E:/test/main.mo");
@@ -52,6 +53,9 @@ int main()
 	mosesIR << out.str();
 	mosesIR.close();
 
+	// (5) Interpreter
+	auto interpreter = Interpreter::create(moduleBuilder.getIRs(), IRContext);
+	interpreter->run();
 	system("pause");
 	return 0;
 }

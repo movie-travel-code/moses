@@ -57,6 +57,8 @@ namespace compiler
 			// getParent - Return the enclosing method, or null if none
 			FuncPtr getParent() { return Parent; }
 
+			std::vector<BBPtr> getPredecessors() const;
+
 			/// \brief Remove 'this' from the containing function.
 			/// \returns the element after the erased one.
 			BBPtr removeFromParent();

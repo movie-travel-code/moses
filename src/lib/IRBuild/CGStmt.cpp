@@ -43,6 +43,12 @@ void ModuleBuilder::EmitContinueStmt(const ContinueStatement* CS)
 /// EmitBlock - Emit the given block \arg BB and set it as the insert point.
 void ModuleBuilder::EmitBlock(BBPtr BB, bool IsFinished)
 {
+	/// Fall out of the current block (if necessary).
+	/// e.g.     B0
+	///         /
+	///        /
+	///       B1
+	/// We can merge the B0 and B1.
 	EmitBrach(BB);
 	if (IsFinished && BB->use_empty())
 	{
@@ -128,13 +134,13 @@ void ModuleBuilder::EmitWhileStmt(const WhileStatement* whilestmt)
 {
 	// Emit the header for the loop, insert it in current 'function', 
 	// which will create an uncond br to it.
-	BBPtr LoopHeader = CreateBasicBlock("while.cond");
+	BBPtr LoopHeader = CreateBasicBlock(getCurLocalName("while.cond"));
 	EmitBlock(LoopHeader);
 
 	// Create an exit block for when the condition fails, create a block
 	// for the body of the loop.
-	BBPtr ExitBlock = CreateBasicBlock("while.end");
-	BBPtr LoopBody = CreateBasicBlock("while.body");
+	BBPtr ExitBlock = CreateBasicBlock(getCurLocalName("while.end"));
+	BBPtr LoopBody = CreateBasicBlock(getCurLocalName("while.body"));
 
 	// Store the blocks to use for break and continue.
 	BreakContinueStack.push_back(CGStmt::BreakContinue(ExitBlock, LoopHeader));
@@ -252,7 +258,8 @@ ValPtr ModuleBuilder::visit(const CompoundStmt* comstmt)
 	}
 
 	// (3) Switch the scope back.
-	CurScope = CurScope->getParent();
+	if (num != 0)
+		CurScope = CurScope->getParent();
 
 	return nullptr;
 }
@@ -298,11 +305,11 @@ void ModuleBuilder::EmitIfStmt(const IfStatement* ifstmt)
 
 	// Create blocks for then and else cases. Insert the 'then' block at the end
 	// of the function.
-	auto ThenBlock = BasicBlock::Create("if.then", nullptr);
-	auto ContBlock = BasicBlock::Create("if.end", nullptr);
+	auto ThenBlock = BasicBlock::Create(getCurLocalName("if.then"), nullptr);
+	auto ContBlock = BasicBlock::Create(getCurLocalName("if.end"), nullptr);
 	auto ElseBlock = ContBlock;
 	if (ifstmt->getElse())
-		ElseBlock = BasicBlock::Create("if.else", nullptr);
+		ElseBlock = BasicBlock::Create(getCurLocalName("if.else"), nullptr);
 
 	// Once the blocks are created, we can emit the conditional branch that choose between
 	// them. 

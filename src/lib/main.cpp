@@ -9,10 +9,10 @@
 #include "../include/Parser/parser.h"
 #include "../include/IRBuild/IRBuilder.h"
 #include "../include//Parser/constant-evaluator.h"
-// #include "../include/IR/MosesIRContext.h"
 #include "../include/Parser/ASTContext.h"
 #include "../include/IR/Support/IRPrinter.h"
 #include "../include/ExecutionEngine/ExecutionEngine.h"
+#include "../include/IR/Dominators.h"
 
 using namespace compiler::parse;
 using namespace compiler::sema;
@@ -53,9 +53,22 @@ int main()
 	mosesIR << out.str();
 	mosesIR.close();
 
+	//=============================test=================================
+	DominatorTree DomTree;
+	std::vector<BBPtr> CFG;
+	for (auto item : moduleBuilder.getIRs())
+	{
+		if (BBPtr BB = std::dynamic_pointer_cast<BasicBlock>(item))
+			CFG.push_back(BB);
+	}
+	DomTree.runOnCFG(CFG);
+
+	DomTree.ComputeDomFrontierOnCFG(CFG);
+	//=================================================================
+
 	// (5) Interpreter
-	auto interpreter = Interpreter::create(moduleBuilder.getIRs(), IRContext);
-	interpreter->run();
+	/*auto interpreter = Interpreter::create(moduleBuilder.getIRs(), IRContext);
+	interpreter->run();*/
 	system("pause");
 	return 0;
 }

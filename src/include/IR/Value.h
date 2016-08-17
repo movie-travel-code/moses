@@ -155,7 +155,8 @@ namespace compiler
 			// Methods for handling the vector of uses of this Value.
 			const Value* use_begin() const;
 			unsigned use_size()	const { return Uses.size(); }
-			bool use_empty() const { return Uses.empty(); }
+			bool use_empty() const { return Uses.empty(); }			
+			const std::list<Use*>& getUses() const { return Uses; }
 
 			/// addUse/killUse - These two methods should only be used by the Use class.
 			/// This means that every time we create a new Use object, the use object

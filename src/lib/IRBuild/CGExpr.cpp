@@ -42,7 +42,7 @@ void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock, BBPtr
 			//			}
 			// At first, we generate code for "lhs > rhs", connecting "num == 0" for true and 
 			// "if.else" for false.
-			BBPtr LHSTrue = CreateBasicBlock("and.lhs.true");
+			BBPtr LHSTrue = CreateBasicBlock(getCurLocalName("and.lhs.true"));
 			EmitBranchOnBoolExpr(CondBOp->getLHS(), LHSTrue, FalseBlock);
 			EmitBlock(LHSTrue);
 
@@ -66,7 +66,7 @@ void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock, BBPtr
 			// Refer to "And", here also implement the short-circuit principle.
 			// Emit the LHS as a conditional. If the LHS conditional is true, we want to jump
 			// to the TrueBlock.
-			BBPtr LHSFalse = CreateBasicBlock("or.lhs.false");
+			BBPtr LHSFalse = CreateBasicBlock(getCurLocalName("or.lhs.false"));
 			EmitBranchOnBoolExpr(CondBOp->getLHS(), TrueBlock, LHSFalse);
 			EmitBlock(LHSFalse);
 

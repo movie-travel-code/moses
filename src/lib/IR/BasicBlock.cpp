@@ -19,6 +19,25 @@ BBPtr BasicBlock::Create(std::string Name, FuncPtr Parent, BBPtr InsertBefore)
 	return std::make_shared<BasicBlock>(Name, Parent, InsertBefore);
 }
 
+// Get the predecessors of this basic block.
+std::vector<BBPtr> BasicBlock::getPredecessors() const
+{
+	std::vector<BBPtr> Predecessors;
+	// (1) get the use list.
+	auto Uses = getUses();
+
+	// (2) get the use's father
+	for (auto item : Uses)
+	{
+		auto user = item->getUser();
+		const Instruction *InstUser = dynamic_cast<const Instruction*>(user);
+		assert(InstUser && "The user of BasicBlock must be Instruction.");
+		auto Parent = InstUser->getParent();
+		Predecessors.push_back(Parent);
+	}
+	return Predecessors;
+}
+
 std::list<InstPtr>::iterator BasicBlock::Insert(Iterator InsertP, InstPtr I)
 { 
 	return InstList.insert(InsertP, I); 

@@ -169,3 +169,84 @@ while flag
 }
 ```
 条件表达式不需要使用 "(" 与")" 进行包裹。
+
+## 示例
+moses，如下代码所示：
+```
+var number = 100;
+var sum : int;
+
+while(number > 0)
+{
+	sum += number--;
+}
+
+var result : bool;
+if (sum > 100000)
+{
+	result = true;
+	while(sum > 0)
+	{
+		sum--;
+	}
+}
+else
+{
+	result = false;
+}
+```
+生成的近SSA的IR如下，现在的IR很原始，有很多冗余而且没有任何优化可言。后面会将该IR提升到完全SSA形式，然后在其上应用相关优化算法。
+```
+ entry:
+%number.addr = alloca int        ; < int* >
+%sum.addr = alloca int        ; < int* >
+%result.addr = alloca bool        ; < bool* >
+store int 100.000000, int* %number.addr        ; < void >
+br label %while.cond0
+
+ %while.cond0:
+%3 = load int* %number.addr        ; < int >
+%gt.result4 = cmp gt int %3, int 0.000000        ; <  bool > 
+br bool %gt.result4, label %while.body2, label %while.end1
+
+ %while.body2:
+%5 = load int* %number.addr        ; < int >
+%dec6 = add int %5, int -1        ; < int >
+store int %dec6, int* %number.addr        ; < void >
+%7 = load int* %sum.addr        ; < int >
+%add.tmp8 = add int %7, int %5        ; < int >
+store int %add.tmp8, int* %sum.addr        ; < void >
+%9 = load int* %sum.addr        ; < int >
+br label %while.cond0
+
+ %while.end1:
+%13 = load int* %sum.addr        ; < int >
+%gt.result14 = cmp gt int %13, int 100000.000000        ; <  bool > 
+br bool %gt.result14, label %if.then10, label %if.else12
+
+ %if.then10:
+store bool , bool* %result.addr        ; < void >
+%15 = load bool* %result.addr        ; < bool >
+br label %while.cond16
+
+ %while.cond16:
+%19 = load int* %sum.addr        ; < int >
+%gt.result20 = cmp gt int %19, int 0.000000        ; <  bool > 
+br bool %gt.result20, label %while.body18, label %while.end17
+
+ %while.body18:
+%21 = load int* %sum.addr        ; < int >
+%dec22 = add int %21, int -1        ; < int >
+store int %dec22, int* %sum.addr        ; < void >
+br label %while.cond16
+
+ %while.end17:
+br label %if.end11
+
+ %if.else12:
+store bool , bool* %result.addr        ; < void >
+%23 = load bool* %result.addr        ; < bool >
+br label %if.end11
+
+ %if.end11:
+```

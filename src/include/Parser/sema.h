@@ -1,12 +1,12 @@
 //===-----------------------------------sema.h----------------------------===//
-// 
-// This file defines the Sema class, which performs semantic analysis and 
+//
+// This file defines the Sema class, which performs semantic analysis and
 // builds ASTs. Consult Clang 2.6.
 // Ad hoc syntax-directed semantic analysis.
 //
 // Checks of many kinds.
 // (1) All identifiers are declared.
-// (2) Types (¾­¹ýÓïÒå·ÖÎöÖ®ºó£¬Óï·¨Ê÷ÉÏµÄÈÎÒâ±í´ïÊ½¶¼ÓÐÆä¶ÔÓ¦ÀàÐÍ£¬ ¼´fully typed)
+// (2) Types (ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½ï¿½Ïµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½Í£ï¿½ ï¿½ï¿½fully typed)
 // (3) Inheritance relationsships(Temporarily moses's class type doesn't have
 //		inheritance).
 // (4) classes defined only once.
@@ -15,35 +15,35 @@
 // (6) Reserved identifiers are mot misused.
 // And others.
 // ---------------------------------Nonsense for coding------------------------
-// ÎÒÃÇÊ¹ÓÃÓï·¨ÖÆµ¼µÄ·­Òë·½·¨£¬¾ÍÊÇÔÚÓï·¨·ÖÎöµÄ¹ý³ÌÖÐ¼ä£¬µ÷ÓÃÒ»Ð©º¯ÊýÀ´½øÐÐÓïÒå·ÖÎö£¬
-// ÕâÐ©º¯ÊýÓÐÒ»¸öÍ³Ò»µÄÃû³Æ¾ÍÊÇAction Routines¡£´ÓÁíÒ»ÖÖ½Ç¶È¿´ÓïÒå·ÖÎö£¬¾ÍÊÇÍ¨¹ý
-// ÊôÐÔÎÄ·¨µÄÐÎÊ½£¬Attribute GrammarÔÚÎÄ·¨²ãÃæ¶¨ÒåÁË£¬ÔÚ½øÐÐÓï·¨·ÖÎöµÄÊ±ºòÒª½øÐÐ
-// ÄÄÐ©²Ù×÷£¬ÊôÐÔÎÄ·¨ÖÐÓÐ¼Ì³ÐÊôÐÔºÍ×ÛºÏÊôÐÔµÄ¸Ä±ä£¬¼Ì³ÐÊôÐÔ¾ÍÊÇµ±Ç°·ÖÎö½Úµã´Ó¸¸Ç×½Úµã
-// ºÍ×óÊÖÐÖµÜ½Úµã»ñµÃµÄÊôÐÔ£¬¶ø×ÛºÏÊôÐÔÖ»ÊÇÓÉµ±Ç°½ÚµãÎª¸ùµÄ×ÓÊ÷Ìá¹©µÄ¡£
-// 
-// mosesÖÐÓÐÒ»Ð©ÊôÐÔÐÅÏ¢ÊÇÐèÒªÑØÍ¾ÊÕ¼¯µÄ£¨mosesÊÇÉÏÏÂÎÄÏà¹ØµÄÓïÑÔ£©£¬Ò²¾ÍÊÇºóÃæµÄÄ³Ð©ÅÐ´íÐèÒª
-// Ç°ÃæÊÕ¼¯µ½µÄÐÅÏ¢£¨ÀýÈç·ûºÅ±í£¬scopeµÈ£©¡£ÕâÐ©ÐÅÏ¢¿ÉÒÔÔÚÓï·¨·ÖÎö£¨ÕâÀï²ÉÓÃµÄÊÇµÝ¹éÏÂ½µ£©
-// µÄ¹ý³ÌÖÐÑØÍ¾ÊÕ¼¯£¬°¤¸ö½ÚµãµÄÏòÏÂ´«µÝ£¬ÕâÀï²ÉÓÃÁË·ûºÅ±í£¨Symbol Table£©µÄ½á¹¹×÷Îª
-// È«¾Ö¿É·ÃÎÊµÄÊý¾Ý½á¹¹£¬±ÜÃâÁËÑØ½Úµã´«µÝµÄÎÊÌâ¡£»¹ºÃmosesµÄÓïÒå±È½Ï¼òµ¥£¬·ûºÅ±í¼ÓÉÏ
-// Ò»Ð©¼òµ¥µÄActionRoutine¾ÍÒÑ¾­Âú×ãÒªÇóÁË¡£
-// 
-// ²¢ÇÒÓÐÐ©ÓïÒå·ÖÎöÓÐÏÈºóË³Ðò£¬ÀýÈçÓöµ½DeclRefExpr£¬Ê×ÏÈ¼ì²é¸ÃidentifierÓÐÎÞ¶¨Òå£¬
-// Ã»ÓÐ¶¨Òå±¨´í¡°undefined variable¡±£¬¶¨ÒåÁËµÄ»°»ñÈ¡ÆäÀàÐÍÔÙ×öType Checking.
+// ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½ï·¨ï¿½Æµï¿½ï¿½Ä·ï¿½ï¿½ë·½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½ï¿½Ð¼ä£¬ï¿½ï¿½ï¿½ï¿½Ò»Ð©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+// ï¿½ï¿½Ð©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Í³Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Æ¾ï¿½ï¿½ï¿½Action Routinesï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Ö½Ç¶È¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½
+// ï¿½ï¿½ï¿½ï¿½ï¿½Ä·ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½Attribute Grammarï¿½ï¿½ï¿½Ä·ï¿½ï¿½ï¿½ï¿½æ¶¨ï¿½ï¿½ï¿½Ë£ï¿½ï¿½Ú½ï¿½ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½
+// ï¿½ï¿½Ð©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä·ï¿½ï¿½ï¿½ï¿½Ð¼Ì³ï¿½ï¿½ï¿½ï¿½Ôºï¿½ï¿½Ûºï¿½ï¿½ï¿½ï¿½ÔµÄ¸Ä±ä£¬ï¿½Ì³ï¿½ï¿½ï¿½ï¿½Ô¾ï¿½ï¿½Çµï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½Ó¸ï¿½ï¿½×½Úµï¿½
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÖµÜ½Úµï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½ï¿½Ûºï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½Éµï¿½Ç°ï¿½Úµï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á¹©ï¿½Ä¡ï¿½
+//
+// mosesï¿½ï¿½ï¿½ï¿½Ò»Ð©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Í¾ï¿½Õ¼ï¿½ï¿½Ä£ï¿½mosesï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½Ò²ï¿½ï¿½ï¿½Çºï¿½ï¿½ï¿½ï¿½Ä³Ð©ï¿½Ð´ï¿½ï¿½ï¿½Òª
+// Ç°ï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å±ï¿½scopeï¿½È£ï¿½ï¿½ï¿½ï¿½ï¿½Ð©ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ÇµÝ¹ï¿½ï¿½Â½ï¿½ï¿½ï¿½
+// ï¿½Ä¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¾ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Úµï¿½ï¿½ï¿½ï¿½ï¿½Â´ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë·ï¿½ï¿½Å±ï¿½Symbol Tableï¿½ï¿½ï¿½Ä½á¹¹ï¿½ï¿½Îª
+// È«ï¿½Ö¿É·ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½Ý½á¹¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø½Úµã´«ï¿½Ýµï¿½ï¿½ï¿½ï¿½â¡£ï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È½Ï¼òµ¥£ï¿½ï¿½ï¿½ï¿½Å±ï¿½ï¿½ï¿½ï¿½
+// Ò»Ð©ï¿½òµ¥µï¿½ActionRoutineï¿½ï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½Ë¡ï¿½
+//
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Èºï¿½Ë³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½DeclRefExprï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½identifierï¿½ï¿½ï¿½Þ¶ï¿½ï¿½å£¬
+// Ã»ï¿½Ð¶ï¿½ï¿½å±¨ï¿½ï¿½undefined variableï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ËµÄ»ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Type Checking.
 // ----------------------------------------------------------------------------
 //
 // -----------------------------------Nonsense for coding------------------------
 // Three kinds of languages:
-// (1) statically typed: All or almost all checking of types is done as part of 
+// (1) statically typed: All or almost all checking of types is done as part of
 //	   compilation(C, Java, including moses)
 // (2) Dynamically typed: Almost all checking of types is done as part of program
 //     execution(Scheme, Lisp, python, perl).
 // ------------------------------------------------------------------------------
 //===---------------------------------------------------------------------===//
 
-// To Do: ÎªÁËÄÚ´æ¹ÜÀíÉÏµÄ·½±ã£¬ÎÒ´óÁ¿Ê¹ÓÃÁËstd::shared_ptr£¬shared_ptr»áÎª
-// countÌí¼Ó2¸ö×ÖµÄ¿ªÏú£¬Îª¶ÑÉÏ¶ÔÏóÌí¼ÓÒ»¸öÖ¸Õë×ÖµÄ¿ªÏú£¬Í¬Ê±ÓÉÓÚÊ¹ÓÃÁËRAII»úÖÆ
-// À´ÊµÏÖÒýÓÃ¼ÆÊýµÄÔö¼õ£¬»áÌí¼ÓÒ»²¿·ÖµÄOverhead¡£
-// ËùÒÔÐèÒª¶Ô´úÂë½øÐÐ¾«¼ò£¡
+// To Do: Îªï¿½ï¿½ï¿½Ú´ï¿½ï¿½ï¿½ï¿½ï¿½ÏµÄ·ï¿½ï¿½ã£¬ï¿½Ò´ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½std::shared_ptrï¿½ï¿½shared_ptrï¿½ï¿½Îª
+// countï¿½ï¿½ï¿½2ï¿½ï¿½ï¿½ÖµÄ¿ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ï¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ÖµÄ¿ï¿½ï¿½ï¿½ï¿½ï¿½Í¬Ê±ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½RAIIï¿½ï¿½ï¿½ï¿½
+// ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½Ã¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Öµï¿½Overheadï¿½ï¿½
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½Ð¾ï¿½ï¿½ï¿½
 
 #ifndef SEMA_INCLUDE
 #define SEMA_INCLUDE
@@ -56,172 +56,179 @@
 
 namespace compiler
 {
-	namespace sema
+namespace sema
+{
+using namespace compiler::ast;
+using namespace compiler::lex;
+using namespace compiler::Hashing;
+using namespace compiler::Support;
+
+/// sema - This implements sematic analysis and AST building for moses.
+/// ------------------------nonsense for coding------------------------
+/// ï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½ï¿½è¶¨ï¿½ï¿½ï¿½È¶ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½Ad-hoc syntax translationï¿½ï¿½ï¿½ï¿½pass
+/// ï¿½Í¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½.
+/// ------------------------nonsense for coding------------------------
+class Sema
+{
+	Sema(const Sema &) = delete;
+	void operator=(const Sema &) = delete;
+	parse::Scanner *scan;
+	ASTContext &Ctx;
+
+  private:
+	std::shared_ptr<Scope> CurScope;
+
+	/// \brief ScopeStack represents scope stack.
+	std::vector<std::shared_ptr<Scope>> ScopeStack;
+
+	/// \brief ScopeTree
+	std::shared_ptr<Scope> ScopeTreeRoot;
+
+	// To Do: ï¿½ï¿½ï¿½ï¿½Class scopeï¿½ï¿½Îªï¿½ï¿½Ö§ï¿½ï¿½ï¿½Ôºï¿½ï¿½Classï¿½ï¿½ï¿½ï¿½Ç¶ï¿½ï¿½
+	// class B
+	// {
+	//		public:
+	//		class A
+	//		{
+	//		}
+	// }
+	// Note: mosesï¿½ï¿½Ê±Ã»ï¿½ï¿½ClassÇ¶ï¿½×£ï¿½ï¿½ï¿½ï¿½ï¿½ClassStackÖ»ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôªï¿½ï¿½
+	// ï¿½ï¿½ï¿½Ð¡ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½Top-Levelï¿½Äºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½Top-Level
+	std::vector<std::shared_ptr<ClassSymbol>> ClassStack;
+
+	// To Do: ï¿½ï¿½ï¿½ï¿½Functionï¿½ï¿½Îªï¿½ï¿½Ö§ï¿½ï¿½ï¿½Ôºï¿½Äºï¿½ï¿½ï¿½ï¿½Õ°ï¿½Êµï¿½ï¿½
+	// func add() -> void
+	// {
+	//		func sub() -> int {}
+	//		return sub;
+	// }
+	// Note: mosesï¿½ï¿½Ê±Ã»ï¿½ï¿½Ö§ï¿½Ö±Õ°ï¿½Êµï¿½Ö£ï¿½ï¿½ï¿½ï¿½ï¿½FunctionStackÖ»ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôªï¿½ï¿½
+	// ï¿½ï¿½ï¿½Ð¡ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½Top-Levelï¿½Äºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½Top-Level
+	std::vector<std::shared_ptr<FunctionSymbol>> FunctionStack;
+
+  public:
+	Sema(ASTContext &Ctx) : Ctx(Ctx) {}
+
+  public:
+	// The functions for handling scope.
+	// Shit Code!
+	// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î¨Ò»ï¿½ï¿½ï¿½ï¿½semaï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½tokenï¿½ï¿½Ö»ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½È¡scanï¿½Äµï¿½Ö·ï¿½ï¿½
+	void getScannerPointer(parse::Scanner *scan) { this->scan = scan; };
+	std::shared_ptr<Scope> getCurScope() { return CurScope; }
+	std::shared_ptr<Scope> getTopLevelScope() { return ScopeStack[0]; }
+	void PushScope(std::shared_ptr<Scope> scope);
+
+	void PopScope();
+	void PopFunctionStack();
+	void PopClassStack();
+
+	std::shared_ptr<FunctionSymbol> getFunctionStackTop() const;
+
+	std::shared_ptr<ClassSymbol> getClassStackTop() const;
+
+  public:
+	// Action routines for semantic analysis.
+	// (1) Statement
+	/// \brief Add a new function scope and symbol.
+
+	// Note: shit code!semaï¿½Ð±ï¿½ï¿½ï¿½ï¿½Þ·ï¿½ï¿½ï¿½Öªï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½Î»ï¿½Ã¡ï¿½
+	// To Do: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+	void ActOnTranslationUnitStart();
+
+	void ActOnFunctionDeclStart(std::string name);
+
+	void ActOnFunctionDecl(std::string name, std::shared_ptr<Type> returnType);
+
+	StmtASTPtr ActOnFunctionDeclEnd(std::string name);
+
+	void ActOnParmDecl(std::string name, ParmDeclPtr parm);
+
+	StmtASTPtr ActOnConstDecl(std::string name, std::shared_ptr<Type> type);
+
+	void ActOnVarDecl(std::string name, VarDeclPtr VD);
+
+	void ActOnClassDeclStart(std::string name);
+	void ActOnCompoundStmt();
+
+	StmtASTPtr ActOnIfStmt(SourceLocation start, SourceLocation end, ExprASTPtr condtion,
+						   StmtASTPtr ThenPart, StmtASTPtr ElsePart);
+
+	std::shared_ptr<Type> ActOnReturnType(const std::string &name) const;
+
+	bool ActOnBreakAndContinueStmt(bool whileContext);
+
+	StmtASTPtr ActOnContinueStmt();
+
+	bool ActOnReturnStmt(std::shared_ptr<Type> type) const;
+
+	StmtASTPtr BuildReturnStmt();
+
+	bool ActOnUnpackDeclElement(std::string name);
+
+	UnpackDeclPtr ActOnUnpackDecl(UnpackDeclPtr unpackDecl, std::shared_ptr<Type> type);
+
+	bool ActOnReturnAnonymous(std::shared_ptr<Type> type) const;
+
+	BinaryPtr ActOnAnonymousTypeVariableAssignment(ExprASTPtr lhs, ExprASTPtr rhs) const;
+
+	// (2) Expression
+	ExprASTPtr ActOnConstantExpression();
+
+	std::shared_ptr<Type> ActOnCallExpr(std::string calleeName,
+										std::vector<std::shared_ptr<Type>> Args, FunctionDeclPtr &FD);
+
+	ExprASTPtr ActOnUnaryOperator();
+
+	ExprASTPtr ActOnPostfixUnaryOperator();
+
+	ExprASTPtr ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs);
+
+	VarDeclPtr ActOnDeclRefExpr(std::string name);
+
+	ExprASTPtr ActOnStringLiteral();
+
+	ExprASTPtr ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok);
+
+	ExprASTPtr ActOnExprStmt();
+
+	bool ActOnConditionExpr(std::shared_ptr<Type> type) const;
+
+	std::shared_ptr<Type> ActOnParmDeclUserDefinedType(Token tok) const;
+
+	std::shared_ptr<Type> ActOnVarDeclUserDefinedType(Token tok) const;
+
+	// (3) help method
+	bool isInFunctionContext() const { return FunctionStack.size() != 0; }
+
+	/// \brief ×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï²»ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½Incï¿½Íºï¿½ï¿½ï¿½Inc
+	/// (ï¿½ï¿½ï¿½ßµï¿½Î¨Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ß·ï¿½ï¿½ØµÄ±ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½Öµï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß·ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½)
+	ExprASTPtr ActOnDecOrIncExpr(ExprASTPtr rhs);
+
+	/// \brief ï¿½ï¿½ï¿½ç£º -10;
+	ExprASTPtr ActOnUnarySubExpr(ExprASTPtr rhs);
+
+	/// \brief ï¿½ï¿½ï¿½ç£º!flag
+	ExprASTPtr ActOnUnaryExclamatoryExpr(ExprASTPtr rhs);
+
+	// To Do: implement RAII
+	class CompoundScopeRAII
 	{
-		using namespace compiler::ast;
-		using namespace compiler::lex;
-		using namespace compiler::Hashing;
-		using namespace compiler::Support;
+	};
+	// To Do: implement RAII
+	class FunctionScopeRAII
+	{
+	};
 
-		/// sema - This implements sematic analysis and AST building for moses.
-		/// ------------------------nonsense for coding------------------------
-		/// ÓÉÓÚmosesµÄÉè¶¨£¬ÏÈ¶¨ÒåºóÊ¹ÓÃ£¬ËùÒÔAd-hoc syntax translationµ¥±épass
-		/// ¾Í¿ÉÒÔÂú×ãÕâ¸öÒªÇó.
-		/// ------------------------nonsense for coding------------------------
-		class Sema
-		{
-			Sema(const Sema&) = delete;
-			void operator=(const Sema&) = delete;
-			parse::Scanner* scan;
-			ASTContext &Ctx;
-		private:
-			std::shared_ptr<Scope> CurScope;
+	std::shared_ptr<Scope> getScopeStackBottom() const;
 
-			/// \brief ScopeStack represents scope stack.
-			std::vector<std::shared_ptr<Scope>> ScopeStack;
+  private:
+	std::shared_ptr<Scope> getScopeStackTop() const;
 
-			/// \brief ScopeTree
-			std::shared_ptr<Scope> ScopeTreeRoot;
+	void errorReport(const std::string &msg) const;
 
-			// To Do: ÉèÖÃClass scope£¬ÎªÁËÖ§³ÖÒÔºóµÄClass¶¨ÒåÇ¶Ì×
-			// class B
-			// {
-			//		public:
-			//		class A
-			//		{
-			//		}
-			// }
-			// Note: mosesÔÝÊ±Ã»ÓÐClassÇ¶Ì×£¬ËùÒÔClassStackÖ»ÓÐÒ»¸ö»òÕßÁã¸öÔªËØ
-			// ÆäÖÐ¡°Ò»¸ö¡±±íÊ¾´¦ÓÚTop-LevelµÄº¯Êý¶¨Òå£¬¶ø¡°Áã¸ö¡±±íÊ¾´¦ÓÚTop-Level
-			std::vector<std::shared_ptr<ClassSymbol>> ClassStack;
-
-			// To Do: ÉèÖÃFunction£¬ÎªÁËÖ§³ÖÒÔºóµÄº¯Êý±Õ°üÊµÏÖ
-			// func add() -> void 
-			// {
-			//		func sub() -> int {}
-			//		return sub;
-			// }
-			// Note: mosesÔÝÊ±Ã»ÓÐÖ§³Ö±Õ°üÊµÏÖ£¬ËùÒÔFunctionStackÖ»ÓÐÒ»¸ö»òÕßÁã¸öÔªËØ
-			// ÆäÖÐ¡°Ò»¸ö¡±±íÊ¾´¦ÓÚTop-LevelµÄº¯Êý¶¨Òå£¬¶ø¡°Áã¸ö¡±±íÊ¾´¦ÓÚTop-Level
-			std::vector<std::shared_ptr<FunctionSymbol>> FunctionStack;
-		public:
-			Sema(ASTContext &Ctx) : Ctx(Ctx) {}
-		public:
-			// The functions for handling scope.
-			// Shit Code!
-			// Õâ¸öº¯ÊýµÄÎ¨Ò»×÷ÓÃsemaÏë»ñÈ¡µ½µ±Ç°µÄtoken£¬Ö»ÄÜÍ¨¹ý»ñÈ¡scanµÄµØÖ·¡£
-			void getScannerPointer(parse::Scanner* scan) { this->scan = scan; };
-			std::shared_ptr<Scope> getCurScope() { return CurScope; }
-			std::shared_ptr<Scope> getTopLevelScope() { return ScopeStack[0]; }
-			void PushScope(std::shared_ptr<Scope> scope);
-
-			void PopScope();
-			void PopFunctionStack();
-			void PopClassStack();
-
-			std::shared_ptr<FunctionSymbol> getFunctionStackTop() const;
-
-			std::shared_ptr<ClassSymbol> getClassStackTop() const;
-		public:
-			// Action routines for semantic analysis.
-			// (1) Statement
-			/// \brief Add a new function scope and symbol.
-
-			// Note: shit code!semaÖÐ±¨´íÎÞ·¨»ñÖªµ±Ç°±¨´íÎ»ÖÃ¡£
-			// To Do: µ÷Õû±¨´í»úÖÆ£¬µ¥¶À¶¨ÒåÒ»¸ö±¨´íÒýÇæ³öÀ´¡£
-			void ActOnTranslationUnitStart();
-
-			void ActOnFunctionDeclStart(std::string name);
-
-			void ActOnFunctionDecl(std::string name, std::shared_ptr<Type> returnType);
-
-			StmtASTPtr ActOnFunctionDeclEnd(std::string name);
-
-			void ActOnParmDecl(std::string name, ParmDeclPtr parm);
-
-			StmtASTPtr ActOnConstDecl(std::string name, std::shared_ptr<Type> type);
-
-			void ActOnVarDecl(std::string name, VarDeclPtr VD);
-
-			void ActOnClassDeclStart(std::string name);
-			void ActOnCompoundStmt();
-
-			StmtASTPtr ActOnIfStmt(SourceLocation start, SourceLocation end, ExprASTPtr condtion, 
-				StmtASTPtr ThenPart, StmtASTPtr ElsePart);
-
-			std::shared_ptr<Type> ActOnReturnType(const std::string& name) const;
-
-			bool ActOnBreakAndContinueStmt(bool whileContext);
-
-			StmtASTPtr ActOnContinueStmt();
-
-			bool ActOnReturnStmt(std::shared_ptr<Type> type) const;
-
-			StmtASTPtr BuildReturnStmt();
-
-			bool ActOnUnpackDeclElement(std::string name);
-
-			UnpackDeclPtr ActOnUnpackDecl(UnpackDeclPtr unpackDecl, std::shared_ptr<Type> type);
-
-			bool ActOnReturnAnonymous(std::shared_ptr<Type> type) const;
-
-			BinaryPtr ActOnAnonymousTypeVariableAssignment(ExprASTPtr lhs, ExprASTPtr rhs) const;
-
-			// (2) Expression
-			ExprASTPtr ActOnConstantExpression();
-
-			std::shared_ptr<Type> ActOnCallExpr(std::string calleeName, 
-				std::vector<std::shared_ptr<Type>> Args, FunctionDeclPtr &FD);
-
-			ExprASTPtr ActOnUnaryOperator();
-
-			ExprASTPtr ActOnPostfixUnaryOperator();
-
-			ExprASTPtr ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs);
-
-			VarDeclPtr ActOnDeclRefExpr(std::string name);
-
-			ExprASTPtr ActOnStringLiteral();
-
-			ExprASTPtr ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok);
-
-			ExprASTPtr ActOnExprStmt();
-
-			bool ActOnConditionExpr(std::shared_ptr<Type> type) const;
-
-			std::shared_ptr<Type> ActOnParmDeclUserDefinedType(Token tok) const;
-
-			std::shared_ptr<Type> ActOnVarDeclUserDefinedType(Token tok) const;
-
-			// (3) help method
-			bool isInFunctionContext() const { return FunctionStack.size() != 0; }
-
-			/// \brief ×¢ÒâÕâÀï²»Çø·ÖÇ°ÖÃIncºÍºóÖÃInc
-			/// (Á½ÕßµÄÎ¨Ò»Çø±ðÊÇÇ°Õß·µ»ØµÄ±í´ïÊ½ÊÇ×óÖµµÃ£¬¶øºóÕß·µ»ØµÄÊÇÓÒÖµµÄ)
-			ExprASTPtr ActOnDecOrIncExpr(ExprASTPtr rhs);
-
-			/// \brief ÀýÈç£º -10;
-			ExprASTPtr ActOnUnarySubExpr(ExprASTPtr rhs);
-
-			/// \brief ÀýÈç£º!flag
-			ExprASTPtr ActOnUnaryExclamatoryExpr(ExprASTPtr rhs);
-
-			// To Do: implement RAII
-			class CompoundScopeRAII
-			{};
-			// To Do: implement RAII
-			class FunctionScopeRAII
-			{};
-
-			std::shared_ptr<Scope> getScopeStackBottom() const;
-		private:
-			std::shared_ptr<Scope> getScopeStackTop() const;
-
-			void errorReport(const std::string& msg) const;
-			
-			UnpackDeclPtr unpackDeclTypeChecking(UnpackDeclPtr unpackDecl, 
-				std::shared_ptr<Type> initType) const;
-		};
-	}
-}
+	UnpackDeclPtr unpackDeclTypeChecking(UnpackDeclPtr unpackDecl,
+										 std::shared_ptr<Type> initType) const;
+};
+} // namespace sema
+} // namespace compiler
 #endif

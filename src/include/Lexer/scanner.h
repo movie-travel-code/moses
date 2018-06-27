@@ -1,128 +1,120 @@
 #ifndef Scanner_INCLUDE
 #define Scanner_INCLUDE
-#include <fstream>
-#include <iostream>
-#include <string>
-#include <cctype>
-#include <algorithm>
-#include <cassert>
-#include "TokenKinds.h"
 #include "../Support/error.h"
 #include "PreStoreToken.h"
 #include "Token.h"
+#include "TokenKinds.h"
+#include <algorithm>
+#include <cassert>
+#include <cctype>
+#include <fstream>
+#include <iostream>
+#include <string>
 
-namespace compiler
-{
-	namespace parse
-	{
-		using namespace compiler::lex;
 
-		// Scanner - ½âÎöÔ­Ê¼ÎÄ±¾µÃµ½Ò»¸ötokenÁ÷
-		class Scanner
-		{
-		private:
-			enum class State
-			{
-				NONE,
-				END_OF_FILE,
-				IDENTIFIER,
-				NUMBER,
-				STRING,
-				OPERATION
-			};
+namespace compiler {
+namespace parse {
+using namespace compiler::lex;
 
-			std::string FileName;
-			std::ifstream input;
-			unsigned long CurLine;
-			unsigned long CurCol;
-			TokenLocation CurLoc;
+// Scanner - ï¿½ï¿½ï¿½ï¿½Ô­Ê¼ï¿½Ä±ï¿½ï¿½Ãµï¿½Ò»ï¿½ï¿½tokenï¿½ï¿½
+class Scanner {
+private:
+  enum class State { NONE, END_OF_FILE, IDENTIFIER, NUMBER, STRING, OPERATION };
 
-			char CurrentChar;
-			static bool errorFlag;
+  std::string FileName;
+  std::ifstream input;
+  unsigned long CurLine;
+  unsigned long CurCol;
+  TokenLocation CurLoc;
 
-			State state;
-			Token Tok;
-			Token LastTok;
+  char CurrentChar;
+  static bool errorFlag;
 
-			// Ô¤ÉèToken
-			PreStoreToken table;
-			// ÕýÔÚ½âÎöµÄToken
-			std::string buffer;
+  State state;
+  Token Tok;
+  Token LastTok;
 
-		private:
-			/// @brief »ñÈ¡ÏÂÒ»¸ö×Ö·û
-			void getNextChar();
+  // Ô¤ï¿½ï¿½Token
+  PreStoreToken table;
+  // ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½ï¿½ï¿½Token
+  std::string buffer;
 
-			/// @brief ÏòÇ°¿´Ò»¸ö×Ö·û£¬ÓÃÓÚ´Ê·¨·ÖÎö
-			char peekChar();
+private:
+  /// @brief ï¿½ï¿½È¡ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö·ï¿½
+  void getNextChar();
 
-			/// @brief ½«µ±Ç°×Ö·û¼ÓÈë»º³å
-			void addToBuffer(char c);
-			/// @brief Èç¹ûÏòÇ°¿´Ê§°Ü£¬Ôò»ØÍË
-			void reduceBuffer();
+  /// @brief ï¿½ï¿½Ç°ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú´Ê·ï¿½ï¿½ï¿½ï¿½ï¿½
+  char peekChar();
 
-			// ´´½¨×Ö·û´®Token
-			void makeToken(compiler::tok::TokenValue tv, const TokenLocation& loc, std::string name);
-			// ´´½¨ÕûÊýÖµToken£¬×ÖÃæÖµ
-			void makeToken(compiler::tok::TokenValue tv, const TokenLocation& loc, long intValue, std::string name);
-			// ´´½¨doubleÐÍToken
-			void makeToken(compiler::tok::TokenValue tv, const TokenLocation& loc, double realValue, std::string name);
+  /// @brief ï¿½ï¿½ï¿½ï¿½Ç°ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ë»ºï¿½ï¿½
+  void addToBuffer(char c);
+  /// @brief ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½Ê§ï¿½Ü£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  void reduceBuffer();
 
-			// ´¦ÀíÎÄ¼þ½áÎ²
-			void handleEOFState();
-			// ´¦Àí±êÊ¶·û
-			void handleIdentifierState();
-			// ´¦ÀíÕûÊý
-			void handleNumberState();
-			// ´¦Àí×Ö·û´®
-			void handleStringState();
-			// ´¦ÀíÔËËã·ûÊ±µÄ×´Ì¬
-			void handleOperationState();
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½Token
+  void makeToken(compiler::tok::TokenValue tv, const TokenLocation &loc,
+                 std::string name);
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÖµTokenï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
+  void makeToken(compiler::tok::TokenValue tv, const TokenLocation &loc,
+                 long intValue, std::string name);
+  // ï¿½ï¿½ï¿½ï¿½doubleï¿½ï¿½Token
+  void makeToken(compiler::tok::TokenValue tv, const TokenLocation &loc,
+                 double realValue, std::string name);
 
-			// ´¦Àí¿Õ°×¼°×¢ÊÍ
-			void preprocess();
-			// ´¦Àíµ¥ÐÐ×¢ÊÍ
-			void handleLineComment();
-			// ´¦Àí¿é×¢ÊÍ
-			// void handleBlockComment();
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½Î²
+  void handleEOFState();
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Ê¶ï¿½ï¿½
+  void handleIdentifierState();
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  void handleNumberState();
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½
+  void handleStringState();
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½×´Ì¬
+  void handleOperationState();
 
-			// ´´½¨µ±Ç°Î»ÖÃµÄTokenLocation
-			TokenLocation getTokenLocation() const
-			{
-				return TokenLocation(CurLine, CurCol, FileName);
-			}
+  // ï¿½ï¿½ï¿½ï¿½Õ°×¼ï¿½×¢ï¿½ï¿½
+  void preprocess();
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½
+  void handleLineComment();
+  // ï¿½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½
+  // void handleBlockComment();
 
-			// ´Ê·¨·ÖÎöÊý×ÖÀàÐÍ
-			void handleDigit();
-			void handleXDigit();
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°Î»ï¿½Ãµï¿½TokenLocation
+  TokenLocation getTokenLocation() const {
+    return TokenLocation(CurLine, CurCol, FileName);
+  }
 
-			// ´Ê·¨·ÖÎöÐ¡ÊýÀàÐÍ
-			void handleFraction();
-			// ´Ê·¨·ÖÎöÖ¸ÊýÀàÐÍ
-			void handleExponent();
+  // ï¿½Ê·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  void handleDigit();
+  void handleXDigit();
 
-			// ÅÐ¶ÏÊÇ·ñÊÇÔËËã·û
-			bool isOperator();
+  // ï¿½Ê·ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  void handleFraction();
+  // ï¿½Ê·ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  void handleExponent();
 
-		public:
-			// ÏÔÊ¾¹¹Ôìº¯Êý
-			// ÆäÊµ´Ê·¨·ÖÎöÆ÷¶ÔÏó¶¼ÊÇ×Ô¼ºµÄÉú³É£¬²»´æÔÚÒþÊ½ÀàÐÍ×ª»»µÄ¿ÉÄÜ
-			explicit Scanner(const std::string& srcFileName);
-			// »ñÈ¡µ±Ç°Token
-			Token getToken() const { return Tok; };
-			Token getLastToken() const { return LastTok; };
-			// »ñÈ¡ÏÂÒ»¸öToken£¬Õâ¸ö·½·¨»á±»Parserµ÷ÓÃ
-			Token getNextToken();
+  // ï¿½Ð¶ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  bool isOperator();
 
-			// ·µ»Ø´íÎóÀàÐÍ
-			static bool getErrorFlag() { return errorFlag; };
+public:
+  // ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ìº¯ï¿½ï¿½
+  // ï¿½ï¿½Êµï¿½Ê·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½
+  explicit Scanner(const std::string &srcFileName);
+  // ï¿½ï¿½È¡ï¿½ï¿½Ç°Token
+  Token getToken() const { return Tok; };
+  Token getLastToken() const { return LastTok; };
+  // ï¿½ï¿½È¡ï¿½ï¿½Ò»ï¿½ï¿½Tokenï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á±»Parserï¿½ï¿½ï¿½ï¿½
+  Token getNextToken();
 
-			// ±¨´í
-			void errorReport(const std::string& msg);
+  // ï¿½ï¿½ï¿½Ø´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  static bool getErrorFlag() { return errorFlag; };
 
-			static void setErrorFlag(bool flag) { errorFlag = flag; }
-		};
-	}
-}
+  // ï¿½ï¿½ï¿½ï¿½
+  void errorReport(const std::string &msg);
+
+  static void setErrorFlag(bool flag) { errorFlag = flag; }
+};
+} // namespace parse
+} // namespace compiler
 
 #endif

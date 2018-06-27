@@ -1,216 +1,220 @@
 //===----------------------------------IRType.h---------------------------===//
-// 
+//
 // This file contains the declaration of the Type class.
-// ¶ÔÓÚType info£¬moses IR»áÊ¹ÓÃÒ»¸öÊý¾Ý½á¹¹ContextÀ´±£´æÈ«¾ÖµÄÀàÐÍÐÅÏ¢£¬ÔÚmosesÖÐ
-// ÓÃ»§×Ô¶¨ÒåÀàÐÍÊÇÈ«¾ÖÎ¨Ò»µÄ£¬ÀýÈç: class A{}, ÔÚmoses IRÖÐ¾ÍÖ»ÊÇstruct.type£¬
-// È«¾ÖÖ»ÓÐÕâÒ»·Ý¶ù£¬²»¿ÉÄÜÍ¬Ê±´´½¨¶à·Ý¶ùType info.
+// ï¿½ï¿½ï¿½ï¿½Type infoï¿½ï¿½moses IRï¿½ï¿½Ê¹ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Ý½á¹¹Contextï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½
+// ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½Î¨Ò»ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½: class A{}, ï¿½ï¿½moses IRï¿½Ð¾ï¿½Ö»ï¿½ï¿½struct.typeï¿½ï¿½
+// È«ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Ý¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý¶ï¿½Type info.
 //
 //===---------------------------------------------------------------------===//
 #ifndef MOSES_IR_IRTYPE_H
 #define MOSES_IR_IRTYPE_H
-#include <vector>
-#include <iostream>
-#include <sstream>
-#include <memory>
-#include <cassert>
 #include "../../include/Parser/Type.h"
-namespace compiler
-{
-	namespace IR
-	{		
-		class Type;
-		class StructType;
-		class FunctionType;
-		class PointerType;
-		class MosesIRContext;
+#include <cassert>
+#include <iostream>
+#include <memory>
+#include <sstream>
+#include <vector>
 
-		using ASTType = compiler::ast::Type;
-		using ASTTyPtr = std::shared_ptr<ASTType>;
-		using ASTBuiltinTy = compiler::ast::BuiltinType;
-		using ASTUDTy = compiler::ast::UserDefinedType;
-		using ASTUDTyPtr = std::shared_ptr<ASTUDTy>;
-		using ASTTyKind = compiler::ast::TypeKind;
-		using ASTAnonyTy = compiler::ast::AnonymousType;
-		using IRTyPtr = std::shared_ptr<Type>;
-		using IRStructTyPtr = std::shared_ptr<StructType>;
-		using IRFuncTyPtr = std::shared_ptr<FunctionType>;
-		using IRPtTyPtr = std::shared_ptr<PointerType>;
-		/// \brief IR Type.
-		class Type
-		{
-		public:
-			//===----------------------------------------------------------===//
-			// Definitions of all of the base types for the type system. Based
-			// on this value, you can cast to a class defined in DerivedTypes.h.
-			enum TypeID
-			{
-				VoidTy,
-				LabelTy,
-				IntegerTy,
-				BoolTy,
-				// ÏÂÃæµÄ¶¼ÓÐ¶ÔÓ¦µÄ×ÓÀà
-				FunctionTy,
-				StructTy,
-				PointerTy,
-				AnonyTy
-			};
-		private:
-			TypeID ID;
-		public:
-			Type(TypeID id) : ID(id) {}
-			//===-----------------------------------------------------===//
-			// Accessors for working with types.
-			TypeID getTypeID() const { return ID; }
-			bool isVoidType() const { return getTypeID() == VoidTy; }
-			bool isLabelTy() const { return getTypeID() == LabelTy; }
-			bool isIntegerTy() const { return getTypeID() == IntegerTy; }
-			bool isFunctionTy() const { return getTypeID() == FunctionTy; }
-			bool isStructTy() const { return getTypeID() == StructTy; }
-			bool isAnonyTy() const { return getTypeID() == AnonyTy; }
-			bool isBoolTy() const { return getTypeID() == BoolTy; }
-			bool isPointerTy() const { return getTypeID() == PointerTy; }
+namespace compiler {
+namespace IR {
+class Type;
+class StructType;
+class FunctionType;
+class PointerType;
+class MosesIRContext;
 
-			/// isSingleValueType - Return true if the type is a valid type for a 
-			/// register in codegen. 
-			bool isSingleValueType() const { return isIntegerTy() || isBoolTy(); }
+using ASTType = compiler::ast::Type;
+using ASTTyPtr = std::shared_ptr<ASTType>;
+using ASTBuiltinTy = compiler::ast::BuiltinType;
+using ASTUDTy = compiler::ast::UserDefinedType;
+using ASTUDTyPtr = std::shared_ptr<ASTUDTy>;
+using ASTTyKind = compiler::ast::TypeKind;
+using ASTAnonyTy = compiler::ast::AnonymousType;
+using IRTyPtr = std::shared_ptr<Type>;
+using IRStructTyPtr = std::shared_ptr<StructType>;
+using IRFuncTyPtr = std::shared_ptr<FunctionType>;
+using IRPtTyPtr = std::shared_ptr<PointerType>;
+/// \brief IR Type.
+class Type {
+public:
+  //===----------------------------------------------------------===//
+  // Definitions of all of the base types for the type system. Based
+  // on this value, you can cast to a class defined in DerivedTypes.h.
+  enum TypeID {
+    VoidTy,
+    LabelTy,
+    IntegerTy,
+    BoolTy,
+    // ï¿½ï¿½ï¿½ï¿½Ä¶ï¿½ï¿½Ð¶ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    FunctionTy,
+    StructTy,
+    PointerTy,
+    AnonyTy
+  };
 
-			/// isAggregateType - Return true if the type is an aggregate type.
-			bool isAggregateType() const
-			{
-				return getTypeID() == StructTy || getTypeID() == AnonyTy;
-			}
-			//===------------------------------------------------------------===//
-			// Helper for get types.
-			static IRTyPtr getVoidType(MosesIRContext &Ctx);
-			static IRTyPtr getLabelType(MosesIRContext &Ctx);
-			static IRTyPtr getIntType(MosesIRContext &Ctx);
-			static IRTyPtr getBoolType(MosesIRContext &Ctx);
+private:
+  TypeID ID;
 
-			virtual unsigned getSize() const;
+public:
+  Type(TypeID id) : ID(id) {}
+  //===-----------------------------------------------------===//
+  // Accessors for working with types.
+  TypeID getTypeID() const { return ID; }
+  bool isVoidType() const { return getTypeID() == VoidTy; }
+  bool isLabelTy() const { return getTypeID() == LabelTy; }
+  bool isIntegerTy() const { return getTypeID() == IntegerTy; }
+  bool isFunctionTy() const { return getTypeID() == FunctionTy; }
+  bool isStructTy() const { return getTypeID() == StructTy; }
+  bool isAnonyTy() const { return getTypeID() == AnonyTy; }
+  bool isBoolTy() const { return getTypeID() == BoolTy; }
+  bool isPointerTy() const { return getTypeID() == PointerTy; }
 
-			/// \brief Print the type info.
-			virtual void Print(std::ostringstream& out);
-		};
+  /// isSingleValueType - Return true if the type is a valid type for a
+  /// register in codegen.
+  bool isSingleValueType() const { return isIntegerTy() || isBoolTy(); }
 
-		/// \brief FunctionType - Class to represent function types.
-		class FunctionType : public Type
-		{
-			// FunctionType¶ÔÓ¦µÄ¶ÔÏó¶¼²»ÊÇ¿É¸´ÖÆµÄ¡£
-			// FunctionµÄÇ©ÃûÔÚmosesÖÐÊÇÎ¨Ò»µÄ¡£
-			FunctionType(const FunctionType &) = delete;
-			const FunctionType &operator=(const FunctionType &) = delete;					
-		private:
-			/// ¶ÔÓÚFunctionTypeÀ´Ëµ£¬ContainedTys°üº¬º¯ÊýµÄÐÎ²ÎÀàÐÍ¡£
-			std::vector<IRTyPtr> ContainedTys;
+  /// isAggregateType - Return true if the type is an aggregate type.
+  bool isAggregateType() const {
+    return getTypeID() == StructTy || getTypeID() == AnonyTy;
+  }
+  //===------------------------------------------------------------===//
+  // Helper for get types.
+  static IRTyPtr getVoidType(MosesIRContext &Ctx);
+  static IRTyPtr getLabelType(MosesIRContext &Ctx);
+  static IRTyPtr getIntType(MosesIRContext &Ctx);
+  static IRTyPtr getBoolType(MosesIRContext &Ctx);
 
-			unsigned NumContainedTys;
-		public:
-			FunctionType(IRTyPtr retty, std::vector<IRTyPtr> parmsty);
-			FunctionType(IRTyPtr retty);
-			/// This static method is the primary way of constructing a FunctionType.
-			static std::shared_ptr<FunctionType> get(IRTyPtr retty, std::vector<IRTyPtr> parmtys);
+  virtual unsigned getSize() const;
 
-			/// Create a FunctionType taking no parameters.
-			static std::shared_ptr<FunctionType> get(IRTyPtr retty);
+  /// \brief Print the type info.
+  virtual void Print(std::ostringstream &out);
+};
 
-			IRTyPtr getReturnType() const { return ContainedTys[0]; }
+/// \brief FunctionType - Class to represent function types.
+class FunctionType : public Type {
+  // FunctionTypeï¿½ï¿½Ó¦ï¿½Ä¶ï¿½ï¿½ó¶¼²ï¿½ï¿½Ç¿É¸ï¿½ï¿½ÆµÄ¡ï¿½
+  // Functionï¿½ï¿½Ç©ï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½ï¿½ï¿½Î¨Ò»ï¿½Ä¡ï¿½
+  FunctionType(const FunctionType &) = delete;
+  const FunctionType &operator=(const FunctionType &) = delete;
 
-			/// ¸Ãº¯ÊýÓÃÓÚ»ñÈ¡param type.
-			/// ÀýÈç£º returntype parm0 parm1 parm2
-			/// [0] = parm0
-			/// [2] = parm2
-			IRTyPtr operator[](unsigned index) const;
+private:
+  /// ï¿½ï¿½ï¿½ï¿½FunctionTypeï¿½ï¿½Ëµï¿½ï¿½ContainedTysï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î²ï¿½ï¿½ï¿½ï¿½Í¡ï¿½
+  std::vector<IRTyPtr> ContainedTys;
 
-			unsigned getNumParams() const { return NumContainedTys - 1; }
-			std::vector<IRTyPtr> getParams() const{ return ContainedTys; }
+  unsigned NumContainedTys;
 
-			static bool classof(IRTyPtr Ty);
+public:
+  FunctionType(IRTyPtr retty, std::vector<IRTyPtr> parmsty);
+  FunctionType(IRTyPtr retty);
+  /// This static method is the primary way of constructing a FunctionType.
+  static std::shared_ptr<FunctionType> get(IRTyPtr retty,
+                                           std::vector<IRTyPtr> parmtys);
 
-			/// \brief Print the FunctionType info.
-			void Print(std::ostringstream& out) override;
-		private:
-			std::vector<IRTyPtr> ConvertParmTypeToIRType(MosesIRContext &Ctx, std::vector<ASTTyPtr> ParmTypes);
-		};
+  /// Create a FunctionType taking no parameters.
+  static std::shared_ptr<FunctionType> get(IRTyPtr retty);
 
-		/// Class to represent struct types.
-		/// ¶ÔÓÚmoses IRÀ´Ëµ£¬ÓÐÁ½ÖÖstruct type:
-		/// (1) Literal struct types (e.g { i32, i32 })
-		/// (2) Identifier structs (e.g %foo)
-		/// 
-		/// ¶ÔÓÚLiteral struct typesÀ´Ëµ£¬¶ÔÓ¦mosesÖÐµÄÄäÃûÀàÐÍ "{int, {bool ,int }}"£¬µ±±»´´½¨
-		/// µÄÊ±ºò£¬±ØÐëÓÐÍêÕûµÄÀàÐÍÐÅÏ¢¡£
-		/// 
-		/// ¶ÔÓÚIdentifier structs À´Ëµ£¬¶ÔÓ¦mosesÖÐµÄclassÀàÐÍ¡£
-		class StructType : public Type
-		{
-			StructType(const StructType &) = delete;
-			const StructType &operator=(const StructType&) = delete;
-		private:
-			bool Literal;
-			std::string Name;
-			std::vector<IRTyPtr> ContainedTys;
-			unsigned NumContainedTys;
+  IRTyPtr getReturnType() const { return ContainedTys[0]; }
 
-			/// For a named struct that actually has a name, this is a pointer to the 
-			/// symbol table entry for the struct. This is null if the type is an 
-			/// literal struct or if it is a identified type that has an empty name.
-		public:
-			StructType(std::vector<IRTyPtr> members, std::string Name, bool isliteral);
-			/// Create identified struct.
-			/*static IRStructTyPtr Create(std::string Name);
-			static IRStructTyPtr Create(MosesIRContext &Ctx, std::vector<IRTyPtr> Elements,
-				std::string Name);*/
-			static IRStructTyPtr Create(MosesIRContext &Ctx, ASTTyPtr type);
+  /// ï¿½Ãºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú»ï¿½È¡param type.
+  /// ï¿½ï¿½ï¿½ç£º returntype parm0 parm1 parm2
+  /// [0] = parm0
+  /// [2] = parm2
+  IRTyPtr operator[](unsigned index) const;
 
-			/// Create literal struct type.
-			static IRStructTyPtr get(std::vector<IRTyPtr> Elements);
-			/// Create literal struct type.
-			static IRStructTyPtr get(MosesIRContext &Ctx, ASTTyPtr type);
+  unsigned getNumParams() const { return NumContainedTys - 1; }
+  std::vector<IRTyPtr> getParams() const { return ContainedTys; }
 
-			virtual unsigned getSize() const;
+  static bool classof(IRTyPtr Ty);
 
-			bool isLiteral() const { return Literal; }
+  /// \brief Print the FunctionType info.
+  void Print(std::ostringstream &out) override;
 
-			/// Return the name for this struct type if it has an identity.
-			/// This may return an empty string for an unnamed struct type. Do not call
-			/// this on an literal type.
-			std::string getName() const;
+private:
+  std::vector<IRTyPtr> ConvertParmTypeToIRType(MosesIRContext &Ctx,
+                                               std::vector<ASTTyPtr> ParmTypes);
+};
 
-			/// Change the name of this type to the specified name.
-			void setName(std::string Name);
+/// Class to represent struct types.
+/// ï¿½ï¿½ï¿½ï¿½moses IRï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½struct type:
+/// (1) Literal struct types (e.g { i32, i32 })
+/// (2) Identifier structs (e.g %foo)
+///
+/// ï¿½ï¿½ï¿½ï¿½Literal struct typesï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½Ó¦mosesï¿½Ðµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ "{int, {bool ,int
+/// }}"ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+/// ï¿½ï¿½Ê±ï¿½ò£¬±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½
+///
+/// ï¿½ï¿½ï¿½ï¿½Identifier structs ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½Ó¦mosesï¿½Ðµï¿½classï¿½ï¿½ï¿½Í¡ï¿½
+class StructType : public Type {
+  StructType(const StructType &) = delete;
+  const StructType &operator=(const StructType &) = delete;
 
-			/// Èç¹ûÁ½ÕßµÄ²¼¾ÖÏàÍ¬£¬Ôò·µ»Øtrue.
-			/// (ÓÐµã¶ùÀàËÆÓÚÇ°¶ËÖÐµÄÀàÐÍÖ¸ÎÆµÄ¸ÅÄî£¬Í¨¹ý¶Ô×ÓÔªËØ½øÐÐ¼ÆËã£¬À´ÅÐ¶ÏÁ½ÀàÐÍÊÇ·ñÏàÈÝ)
-			bool isLayoutIdentical(IRStructTyPtr Other) const;
-			unsigned getNumElements() const { return NumContainedTys; }
-			std::vector<std::shared_ptr<Type>> getContainedTys() const { return ContainedTys; }
-			IRTyPtr operator[](unsigned index) const
-			{ 
-				assert(index < NumContainedTys && "Index out of range!");
-				return ContainedTys[index]; 
-			}
+private:
+  bool Literal;
+  std::string Name;
+  std::vector<IRTyPtr> ContainedTys;
+  unsigned NumContainedTys;
 
-			static bool classof(IRTyPtr T) { return T->getTypeID() == StructTy; }
+  /// For a named struct that actually has a name, this is a pointer to the
+  /// symbol table entry for the struct. This is null if the type is an
+  /// literal struct or if it is a identified type that has an empty name.
+public:
+  StructType(std::vector<IRTyPtr> members, std::string Name, bool isliteral);
+  /// Create identified struct.
+  /*static IRStructTyPtr Create(std::string Name);
+                  static IRStructTyPtr Create(MosesIRContext &Ctx,
+     std::vector<IRTyPtr> Elements, std::string Name);*/
+  static IRStructTyPtr Create(MosesIRContext &Ctx, ASTTyPtr type);
 
-			/// \brief Print the StructType Info.
-			void Print(std::ostringstream& out) override;
-			void PrintCompleteInfo(std::ostringstream& out);
-		};
+  /// Create literal struct type.
+  static IRStructTyPtr get(std::vector<IRTyPtr> Elements);
+  /// Create literal struct type.
+  static IRStructTyPtr get(MosesIRContext &Ctx, ASTTyPtr type);
 
-		/// PointerType - Class to represent pointers
-		class PointerType : public compiler::IR::Type
-		{
-			IRTyPtr ElementTy;
-		public:
-			PointerType(IRTyPtr ElementTy);
-			static IRPtTyPtr get(IRTyPtr ElementTy);
-			IRTyPtr getElementTy() const { return ElementTy; };
-			static bool classof(IRPtTyPtr) { return true; }
-			static bool classof(IRTyPtr Ty) { return Ty->isPointerTy(); }
-			/// \brief Print the PointerType.
-			void Print(std::ostringstream& out) override;
-		};
-	}
-}
+  virtual unsigned getSize() const;
+
+  bool isLiteral() const { return Literal; }
+
+  /// Return the name for this struct type if it has an identity.
+  /// This may return an empty string for an unnamed struct type. Do not call
+  /// this on an literal type.
+  std::string getName() const;
+
+  /// Change the name of this type to the specified name.
+  void setName(std::string Name);
+
+  /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ßµÄ²ï¿½ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ò·µ»ï¿½true.
+  /// (ï¿½Ðµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ÆµÄ¸ï¿½ï¿½î£¬Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôªï¿½Ø½ï¿½ï¿½Ð¼ï¿½ï¿½ã£¬ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½)
+  bool isLayoutIdentical(IRStructTyPtr Other) const;
+  unsigned getNumElements() const { return NumContainedTys; }
+  std::vector<std::shared_ptr<Type>> getContainedTys() const {
+    return ContainedTys;
+  }
+  IRTyPtr operator[](unsigned index) const {
+    assert(index < NumContainedTys && "Index out of range!");
+    return ContainedTys[index];
+  }
+
+  static bool classof(IRTyPtr T) { return T->getTypeID() == StructTy; }
+
+  /// \brief Print the StructType Info.
+  void Print(std::ostringstream &out) override;
+  void PrintCompleteInfo(std::ostringstream &out);
+};
+
+/// PointerType - Class to represent pointers
+class PointerType : public compiler::IR::Type {
+  IRTyPtr ElementTy;
+
+public:
+  PointerType(IRTyPtr ElementTy);
+  static IRPtTyPtr get(IRTyPtr ElementTy);
+  IRTyPtr getElementTy() const { return ElementTy; };
+  static bool classof(IRPtTyPtr) { return true; }
+  static bool classof(IRTyPtr Ty) { return Ty->isPointerTy(); }
+  /// \brief Print the PointerType.
+  void Print(std::ostringstream &out) override;
+};
+} // namespace IR
+} // namespace compiler
 
 #endif

@@ -1,7 +1,7 @@
 //===------------------------------sema.cpp--------------------------------===//
 //
 // This file is used to implement sema.
-// 
+//
 //===---------------------------------------------------------------------===//
 #include "../../include/Parser/sema.h"
 #include "../../include/Support/error.h"
@@ -15,430 +15,377 @@ using FuncSymPtr = std::shared_ptr<FunctionSymbol>;
 using UDTyPtr = std::shared_ptr<UserDefinedType>;
 using AnonTyPtr = std::shared_ptr<AnonymousType>;
 
-std::shared_ptr<Symbol> Scope::Resolve(std::string name) const
-{
-	// Look up the name in current scope.
-	for (auto item : SymbolTable)
-	{
-		if (item->getLexem() == name)
-		{
-			return item;
-		}
-	}
-	if (Parent)
-	{
-		return Parent->Resolve(name);
-	}
-	return nullptr;
+std::shared_ptr<Symbol> Scope::Resolve(std::string name) const {
+  // Look up the name in current scope.
+  for (auto item : SymbolTable) {
+    if (item->getLexem() == name) {
+      return item;
+    }
+  }
+  if (Parent) {
+    return Parent->Resolve(name);
+  }
+  return nullptr;
 }
 
-/// \biref Õâ¸öº¯ÊýÖ÷ÒªÓÃÓÚÔÚÎÄ¼þÍ·´´½¨Top-Level Scope.
-void Sema::ActOnTranslationUnitStart()
-{
-	CurScope = std::make_shared<Scope>("##TranslationUnit", 0, nullptr,
-		Scope::ScopeKind::SK_TopLevel);
-	ScopeStack.push_back(CurScope);
+/// \biref ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½Í·ï¿½ï¿½ï¿½ï¿½Top-Level Scope.
+void Sema::ActOnTranslationUnitStart() {
+  CurScope = std::make_shared<Scope>("##TranslationUnit", 0, nullptr,
+                                     Scope::ScopeKind::SK_TopLevel);
+  ScopeStack.push_back(CurScope);
 }
 
-/// \brief ActOnFunctionDecl - Mainly for checking function name and recording function name.
-void Sema::ActOnFunctionDeclStart(std::string name)
-{
-	// Check function name.
-	// Note: moses doesn't support function overload now.
-	if (CurScope->Resolve(name))
-	{
-		errorReport("Function redefinition.");
-	}
+/// \brief ActOnFunctionDecl - Mainly for checking function name and recording
+/// function name.
+void Sema::ActOnFunctionDeclStart(std::string name) {
+  // Check function name.
+  // Note: moses doesn't support function overload now.
+  if (CurScope->Resolve(name)) {
+    errorReport("Function redefinition.");
+  }
 
-	// Create new scope for function.
-	unsigned CurDepth = CurScope->getDepth();
-	std::shared_ptr<Scope> funcScope = std::make_shared<Scope>(name, CurDepth + 1,
-		CurScope, Scope::ScopeKind::SK_Function);
+  // Create new scope for function.
+  unsigned CurDepth = CurScope->getDepth();
+  std::shared_ptr<Scope> funcScope = std::make_shared<Scope>(
+      name, CurDepth + 1, CurScope, Scope::ScopeKind::SK_Function);
 
-	// Record this func symbol.
-	std::shared_ptr<FunctionSymbol> funcsym =
-		std::make_shared<FunctionSymbol>(name, nullptr, CurScope, funcScope);
+  // Record this func symbol.
+  std::shared_ptr<FunctionSymbol> funcsym =
+      std::make_shared<FunctionSymbol>(name, nullptr, CurScope, funcScope);
 
-	CurScope->addDef(funcsym);
+  CurScope->addDef(funcsym);
 
-	// Update CurScope.			
-	CurScope = funcScope;
-	ScopeStack.push_back(CurScope);
-	FunctionStack.push_back(funcsym);
+  // Update CurScope.
+  CurScope = funcScope;
+  ScopeStack.push_back(CurScope);
+  FunctionStack.push_back(funcsym);
 }
 
 /// \brief ActOnFunctionDecl - Set return type and create new scope.
-void Sema::ActOnFunctionDecl(std::string name, std::shared_ptr<Type> returnType)
-{
-	getFunctionStackTop()->setReturnType(returnType);
+void Sema::ActOnFunctionDecl(std::string name,
+                             std::shared_ptr<Type> returnType) {
+  getFunctionStackTop()->setReturnType(returnType);
 
-	auto OldScope = CurScope;
-	// Create new scope for function body.
-	CurScope = std::make_shared<Scope>("", CurScope->getDepth() + 1, CurScope,
-		Scope::ScopeKind::SK_Block);
+  auto OldScope = CurScope;
+  // Create new scope for function body.
+  CurScope = std::make_shared<Scope>("", CurScope->getDepth() + 1, CurScope,
+                                     Scope::ScopeKind::SK_Block);
 
-	auto symbol = std::make_shared<ScopeSymbol>(CurScope, OldScope);
-	OldScope->addDef(symbol);
+  auto symbol = std::make_shared<ScopeSymbol>(CurScope, OldScope);
+  OldScope->addDef(symbol);
 
-	ScopeStack.push_back(CurScope);
+  ScopeStack.push_back(CurScope);
 }
 
 /// \brief Action routines about IfStatement.
-StmtASTPtr Sema::ActOnIfStmt(SourceLocation start, SourceLocation end, 
-	ExprASTPtr condition, StmtASTPtr ThenPart, StmtASTPtr ElsePart)
-{
-	Expr* cond = condition.get();
-	if (!cond)
-	{
-		// To Do: ±¨´í
-	}
-	return std::make_shared<IfStatement>(start, end, condition, ThenPart, ElsePart);
+StmtASTPtr Sema::ActOnIfStmt(SourceLocation start, SourceLocation end,
+                             ExprASTPtr condition, StmtASTPtr ThenPart,
+                             StmtASTPtr ElsePart) {
+  Expr *cond = condition.get();
+  if (!cond) {
+    // To Do: ï¿½ï¿½ï¿½ï¿½
+  }
+  return std::make_shared<IfStatement>(start, end, condition, ThenPart,
+                                       ElsePart);
 }
 
 /// \brief Action routines about CompoundStatement.
-void Sema::ActOnCompoundStmt()
-{
-	auto OldScope = CurScope;
-	// Create new scope for function body.	
-	CurScope = std::make_shared<Scope>("", CurScope->getDepth() + 1, CurScope,
-		Scope::ScopeKind::SK_Block);
+void Sema::ActOnCompoundStmt() {
+  auto OldScope = CurScope;
+  // Create new scope for function body.
+  CurScope = std::make_shared<Scope>("", CurScope->getDepth() + 1, CurScope,
+                                     Scope::ScopeKind::SK_Block);
 
-	auto symbol = std::make_shared<ScopeSymbol>(CurScope, OldScope);
-	OldScope->addDef(symbol);
+  auto symbol = std::make_shared<ScopeSymbol>(CurScope, OldScope);
+  OldScope->addDef(symbol);
 
-	ScopeStack.push_back(CurScope);
+  ScopeStack.push_back(CurScope);
 }
 
 /// \brief Actions routines about unpack decl.
 /// var {num, mem} = anony;
 /// Mainly check redefintion.
-bool Sema::ActOnUnpackDeclElement(std::string name)
-{
-	// ÔÚµ±Ç°CurScopeÖÐ·¢ÏÖÍ¬Ãû±äÁ¿
-	if (CurScope->CheckWhetherInCurScope(name))
-	{
-		errorReport("Error occured in unpack decl.  Variable " + name + " redefinition.");
-		return false;
-	}
-	return true;
+bool Sema::ActOnUnpackDeclElement(std::string name) {
+  // ï¿½Úµï¿½Ç°CurScopeï¿½Ð·ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  if (CurScope->CheckWhetherInCurScope(name)) {
+    errorReport("Error occured in unpack decl.  Variable " + name +
+                " redefinition.");
+    return false;
+  }
+  return true;
 }
 
 /// \brief Mainly check whether current context is while context.
-bool Sema::ActOnBreakAndContinueStmt(bool whileContext)
-{
-	if (whileContext)
-	{
-		errorReport("Current context is not loop-context.");
-	}
-	return whileContext;
+bool Sema::ActOnBreakAndContinueStmt(bool whileContext) {
+  if (whileContext) {
+    errorReport("Current context is not loop-context.");
+  }
+  return whileContext;
 }
 
 /// \brief Mainly current whether identifier is user defined type.
-std::shared_ptr<Type> Sema::ActOnReturnType(const std::string& name) const
-{
-	// Note: ÔÚmosesÖÐ£¬classÔÝÊ±¶¨ÒåÔÚTop-LevelÖÐ
-	if (ClassSymPtr sym = std::dynamic_pointer_cast<ClassSymbol>(ScopeStack[0]->CheckWhetherInCurScope(name)))
-	{
-		return sym->getType();
-	}
-	else
-	{
-		errorReport("Current identifier isn't user defined type.");
-		return nullptr;
-	}
+std::shared_ptr<Type> Sema::ActOnReturnType(const std::string &name) const {
+  // Note: ï¿½ï¿½mosesï¿½Ð£ï¿½classï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Top-Levelï¿½ï¿½
+  if (ClassSymPtr sym = std::dynamic_pointer_cast<ClassSymbol>(
+          ScopeStack[0]->CheckWhetherInCurScope(name))) {
+    return sym->getType();
+  } else {
+    errorReport("Current identifier isn't user defined type.");
+    return nullptr;
+  }
 }
 
-void Sema::ActOnParmDecl(std::string name, ParmDeclPtr parm)
-{
-	// Check redefinition.
-	if (CurScope->CheckWhetherInCurScope(name))
-	{
-		errorReport("Parameter redefinition.");
+void Sema::ActOnParmDecl(std::string name, ParmDeclPtr parm) {
+  // Check redefinition.
+  if (CurScope->CheckWhetherInCurScope(name)) {
+    errorReport("Parameter redefinition.");
+  }
+  // Note: mosesï¿½ï¿½FunctionDefinitionï¿½Ðµï¿½constï¿½Î²Î£ï¿½Ä¬ï¿½Ï¶ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½Êµï¿½Î³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½
+  auto vsym = std::make_shared<ParmDeclSymbol>(name, CurScope,
+                                               parm->getDeclType(), true, parm);
 
-	}
-	// Note: mosesÖÐFunctionDefinitionÖÐµÄconstÐÎ²Î£¬Ä¬ÈÏ¶¼ÊÇÍ¨¹ýº¯Êýµ÷ÓÃÖÐµÄÊµ²Î³õÊ¼»¯µÄ
-	auto vsym = std::make_shared<ParmDeclSymbol>(name, CurScope, parm->getDeclType(), true, parm);
-
-	CurScope->addDef(vsym);
-	getFunctionStackTop()->addParmVariableSymbol(vsym);
+  CurScope->addDef(vsym);
+  getFunctionStackTop()->addParmVariableSymbol(vsym);
 }
 
-void Sema::ActOnClassDeclStart(std::string name)
-{
-	// check class redefinition.
-	if (CurScope->CheckWhetherInCurScope(name))
-	{
-		errorReport("Class redefinition.");
-		return;
-	}
+void Sema::ActOnClassDeclStart(std::string name) {
+  // check class redefinition.
+  if (CurScope->CheckWhetherInCurScope(name)) {
+    errorReport("Class redefinition.");
+    return;
+  }
 
-	// Create new scope.
-	auto ClassBodyScope = std::make_shared<Scope>(name, CurScope->getDepth() + 1, 
-		CurScope, Scope::ScopeKind::SK_Class);
+  // Create new scope.
+  auto ClassBodyScope = std::make_shared<Scope>(
+      name, CurScope->getDepth() + 1, CurScope, Scope::ScopeKind::SK_Class);
 
-	// Create class symbol.
-	std::shared_ptr<ClassSymbol> CurSym =
-		std::make_shared<ClassSymbol>(name, CurScope, ClassBodyScope);
+  // Create class symbol.
+  std::shared_ptr<ClassSymbol> CurSym =
+      std::make_shared<ClassSymbol>(name, CurScope, ClassBodyScope);
 
-	ClassBodyScope->setBelongToSymbolForClassScope(CurSym);
-	CurScope->addDef(CurSym);
-	ClassStack.push_back(CurSym);
-	ScopeStack.push_back(ClassBodyScope);
-	// Update CurScope.
-	CurScope = ClassBodyScope;
+  ClassBodyScope->setBelongToSymbolForClassScope(CurSym);
+  CurScope->addDef(CurSym);
+  ClassStack.push_back(CurSym);
+  ScopeStack.push_back(ClassBodyScope);
+  // Update CurScope.
+  CurScope = ClassBodyScope;
 }
 
 /// \brief Create new variable symbol.
-void Sema::ActOnVarDecl(std::string name, VarDeclPtr VD/*, std::shared_ptr<Type> declType, ExprASTPtr InitExpr*/)
-{
-	ExprASTPtr Init = VD->getInitExpr();
-	auto declType = VD->getDeclType();
-	CurScope->addDef(std::make_shared<VariableSymbol>(name, CurScope, declType, VD->getInitExpr() ? true : false, VD));
+void Sema::ActOnVarDecl(
+    std::string name,
+    VarDeclPtr VD /*, std::shared_ptr<Type> declType, ExprASTPtr InitExpr*/) {
+  ExprASTPtr Init = VD->getInitExpr();
+  auto declType = VD->getDeclType();
+  CurScope->addDef(std::make_shared<VariableSymbol>(
+      name, CurScope, declType, VD->getInitExpr() ? true : false, VD));
 
-	// To Do: moses²ÉÓÃµÄÊÇ½á¹¹ÀàÐÍµÈ¼ÛµÄ½á¹¹£¬ÐèÒª¼ÇÂ¼Class TypeµÄ×ÓType
-	if (ClassStack.size() != 0)
-	{
-		// mosesÔÝÊ±ÔÚ¶¨ÒåclassÖÐ£¬²»ÄÜ¸øMemberÊý¾Ý³ÉÔ±InitExpr.
-		if (Init)
-		{
-			errorReport("Member declaration can't have initial expression");
-		}
-		CurScope->getTheSymbolBelongTo()->addSubType(declType, name);
-	}
+  // To Do: mosesï¿½ï¿½ï¿½Ãµï¿½ï¿½Ç½á¹¹ï¿½ï¿½ï¿½ÍµÈ¼ÛµÄ½á¹¹ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Â¼Class Typeï¿½ï¿½ï¿½ï¿½Type
+  if (ClassStack.size() != 0) {
+    // mosesï¿½ï¿½Ê±ï¿½Ú¶ï¿½ï¿½ï¿½classï¿½Ð£ï¿½ï¿½ï¿½ï¿½Ü¸ï¿½Memberï¿½ï¿½ï¿½Ý³ï¿½Ô±InitExpr.
+    if (Init) {
+      errorReport("Member declaration can't have initial expression");
+    }
+    CurScope->getTheSymbolBelongTo()->addSubType(declType, name);
+  }
 }
 
-/// \brief ¶Ôreutrn anonymousµÄÇé¿ö½øÐÐÓïÒå¼ì²é
-bool Sema::ActOnReturnAnonymous(std::shared_ptr<Type> type) const
-{
-	if (!type)
-	{
-		return false;
-	}
-	// ÎÞÐè±¨´í£¬Ç°ÃæÔÚ½âÎöfunctionÒÔ¼°return typeµÄÊ±ºò³öÁËÎÊÌâ£¬²Å»áµ¼ÖÂÎª¿Õ
-	// Ç°ÃæÒÑ¾­±¨´í£¬ÎÞÐèÖØ¸´±¨´í
-	if (!getFunctionStackTop() || !(getFunctionStackTop()->getReturnType()))
-	{
-		return false;
-	}
-	if (getFunctionStackTop()->getReturnType()->getKind() != TypeKind::ANONYMOUS)
-	{
-		errorReport("Current function's return type isn't anonymous.");
-		return false;
-	}
+/// \brief ï¿½ï¿½reutrn anonymousï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+bool Sema::ActOnReturnAnonymous(std::shared_ptr<Type> type) const {
+  if (!type) {
+    return false;
+  }
+  // ï¿½ï¿½ï¿½è±¨ï¿½ï¿½Ç°ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½functionï¿½Ô¼ï¿½return typeï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â£¬ï¿½Å»áµ¼ï¿½ï¿½Îªï¿½ï¿½
+  // Ç°ï¿½ï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø¸ï¿½ï¿½ï¿½ï¿½ï¿½
+  if (!getFunctionStackTop() || !(getFunctionStackTop()->getReturnType())) {
+    return false;
+  }
+  if (getFunctionStackTop()->getReturnType()->getKind() !=
+      TypeKind::ANONYMOUS) {
+    errorReport("Current function's return type isn't anonymous.");
+    return false;
+  }
 
-	if (TypeKeyInfo::TypeKeyInfo::getHashValue(type) !=
-		TypeKeyInfo::TypeKeyInfo::getHashValue(getFunctionStackTop()->getReturnType()))
-	{
-		errorReport("Return type not match.");
-		return false;
-	}
-	return true;
+  if (TypeKeyInfo::TypeKeyInfo::getHashValue(type) !=
+      TypeKeyInfo::TypeKeyInfo::getHashValue(
+          getFunctionStackTop()->getReturnType())) {
+    errorReport("Return type not match.");
+    return false;
+  }
+  return true;
 }
 
-bool Sema::ActOnReturnStmt(std::shared_ptr<Type> type) const
-{
-	// To Do: ´úÂëÐ§ÂÊ½ÏµÍ£¬ÓÐµÄº¯ÊýÐèÒªµ÷ÓÃÁ½´Î
-	if (!getFunctionStackTop() || !(getFunctionStackTop()->getReturnType()))
-	{
-		return false;
-	}
-	// ÅÐ¶ÏÀàÐÍÊÇ·ñÏàÍ¬
-	// Note: mosesÔÝÊ±²»Ö§³Öconst·µ»ØÀàÐÍ
-	if (TypeKeyInfo::TypeKeyInfo::getHashValue(type)
-		!= TypeKeyInfo::TypeKeyInfo::getHashValue(getFunctionStackTop()->getReturnType()))
-	{
-		errorReport("Return type not match.");
-		return false;
-	}
-	return true;
+bool Sema::ActOnReturnStmt(std::shared_ptr<Type> type) const {
+  // To Do: ï¿½ï¿½ï¿½ï¿½Ð§ï¿½Ê½ÏµÍ£ï¿½ï¿½ÐµÄºï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  if (!getFunctionStackTop() || !(getFunctionStackTop()->getReturnType())) {
+    return false;
+  }
+  // ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Í¬
+  // Note: mosesï¿½ï¿½Ê±ï¿½ï¿½Ö§ï¿½ï¿½constï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  if (TypeKeyInfo::TypeKeyInfo::getHashValue(type) !=
+      TypeKeyInfo::TypeKeyInfo::getHashValue(
+          getFunctionStackTop()->getReturnType())) {
+    errorReport("Return type not match.");
+    return false;
+  }
+  return true;
 }
 
 /// \brief Act on declaration reference.
 /// Perferm name lookup and type checking.
-VarDeclPtr Sema::ActOnDeclRefExpr(std::string name)
-{
-	if (VarSymPtr vsym = std::dynamic_pointer_cast<VariableSymbol>(CurScope->Resolve(name)))
-	{
-		return vsym->getDecl();
-	}
-	else if (ParmSymPtr psym = std::dynamic_pointer_cast<ParmDeclSymbol>(CurScope->Resolve(name)))
-	{
-		return psym->getDecl();
-	}
-	else
-	{
-		errorReport("Undefined variable.");
-		return nullptr;
-	}
+VarDeclPtr Sema::ActOnDeclRefExpr(std::string name) {
+  if (VarSymPtr vsym =
+          std::dynamic_pointer_cast<VariableSymbol>(CurScope->Resolve(name))) {
+    return vsym->getDecl();
+  } else if (ParmSymPtr psym = std::dynamic_pointer_cast<ParmDeclSymbol>(
+                 CurScope->Resolve(name))) {
+    return psym->getDecl();
+  } else {
+    errorReport("Undefined variable.");
+    return nullptr;
+  }
 }
-
 
 /// \brief Act on Call Expr.
 /// Perform name lookup and parm type checking.
-std::shared_ptr<Type> Sema::ActOnCallExpr(std::string name,
-	std::vector<std::shared_ptr<Type>> args, FunctionDeclPtr &FD)
-{
-	std::shared_ptr<Type> ReturnType = nullptr;
-	if (FuncSymPtr FuncSym =
-		std::dynamic_pointer_cast<FunctionSymbol>(ScopeStack[0]->CheckWhetherInCurScope(name)))
-	{
-		ReturnType = FuncSym->getReturnType();
-		// check args number and type.
-		if (args.size() != FuncSym->getParmNum())
-		{
-			errorReport("Arguments number not match.");
-		}
+std::shared_ptr<Type>
+Sema::ActOnCallExpr(std::string name, std::vector<std::shared_ptr<Type>> args,
+                    FunctionDeclPtr &FD) {
+  std::shared_ptr<Type> ReturnType = nullptr;
+  if (FuncSymPtr FuncSym = std::dynamic_pointer_cast<FunctionSymbol>(
+          ScopeStack[0]->CheckWhetherInCurScope(name))) {
+    ReturnType = FuncSym->getReturnType();
+    // check args number and type.
+    if (args.size() != FuncSym->getParmNum()) {
+      errorReport("Arguments number not match.");
+    }
 
-		unsigned size = args.size();
-		for (unsigned i = 0; i < size; i++)
-		{
-			if (!args[i])
-			{
-				errorReport("The argument of index " + std::to_string(i) + " is wrong.");
-				continue;
-			}
-			// Note: º¯Êý¶¨ÒåÖÐµÄ´íÎó£¬´Ë´¦²»Óè±¨³ö£¬continue¼´¿É
-			// ÓÉÓÚÌõ¼þ±í´ïÊ½µÄ¶ÌÂ·ÇóÖµÌØÐÔ£¬²»»á³öÏÖ(*FuncSym)[i]Îª¿Õ£¬Í¬Ê±
-			if (!(*FuncSym)[i] || !((*FuncSym)[i]->getType()))
-			{
-				continue;
-			}
+    unsigned size = args.size();
+    for (unsigned i = 0; i < size; i++) {
+      if (!args[i]) {
+        errorReport("The argument of index " + std::to_string(i) +
+                    " is wrong.");
+        continue;
+      }
+      // Note:
+      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÐµÄ´ï¿½ï¿½ó£¬´Ë´ï¿½ï¿½ï¿½ï¿½è±¨ï¿½ï¿½ï¿½ï¿½continueï¿½ï¿½ï¿½ï¿½
+      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½Ä¶ï¿½Â·ï¿½ï¿½Öµï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(*FuncSym)[i]Îªï¿½Õ£ï¿½Í¬Ê±
+      if (!(*FuncSym)[i] || !((*FuncSym)[i]->getType())) {
+        continue;
+      }
 
-			if (TypeKeyInfo::TypeKeyInfo::getHashValue(args[i]) == 
-				TypeKeyInfo::TypeKeyInfo::getHashValue((*FuncSym)[i]->getType()))
-			{
-				continue;
-			}
-			else
-			{
-				errorReport("Arguments type not match.");
-			}
-		}
-		FD = FuncSym->getFuncDeclPointer();
-	}
-	else
-	{
-		errorReport("Function undefined.");
-	}
-	return ReturnType;
+      if (TypeKeyInfo::TypeKeyInfo::getHashValue(args[i]) ==
+          TypeKeyInfo::TypeKeyInfo::getHashValue((*FuncSym)[i]->getType())) {
+        continue;
+      } else {
+        errorReport("Arguments type not match.");
+      }
+    }
+    FD = FuncSym->getFuncDeclPointer();
+  } else {
+    errorReport("Function undefined.");
+  }
+  return ReturnType;
 }
 
-/// \brief Act on Binary Operator(Type checking and create new binary expr through lhs and rhs).
-/// Note: ÔÚC/C++ÖÐ£¬¸³ÖµÓï¾ä·µ»ØµÄÊÇËù¸³µÄÖµ¡£
-/// ÀýÈç£º'a = 10;'·µ»ØµÄÖµÊÇ10.
-/// To Do: Shit code!
-ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
-{
-	if (!lhs || !rhs)
-		return nullptr;
-	if (!(lhs->getType()))
-	{
-		errorReport("Left hand expression' type wrong.");
-		return nullptr;
-	}
+/// \brief Act on Binary Operator(Type checking and create new binary expr
+/// through lhs and rhs). Note: ï¿½ï¿½C/C++ï¿½Ð£ï¿½ï¿½ï¿½Öµï¿½ï¿½ä·µï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ ï¿½ï¿½ï¿½ç£º'a =
+/// 10;'ï¿½ï¿½ï¿½Øµï¿½Öµï¿½ï¿½10. To Do: Shit code!
+ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok,
+                                     ExprASTPtr rhs) {
+  if (!lhs || !rhs)
+    return nullptr;
+  if (!(lhs->getType())) {
+    errorReport("Left hand expression' type wrong.");
+    return nullptr;
+  }
 
-	if (!(rhs->getType()))
-	{
-		errorReport("Right hand expression' type wrong.");
-		return nullptr;
-	}
+  if (!(rhs->getType())) {
+    errorReport("Right hand expression' type wrong.");
+    return nullptr;
+  }
 
-	// Check expression's value kind.
-	std::shared_ptr<Type> type = nullptr;
-	if (tok.isAssign())
-	{
-		if (!lhs->isLValue())
-			errorReport("Left hand expression must be lvalue.");
-		if (TypeKeyInfo::TypeKeyInfo::getHashValue(lhs->getType()) != 
-			TypeKeyInfo::TypeKeyInfo::getHashValue(rhs->getType()))
-			errorReport("Type on the left and type on the right must be same.");
-		type = lhs->getType();
-		if (DeclRefExprPtr DRE = std::dynamic_pointer_cast<DeclRefExpr>(lhs))
-		{
-			if (DRE->getDecl()->isConst())
-			{
-				// ¼ì²éÊÇ·ñ³õÊ¼»¯
-				if (VarSymPtr sym =
-					std::dynamic_pointer_cast<VariableSymbol>(CurScope->Resolve(DRE->getDeclName())))
-				{
-					if (sym->isInitial())
-					{
-						errorReport("Can not assign to const type.");
-					}
-					else
-					{
-						sym->setInitial(true);
-						sym->getDecl()->setInitExpr(rhs);
-					}
-				}
-				else
-				{
-					errorReport("Undefined symbol.");
-				}
-			}
-		}
-	}
+  // Check expression's value kind.
+  std::shared_ptr<Type> type = nullptr;
+  if (tok.isAssign()) {
+    if (!lhs->isLValue())
+      errorReport("Left hand expression must be lvalue.");
+    if (TypeKeyInfo::TypeKeyInfo::getHashValue(lhs->getType()) !=
+        TypeKeyInfo::TypeKeyInfo::getHashValue(rhs->getType()))
+      errorReport("Type on the left and type on the right must be same.");
+    type = lhs->getType();
+    if (DeclRefExprPtr DRE = std::dynamic_pointer_cast<DeclRefExpr>(lhs)) {
+      if (DRE->getDecl()->isConst()) {
+        // ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ê¼ï¿½ï¿½
+        if (VarSymPtr sym = std::dynamic_pointer_cast<VariableSymbol>(
+                CurScope->Resolve(DRE->getDeclName()))) {
+          if (sym->isInitial()) {
+            errorReport("Can not assign to const type.");
+          } else {
+            sym->setInitial(true);
+            sym->getDecl()->setInitExpr(rhs);
+          }
+        } else {
+          errorReport("Undefined symbol.");
+        }
+      }
+    }
+  }
 
-	tok::TokenValue tokKind = tok.getKind();	
+  tok::TokenValue tokKind = tok.getKind();
 
-	// Note:ÏÖÔÚmosesÖ»ÓÐÁ½ÖÖÀàÐÍ£¬intºÍbool.
-	// To Do: moses»¹Ã»ÓÐÊµÏÖÀàÐÍ×ª»»£¨type cast£©
-	// To Do: mosesÔÝÊ±²»ÔÊÐí×Ô¶¨ÒåÀàÐÍ½øÐÐÔËËã·ûÖØÔØ
-	// Type checking.
-	if (tok.isIntOperator())
-	{
-		if (lhs->getType()->getKind() != TypeKind::INT ||
-			rhs->getType()->getKind() != TypeKind::INT)
-		{
-			errorReport("Left hand expression and right hand expression must be int type.");
-		}
-	}
+  // Note:ï¿½ï¿½ï¿½ï¿½mosesÖ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½intï¿½ï¿½bool.
+  // To Do: mosesï¿½ï¿½Ã»ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½type castï¿½ï¿½
+  // To Do: mosesï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  // Type checking.
+  if (tok.isIntOperator()) {
+    if (lhs->getType()->getKind() != TypeKind::INT ||
+        rhs->getType()->getKind() != TypeKind::INT) {
+      errorReport(
+          "Left hand expression and right hand expression must be int type.");
+    }
+  }
 
-	if (tok.isBoolOperator())
-	{
-		if (lhs->getType()->getKind() != TypeKind::BOOL ||
-			rhs->getType()->getKind() != TypeKind::BOOL)
-		{
-			errorReport("Left hand expression and right hand expression must be bool type.");
-		}
-	}
+  if (tok.isBoolOperator()) {
+    if (lhs->getType()->getKind() != TypeKind::BOOL ||
+        rhs->getType()->getKind() != TypeKind::BOOL) {
+      errorReport(
+          "Left hand expression and right hand expression must be bool type.");
+    }
+  }
 
-	if (tok.isCmpOperator())
-	{
-		if (TypeKeyInfo::TypeKeyInfo::getHashValue(lhs->getType()) !=
-			TypeKeyInfo::TypeKeyInfo::getHashValue(rhs->getType()))
-			errorReport("Type on the left and type on the right must be same.");
-	}
+  if (tok.isCmpOperator()) {
+    if (TypeKeyInfo::TypeKeyInfo::getHashValue(lhs->getType()) !=
+        TypeKeyInfo::TypeKeyInfo::getHashValue(rhs->getType()))
+      errorReport("Type on the left and type on the right must be same.");
+  }
 
-	// Èç¹ûµ±Ç°ÔËËã·ûÊÇËãÊõÔËËã£¬ÔòBinaryOperatorÊÇintÀàÐÍ
-	if (tok.isArithmeticOperator())
-	{
-		type = Ctx.Int;
-	}
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ã£¬ï¿½ï¿½BinaryOperatorï¿½ï¿½intï¿½ï¿½ï¿½ï¿½
+  if (tok.isArithmeticOperator()) {
+    type = Ctx.Int;
+  }
 
-	// Èç¹ûµ±Ç°ÔËËã·ûÊÇÂß¼­ÔËËã·û£¬ÔòBinaryOperatorÊÇboolÀàÐÍ
-	if (tok.isLogicalOperator())
-	{
-		type = Ctx.Bool;
-	}
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½BinaryOperatorï¿½ï¿½boolï¿½ï¿½ï¿½ï¿½
+  if (tok.isLogicalOperator()) {
+    type = Ctx.Bool;
+  }
 
-	// Èç¹ûµ±Ç°ÔËËãÊÇ¸³ÖµÔËËã£¬ÔòBinaryOperatorµÄ·µ»ØÖµÊÇlhsµÄÖµ¡£
-	// --------------------Assignment operators-------------------------
-	// An assignment operator stores a value in the object designated by the left operand. 
-	// An assignment expression has the value of the left operand after the assignment,
-	// but is not an lvalue.
-	// http://stackoverflow.com/questions/22616044/assignment-operator-sequencing-in-c11-expressions
-	//---------------------Assignment operators-------------------------
-	if (tok.isArithmeticOperator())
-	{
-		type = lhs->getType();
-	}
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½ï¿½Ç¸ï¿½Öµï¿½ï¿½ï¿½ã£¬ï¿½ï¿½BinaryOperatorï¿½Ä·ï¿½ï¿½ï¿½Öµï¿½ï¿½lhsï¿½ï¿½Öµï¿½ï¿½
+  // --------------------Assignment operators-------------------------
+  // An assignment operator stores a value in the object designated by the left
+  // operand. An assignment expression has the value of the left operand after
+  // the assignment, but is not an lvalue.
+  // http://stackoverflow.com/questions/22616044/assignment-operator-sequencing-in-c11-expressions
+  //---------------------Assignment operators-------------------------
+  if (tok.isArithmeticOperator()) {
+    type = lhs->getType();
+  }
 
-	// Note: ÎªÁË¼ò»¯Éè¼Æ£¬BinaryOperatorÄ¬ÈÏÊÇrvalue
-	auto BE = std::make_shared<BinaryExpr>(lhs->getLocStart(), rhs->getLocEnd(), type, 
-		tok.getLexem(), lhs, rhs);
+  // Note: Îªï¿½Ë¼ï¿½ï¿½ï¿½Æ£ï¿½BinaryOperatorÄ¬ï¿½ï¿½ï¿½ï¿½rvalue
+  auto BE = std::make_shared<BinaryExpr>(lhs->getLocStart(), rhs->getLocEnd(),
+                                         type, tok.getLexem(), lhs, rhs);
 
-	return BE;
+  return BE;
 }
 
 /// \brief Perform simple semantic analysis for member access expr.
@@ -449,307 +396,259 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs)
 ///		}
 ///		var base : A;
 ///		base.num = 10;
-ExprASTPtr Sema::ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok)
-{
-	/// (1) Check LHS
-	/// LHS±íÊ¾µÄÊÇ¶ÔÏó²¿·Ö£¬¶ÔÏó²¿·Ö´ó²¿·ÖÇé¿öÏÂ¶¼ÊÇDeclRefExpr
-	/// µ«Ò²ÓÐºÜ´óÇé¿ö²»ÊÇDeclRefExpr£¬Ò²ÓÐ¿ÉÄÜÊÇº¯Êýµ÷ÓÃ±í´ïÊ½¡£
-	/// ÀýÈç£º
-	/// func add() -> A {}
-	/// ÓÉÓÚmosesÖÐ×Ô¶¨ÒåÀàÐÍ²ÉÓÃµÄÊÇÒýÓÃÀàÐÍ£¬Ò²¾ÍÊÇËµ×Ô¶¨ÒåÀàÐÍ²»ÊÇÔÚÕ»ÉÏ·ÖÅäµÄ
-	/// ¶øÊÇÊ¹ÓÃmoses×Ô¼ºµÄÄÚ´æ¹ÜÀí»úÖÆ½øÐÐÍ³Ò»¹ÜÀíµÄ£¬È»ºóÊÊÊ±µØ½øÐÐÀ¬»ø»ØÊÕ¡£
-	/// ËùÒÔÖ»ÐèÒª¼ì²éLHS²¿·ÖµÄÀàÐÍÊÇ·ñÎªÓÃ»§×Ô¶¨ÒåÀàÐÍ¼´¿É¡£
-	if (!(lhs->getType()) || lhs->getType()->getKind() != TypeKind::USERDEFIED)
-	{
-		errorReport("Type error. Expect user defined type.");
-	}
+ExprASTPtr Sema::ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok) {
+  /// (1) Check LHS
+  /// LHSï¿½ï¿½Ê¾ï¿½ï¿½ï¿½Ç¶ï¿½ï¿½ó²¿·Ö£ï¿½ï¿½ï¿½ï¿½ó²¿·Ö´ó²¿·ï¿½ï¿½ï¿½ï¿½ï¿½Â¶ï¿½ï¿½ï¿½DeclRefExpr
+  /// ï¿½ï¿½Ò²ï¿½ÐºÜ´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½DeclRefExprï¿½ï¿½Ò²ï¿½Ð¿ï¿½ï¿½ï¿½ï¿½Çºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã±ï¿½ï¿½Ê½ï¿½ï¿½
+  /// ï¿½ï¿½ï¿½ç£º
+  /// func add() -> A {}
+  /// ï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í²ï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½Ò²ï¿½ï¿½ï¿½ï¿½Ëµï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í²ï¿½ï¿½ï¿½ï¿½ï¿½Õ»ï¿½Ï·ï¿½ï¿½ï¿½ï¿½
+  /// ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½mosesï¿½Ô¼ï¿½ï¿½ï¿½ï¿½Ú´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ½ï¿½ï¿½ï¿½Í³Ò»ï¿½ï¿½ï¿½ï¿½Ä£ï¿½È»ï¿½ï¿½ï¿½ï¿½Ê±ï¿½Ø½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¡ï¿½
+  /// ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½Òªï¿½ï¿½ï¿½LHSï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½Îªï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½É¡ï¿½
+  if (!(lhs->getType()) || lhs->getType()->getKind() != TypeKind::USERDEFIED) {
+    errorReport("Type error. Expect user defined type.");
+  }
 
-	std::shared_ptr<Type> memberType = nullptr;
-	int idx = -1;
-	/// (2) Check Member name.
-	/// ÕâÀïÐèÒª¼ì²é¸ÃÓÃ»§×Ô¶¨ÒåÀàÐÍÊÇ·ñÓÐÕâ¸ö³ÉÔ±Ãû£¬´æÔÚµÄ»°£¬Í¬Ê±»ñÈ¡¸ÃÊý¾Ý³ÉÔ±µÄÀàÐÍ
-	/// Note: ÕâÀï½«UserDefinedType*Ö¸Õë±©Â¶³öÀ´ÊÇ²»·ûºÏ¹æ·¶µÄ£¬µ«ÊÇÖ»ÓÐÔÚÔ­ÉúÌ¬Ö¸ÕëµÄ
-	/// Çé¿öÏÂ²ÅÄÜ½øÐÐ¶àÌ¬µÄ×ª»»¡£
-	if (UDTyPtr BaseType = std::dynamic_pointer_cast<UserDefinedType>(lhs->getType()))
-	{
-		if (!(BaseType->HaveMember(tok.getLexem())))
-		{
-			errorReport("Type " + BaseType->getTypeName() + " have no member " + tok.getLexem());
-			return nullptr;
-		}
-		memberType = BaseType->getMemberType(tok.getLexem());
-		idx = BaseType->getIdx(tok.getLexem());
-	}
+  std::shared_ptr<Type> memberType = nullptr;
+  int idx = -1;
+  /// (2) Check Member name.
+  /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÚµÄ»ï¿½ï¿½ï¿½Í¬Ê±ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½Ý³ï¿½Ô±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  /// Note:
+  /// ï¿½ï¿½ï¿½ï½«UserDefinedType*Ö¸ï¿½ë±©Â¶ï¿½ï¿½ï¿½ï¿½ï¿½Ç²ï¿½ï¿½ï¿½ï¿½Ï¹æ·¶ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½Ô­ï¿½ï¿½Ì¬Ö¸ï¿½ï¿½ï¿½
+  /// ï¿½ï¿½ï¿½ï¿½Â²ï¿½ï¿½Ü½ï¿½ï¿½Ð¶ï¿½Ì¬ï¿½ï¿½×ªï¿½ï¿½ï¿½ï¿½
+  if (UDTyPtr BaseType =
+          std::dynamic_pointer_cast<UserDefinedType>(lhs->getType())) {
+    if (!(BaseType->HaveMember(tok.getLexem()))) {
+      errorReport("Type " + BaseType->getTypeName() + " have no member " +
+                  tok.getLexem());
+      return nullptr;
+    }
+    memberType = BaseType->getMemberType(tok.getLexem());
+    idx = BaseType->getIdx(tok.getLexem());
+  }
 
-	if (!memberType)
-		return nullptr;
-	return std::make_shared<MemberExpr>(lhs->getLocStart(), lhs->getLocEnd(), memberType, lhs, 
-		tok.getTokenLoc(), tok.getLexem(), memberType->getKind() != TypeKind::USERDEFIED, idx);
+  if (!memberType)
+    return nullptr;
+  return std::make_shared<MemberExpr>(
+      lhs->getLocStart(), lhs->getLocEnd(), memberType, lhs, tok.getTokenLoc(),
+      tok.getLexem(), memberType->getKind() != TypeKind::USERDEFIED, idx);
 }
 
-ExprASTPtr Sema::ActOnDecOrIncExpr(ExprASTPtr rhs)
-{
-	if (!rhs->getType())
-	{
-		return nullptr;
-	}
-	// (1) rhs ±ØÐëÊÇintÀàÐÍ
-	if (rhs->getType()->getKind() != TypeKind::INT)
-	{
-		errorReport("Operator '++' '--' need operand is int type.");
-	}
+ExprASTPtr Sema::ActOnDecOrIncExpr(ExprASTPtr rhs) {
+  if (!rhs->getType()) {
+    return nullptr;
+  }
+  // (1) rhs ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½intï¿½ï¿½ï¿½ï¿½
+  if (rhs->getType()->getKind() != TypeKind::INT) {
+    errorReport("Operator '++' '--' need operand is int type.");
+  }
 
-	// (2) rhs ±ØÐëÊÇ×óÖµ
-	// Note: mosesÖÐÖ»ÓÐ×óÖµºÍÓÒÖµÖ®·Ö£¬Ã»ÓÐÊ²Ã´xrvalueºÍprvalueÖ®·Ö¡£
-	if (rhs->isRValue())
-	{
-		errorReport("Operator '++' '--' need operand is lvalue");
-	}
+  // (2) rhs ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
+  // Note: mosesï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ÖµÖ®ï¿½Ö£ï¿½Ã»ï¿½ï¿½Ê²Ã´xrvalueï¿½ï¿½prvalueÖ®ï¿½Ö¡ï¿½
+  if (rhs->isRValue()) {
+    errorReport("Operator '++' '--' need operand is lvalue");
+  }
 
-	// (3) ¼ì²érhsÊÇ·ñÊÇconstÀàÐÍ
-	if (DeclRefExprPtr DeclRef = std::dynamic_pointer_cast<DeclRefExpr>(rhs))
-	{
-		auto decl = DeclRef->getDecl();
-		if (!decl)
-			errorReport("Declaration reference error!");
-		auto symbol = CurScope->Resolve(decl->getName());
-		if (VarSymPtr sym = std::dynamic_pointer_cast<VariableSymbol>(symbol))
-		{
-			if (decl->isConst() && sym->isInitial())
-			{
-				errorReport("Const variable can't be assigned.");
-			}
-		}
-		else if (ParmSymPtr psym = std::dynamic_pointer_cast<ParmDeclSymbol>(symbol))
-		{
-			return rhs;
-		}
-		else
-		{
-			errorReport("Declaration reference error!");
-		}
-	}
-	return rhs;
+  // (3) ï¿½ï¿½ï¿½rhsï¿½Ç·ï¿½ï¿½ï¿½constï¿½ï¿½ï¿½ï¿½
+  if (DeclRefExprPtr DeclRef = std::dynamic_pointer_cast<DeclRefExpr>(rhs)) {
+    auto decl = DeclRef->getDecl();
+    if (!decl)
+      errorReport("Declaration reference error!");
+    auto symbol = CurScope->Resolve(decl->getName());
+    if (VarSymPtr sym = std::dynamic_pointer_cast<VariableSymbol>(symbol)) {
+      if (decl->isConst() && sym->isInitial()) {
+        errorReport("Const variable can't be assigned.");
+      }
+    } else if (ParmSymPtr psym =
+                   std::dynamic_pointer_cast<ParmDeclSymbol>(symbol)) {
+      return rhs;
+    } else {
+      errorReport("Declaration reference error!");
+    }
+  }
+  return rhs;
 }
 
-ExprASTPtr Sema::ActOnUnaryExclamatoryExpr(ExprASTPtr rhs)
-{
-	// ÓÉÓÚmosesÖÐÓÃ»§×Ô¶¨ÒåÀàÐÍ²»ÄÜÖØÔØÔËËã·û£¬ËùÒÔÈ¡·ÇÔËËãÖ»ÄÜÓÃÓÚboolÀàÐÍ
-	if (rhs->getType()->getKind() != TypeKind::BOOL)
-	{
-		errorReport("Operator '!' need operand is bool type.");
-	}
-	return rhs;
+ExprASTPtr Sema::ActOnUnaryExclamatoryExpr(ExprASTPtr rhs) {
+  // ï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½boolï¿½ï¿½ï¿½ï¿½
+  if (rhs->getType()->getKind() != TypeKind::BOOL) {
+    errorReport("Operator '!' need operand is bool type.");
+  }
+  return rhs;
 }
 
-/// \brief ÓÃÓÚ¶Ôµ¥Ä¿Çó¸ºÖµÔËËã½øÐÐ¼ì²é
-/// To Do: ×¢ÒâÕâÀïintÖµµÄ±ß½ç²¢Ã»ÓÐÏÞ¶¨£¬ÔÝÊ±ÓëCÓïÑÔÖÐµÄintÐÍÏàÍ¬16Î»(µ«ÊÇÏÖÔÚÆäÊµ¶¼ÊÇ32Î»ÊýµÄ)
-ExprASTPtr Sema::ActOnUnarySubExpr(ExprASTPtr rhs)
-{
-	if (rhs->getType()->getKind() != TypeKind::INT)
-	{
-		errorReport("Operator '-' need operand is int type");
-	}
-	return rhs;
+/// \brief ï¿½ï¿½ï¿½Ú¶Ôµï¿½Ä¿ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¼ï¿½ï¿½
+/// To Do:
+/// ×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½intÖµï¿½Ä±ß½ç²¢Ã»ï¿½ï¿½ï¿½Þ¶ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½Cï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½intï¿½ï¿½ï¿½ï¿½Í¬16Î»(ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½32Î»ï¿½ï¿½ï¿½ï¿½)
+ExprASTPtr Sema::ActOnUnarySubExpr(ExprASTPtr rhs) {
+  if (rhs->getType()->getKind() != TypeKind::INT) {
+    errorReport("Operator '-' need operand is int type");
+  }
+  return rhs;
 }
 
-/// \brief ¶Ôunpack decl½øÐÐÓïÒå·ÖÎö£¬Ö÷ÒªÊÇÀàÐÍ¼ì²é
-/// ÀýÈç£º var {num, {flag, lhs, rhs}} = anony;
+/// \brief ï¿½ï¿½unpack declï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½
+/// ï¿½ï¿½ï¿½ç£º var {num, {flag, lhs, rhs}} = anony;
 /// Shit code!
-UnpackDeclPtr Sema::ActOnUnpackDecl(UnpackDeclPtr unpackDecl, std::shared_ptr<Type> type)
-{
-	if (UnpackDeclPtr unpackd = std::dynamic_pointer_cast<UnpackDecl>(unpackDecl))
-	{
-		if (!type)
-		{
-			errorReport("Unapck declaration's initial expression type error.");
-		}
-		if (type->getKind() != TypeKind::ANONYMOUS)
-		{
-			errorReport("Unpack declaration's initial expression must be anonymous type.");
-			return nullptr;
-		}
+UnpackDeclPtr Sema::ActOnUnpackDecl(UnpackDeclPtr unpackDecl,
+                                    std::shared_ptr<Type> type) {
+  if (UnpackDeclPtr unpackd =
+          std::dynamic_pointer_cast<UnpackDecl>(unpackDecl)) {
+    if (!type) {
+      errorReport("Unapck declaration's initial expression type error.");
+    }
+    if (type->getKind() != TypeKind::ANONYMOUS) {
+      errorReport(
+          "Unpack declaration's initial expression must be anonymous type.");
+      return nullptr;
+    }
 
-		return unpackDeclTypeChecking(unpackDecl, type);
-	}
-	errorReport("Left hand expression isn's unpack declaration.");
-	// To Do: ´Ë´¦Ö±½Ó·µ»ØnullptrÌ«¹ý¼¤½ø£¬ÐèÒª¸üºÏÊÊµÄ´¦Àí·½Ê½¡£
-	return nullptr;
+    return unpackDeclTypeChecking(unpackDecl, type);
+  }
+  errorReport("Left hand expression isn's unpack declaration.");
+  // To Do: ï¿½Ë´ï¿½Ö±ï¿½Ó·ï¿½ï¿½ï¿½nullptrÌ«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ÊµÄ´ï¿½ï¿½ï¿½Ê½ï¿½ï¿½
+  return nullptr;
 }
 
-/// \brief 
-BinaryPtr Sema::ActOnAnonymousTypeVariableAssignment(ExprASTPtr lhs, ExprASTPtr rhs) const
-{
-	if (DeclRefExprPtr DRE = std::dynamic_pointer_cast<DeclRefExpr>(lhs))
-	{
-		// Type Checking.
-		if (TypeKeyInfo::TypeKeyInfo::getHashValue(DRE->getType()) !=
-			TypeKeyInfo::TypeKeyInfo::getHashValue(rhs->getType()))
-		{
-			errorReport("Type error occured in anonymous type variable assigning.");
-		}
-	}
-	else
-	{
-		errorReport("Error occured in anonymous type variable assigning.");
-	}
-	return std::make_shared<BinaryExpr>(lhs->getLocStart(), rhs->getLocEnd(), lhs->getType(), "=", lhs, rhs);
+/// \brief
+BinaryPtr Sema::ActOnAnonymousTypeVariableAssignment(ExprASTPtr lhs,
+                                                     ExprASTPtr rhs) const {
+  if (DeclRefExprPtr DRE = std::dynamic_pointer_cast<DeclRefExpr>(lhs)) {
+    // Type Checking.
+    if (TypeKeyInfo::TypeKeyInfo::getHashValue(DRE->getType()) !=
+        TypeKeyInfo::TypeKeyInfo::getHashValue(rhs->getType())) {
+      errorReport("Type error occured in anonymous type variable assigning.");
+    }
+  } else {
+    errorReport("Error occured in anonymous type variable assigning.");
+  }
+  return std::make_shared<BinaryExpr>(lhs->getLocStart(), rhs->getLocEnd(),
+                                      lhs->getType(), "=", lhs, rhs);
 }
-
 
 /// \brief Mainly check the conditon expression type.
-bool Sema::ActOnConditionExpr(std::shared_ptr<Type> type) const
-{
-	if (!type || type->getKind() != TypeKind::BOOL)
-	{
-		errorReport("Conditional expression is not a boolean type.");
-		return false;
-	}
-	return true;
+bool Sema::ActOnConditionExpr(std::shared_ptr<Type> type) const {
+  if (!type || type->getKind() != TypeKind::BOOL) {
+    errorReport("Conditional expression is not a boolean type.");
+    return false;
+  }
+  return true;
 }
-
 
 /// \brief Mainly check parameter declaration type.
-std::shared_ptr<Type> Sema::ActOnParmDeclUserDefinedType(Token tok) const
-{
-	if (ClassSymPtr csym =
-		std::dynamic_pointer_cast<ClassSymbol>(ScopeStack[0]->CheckWhetherInCurScope(tok.getLexem())))
-	{
-		return csym->getType();
-	}
-	else
-	{
-		errorReport("Undefined type.");
-	}
-	return nullptr;
+std::shared_ptr<Type> Sema::ActOnParmDeclUserDefinedType(Token tok) const {
+  if (ClassSymPtr csym = std::dynamic_pointer_cast<ClassSymbol>(
+          ScopeStack[0]->CheckWhetherInCurScope(tok.getLexem()))) {
+    return csym->getType();
+  } else {
+    errorReport("Undefined type.");
+  }
+  return nullptr;
 }
-
 
 /// \brief Mainly check variable declararion type.
-std::shared_ptr<Type> Sema::ActOnVarDeclUserDefinedType(Token tok) const
-{
-	return ActOnParmDeclUserDefinedType(tok);
+std::shared_ptr<Type> Sema::ActOnVarDeclUserDefinedType(Token tok) const {
+  return ActOnParmDeclUserDefinedType(tok);
 }
 
-void Sema::PopClassStack()
-{
-	ClassStack.pop_back();
+void Sema::PopClassStack() { ClassStack.pop_back(); }
+
+void Sema::PopFunctionStack() { FunctionStack.pop_back(); }
+
+std::shared_ptr<FunctionSymbol> Sema::getFunctionStackTop() const {
+  if (FunctionStack.size() == 0) {
+    errorReport(
+        "Now in top-level scope and we can't get current function symbol.");
+    return nullptr;
+  }
+  return FunctionStack[FunctionStack.size() - 1];
 }
 
-void Sema::PopFunctionStack()
-{
-	FunctionStack.pop_back();
+std::shared_ptr<ClassSymbol> Sema::getClassStackTop() const {
+  if (ClassStack.size() == 0) {
+    errorReport("Now in top-level scope and we can't get current class symbol");
+    return nullptr;
+  }
+  return ClassStack[ClassStack.size() - 1];
 }
 
-std::shared_ptr<FunctionSymbol> Sema::getFunctionStackTop() const
-{
-	if (FunctionStack.size() == 0)
-	{
-		errorReport("Now in top-level scope and we can't get current function symbol.");
-		return nullptr;
-	}
-	return FunctionStack[FunctionStack.size() - 1];
-}
-
-std::shared_ptr<ClassSymbol> Sema::getClassStackTop() const
-{
-	if (ClassStack.size() == 0)
-	{
-		errorReport("Now in top-level scope and we can't get current class symbol");
-		return nullptr;
-	}
-	return ClassStack[ClassStack.size() - 1];
-}
-
-void Sema::PopScope()
-{
-	// Pop Scope and update info.
-	ScopeStack.pop_back();
-	CurScope = getScopeStackTop();
+void Sema::PopScope() {
+  // Pop Scope and update info.
+  ScopeStack.pop_back();
+  CurScope = getScopeStackTop();
 }
 
 /// \brief Look up name for current scope.
-std::shared_ptr<Symbol> Scope::CheckWhetherInCurScope(std::string name)
-{
+std::shared_ptr<Symbol> Scope::CheckWhetherInCurScope(std::string name) {
 
-	for (auto item : SymbolTable)
-	{
-		if (item->getLexem() == name)
-		{
-			return item;
-		}
-	}
-	return nullptr;
+  for (auto item : SymbolTable) {
+    if (item->getLexem() == name) {
+      return item;
+    }
+  }
+  return nullptr;
 }
 
-std::shared_ptr<Scope> Sema::getScopeStackBottom() const
-{
-	return ScopeStack[0];
+std::shared_ptr<Scope> Sema::getScopeStackBottom() const {
+  return ScopeStack[0];
 }
 
-std::shared_ptr<Scope> Sema::getScopeStackTop() const
-{
-	if (ScopeStack.size() == 0)
-	{
-		errorReport("Now in top-level scope and we can't get current scope.");
-		return nullptr;
-	}
-	return ScopeStack[ScopeStack.size() - 1];
+std::shared_ptr<Scope> Sema::getScopeStackTop() const {
+  if (ScopeStack.size() == 0) {
+    errorReport("Now in top-level scope and we can't get current scope.");
+    return nullptr;
+  }
+  return ScopeStack[ScopeStack.size() - 1];
 }
 
-/// \brief ¸Ã·½·¨Ö÷ÒªÓÃÓÚ½øÐÐÀàÐÍ¼ì²é£¬²¢ÉèÖÃÆäÀàÐÍ
-UnpackDeclPtr Sema::unpackDeclTypeChecking(UnpackDeclPtr decl, std::shared_ptr<Type> initType) const
-{
-	if (AnonTyPtr anonyt = std::dynamic_pointer_cast<AnonymousType>(initType))
-	{
-		// (1) ¼ì²éÆäÖÐµÄÃ¿¸öÀàÐÍÊÇ·ñÏàÈÝ
-		if (!(decl->TypeCheckingAndTypeSetting(anonyt)))
-		{
-			errorReport("Unpack declaration type error.");
-			return nullptr;
-		}
+/// \brief ï¿½Ã·ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½é£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+UnpackDeclPtr
+Sema::unpackDeclTypeChecking(UnpackDeclPtr decl,
+                             std::shared_ptr<Type> initType) const {
+  if (AnonTyPtr anonyt = std::dynamic_pointer_cast<AnonymousType>(initType)) {
+    // (1) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½
+    if (!(decl->TypeCheckingAndTypeSetting(anonyt))) {
+      errorReport("Unpack declaration type error.");
+      return nullptr;
+    }
 
-		// Note: ÆäÊµ²»ÐèÒªtypeÉèÖÃ£¬ÒòÎª×îÖØÒªµÄÊÇsymbol table.
-		decl->setCorrespondingType(initType);
+    // Note: ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½Òªtypeï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½symbol table.
+    decl->setCorrespondingType(initType);
 
-		// (2) ´´½¨symbol
-		// Note: ÏÖÔÚÕâ¸ö²Ù×÷Ö÷ÒªÊÇ½«unpack decl·Ö²ð¿ªÀ´
-		// ÀýÈç£º {{start, end}, {lhs, rhs}} = num;
-		// ²ð³öÀ´ºóÊÇstart, end, lhs, rhs
-		// 1: ÊÕ¼¯decl names
-		std::vector<VarDeclPtr> unpackDecls;
-		decl->getDecls(unpackDecls);
+    // (2) ï¿½ï¿½ï¿½ï¿½symbol
+    // Note: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½Ç½ï¿½unpack declï¿½Ö²ï¿½ï¿½ï¿½
+    // ï¿½ï¿½ï¿½ç£º {{start, end}, {lhs, rhs}} = num;
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½start, end, lhs, rhs
+    // 1: ï¿½Õ¼ï¿½decl names
+    std::vector<VarDeclPtr> unpackDecls;
+    decl->getDecls(unpackDecls);
 
-		// 2: ÊÕ¼¯types
-		std::vector<std::shared_ptr<Type>> types;
-		anonyt->getTypes(types);
+    // 2: ï¿½Õ¼ï¿½types
+    std::vector<std::shared_ptr<Type>> types;
+    anonyt->getTypes(types);
 
-		// 3: check
-		if (unpackDecls.size() != types.size())
-		{
-			errorReport("Unpack declaration type error.");
-		}
-		// 3: ´´½¨symbol
-		unsigned size = unpackDecls.size();
-		for (unsigned index = 0; index < size; index++)
-		{
-			// ´´½¨variable symbol²¢²åÈëµ±Ç°scope
-			// ÕâÀïÓÐÒ»¸öÎÊÌâ£ºunpackdecl var {num1, num2} ÖÐÓÐÁ½¸öVarSymbol
-			// ÕâÁ½¸öVarSymbol¶¼ÐèÒª´æ´¢UnpackDecl.
-			CurScope->addDef(std::make_shared<VariableSymbol>(unpackDecls[index]->getName(),
-				CurScope, types[index], true, unpackDecls[index]));
-		}
-	}
-	else
-	{
-		errorReport("Unpack declaration type error.");
-		return nullptr;
-	}
-	return decl;
+    // 3: check
+    if (unpackDecls.size() != types.size()) {
+      errorReport("Unpack declaration type error.");
+    }
+    // 3: ï¿½ï¿½ï¿½ï¿½symbol
+    unsigned size = unpackDecls.size();
+    for (unsigned index = 0; index < size; index++) {
+      // ï¿½ï¿½ï¿½ï¿½variable symbolï¿½ï¿½ï¿½ï¿½ï¿½ëµ±Ç°scope
+      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½â£ºunpackdecl var {num1, num2} ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½VarSymbol
+      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½VarSymbolï¿½ï¿½ï¿½ï¿½Òªï¿½æ´¢UnpackDecl.
+      CurScope->addDef(std::make_shared<VariableSymbol>(
+          unpackDecls[index]->getName(), CurScope, types[index], true,
+          unpackDecls[index]));
+    }
+  } else {
+    errorReport("Unpack declaration type error.");
+    return nullptr;
+  }
+  return decl;
 }
-/// \brief ÓÃÓÚsemaµÄ±¨´í
-void Sema::errorReport(const std::string& msg) const
-{
-	Ctx.isParseOrSemaSuccess = false;
-	errorSema(scan->getLastToken().getTokenLoc().toString() + " --- " + msg);
+/// \brief ï¿½ï¿½ï¿½ï¿½semaï¿½Ä±ï¿½ï¿½ï¿½
+void Sema::errorReport(const std::string &msg) const {
+  Ctx.isParseOrSemaSuccess = false;
+  errorSema(scan->getLastToken().getTokenLoc().toString() + " --- " + msg);
 }

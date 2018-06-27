@@ -1,232 +1,223 @@
 //===------------------------EvaluatedExprVisitor.h-----------------------===//
 //
 // This file defines the EvaluateExprVisitor class.
-// 
-// ²»Í¬ÓÚClang£¬ClangÎªÁËÌáÉý´úÂëÐ§ÂÊÊ¹ÓÃCRTPÄ£Ê½ÊµÏÖ¶àÌ¬£¬ÕâÀïÎÒÃÇÊ¹ÓÃÐéº¯Êýµ÷ÓÃ
-// À´ÊµÏÖ¸Ã»úÖÆ¡£ÆäÖÐ¸ÃvisitorÊ¹ÓÃvisitor pattern£¬±éÀú¸ø¶¨µÄ×ÓÊ÷¸ù½Úµã£¬²¢Ö´ÐÐ
-// ÏàÓ¦µÄÐÐÎª¡£
-// ÀýÈç£º
+//
+// ï¿½ï¿½Í¬ï¿½ï¿½Clangï¿½ï¿½ClangÎªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð§ï¿½ï¿½Ê¹ï¿½ï¿½CRTPÄ£Ê½Êµï¿½Ö¶ï¿½Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½éº¯ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+// ï¿½ï¿½Êµï¿½Ö¸Ã»ï¿½ï¿½Æ¡ï¿½ï¿½ï¿½ï¿½Ð¸ï¿½visitorÊ¹ï¿½ï¿½visitor patternï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Úµã£¬ï¿½ï¿½Ö´ï¿½ï¿½
+// ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½
+// ï¿½ï¿½ï¿½ç£º
 //                  +
 //				  /   \
 //				 -	   *
 //			    / \   /  \
 //			  num 1 start 3
 //
-// ¶ÔÓÚIntExprEvaluatorÀ´Ëµ£¬VisitBinaryOperator()À´Ëµ£¬¾ÍÊÇ lhs + rhs. ÖÐ¼ä»á
-// µÝ¹é±éÀú lhs ºÍ rhs È»ºó£¬µÃ³öÃ¿¸ö²¿·ÖµÄÖµ£¬È»ºóÏà¼Ó¡£
-// ¶ÔÓÚStringExprEvaluatorÀ´Ëµ£¬VisitBinaryOperator()À´Ëµ£¬¾ÍÊÇ "hello" + "world".
-// 
+// ï¿½ï¿½ï¿½ï¿½IntExprEvaluatorï¿½ï¿½Ëµï¿½ï¿½VisitBinaryOperator()ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ lhs + rhs. ï¿½Ð¼ï¿½ï¿½
+// ï¿½Ý¹ï¿½ï¿½ï¿½ï¿½ lhs ï¿½ï¿½ rhs
+// È»ï¿½ó£¬µÃ³ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½Öµï¿½ï¿½È»ï¿½ï¿½ï¿½ï¿½Ó¡ï¿½
+// ï¿½ï¿½ï¿½ï¿½StringExprEvaluatorï¿½ï¿½Ëµï¿½ï¿½VisitBinaryOperator()ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ "hello" + "world".
+//
 //				add()
 //			   /     \
 //			parm    body
 //          /           \
-//   {Ä£Äâ¼ÆËãÊµ²ÎÖµ} {Ä£ÄâÔËÐÐº¯ÊýÌå}
-// 
-// ÆäÖÐ¶ÔÓÚ IntExprEvaluator ºÍ StringExprEvaluator À´Ëµ¶¼»á½øÐÐCallExpr½øÐÐ
-// evaluate£¬ÔÚmosesÖÐÏÞÖÆ eval Éî¶È×îÉîÎª 1
+//   {Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½Öµ} {Ä£ï¿½ï¿½ï¿½ï¿½ï¿½Ðºï¿½ï¿½ï¿½ï¿½ï¿½}
+//
+// ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½ IntExprEvaluator ï¿½ï¿½ StringExprEvaluator ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½CallExprï¿½ï¿½ï¿½ï¿½
+// evaluateï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ eval ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îª 1
 //===---------------------------------------------------------------------===//
 
 #ifndef EVALUATED_EXPR_VISITOR_H
 #define EVALUATED_EXPR_VISITOR_H
-#include <iostream>
-#include <utility>
-#include <typeinfo>
 #include "ast.h"
+#include <iostream>
+#include <typeinfo>
+#include <utility>
 
-namespace compiler
-{
-	namespace ast
-	{	
-		struct EvalStatus
-		{
-			enum ValueKind
-			{
-				IntKind,
-				BoolKind,
-				AnonymousKind
-			};
 
-			enum Result
-			{
-				Constant,
-				NotConstant,
-				// ÓÉÓÚµ±Ç°±í´ïÊ½ÒÀÀµÓÚ»¹Ã»ÓÐ½øÐÐevaluateµÄ·ûºÅ£¬»¹²»ÄÜ±»evaluate£¬
-				Pending
-			};
-			/// \brief ´ý½øÐÐevaluatedµÄ±í´ïÊ½ÊÇ·ñÓÐ¸±×÷ÓÃ¡£
-			/// ÀýÈç£º (f() && 0) ¿ÉÒÔ±»ÕÛµþ³É0£¬µ«ÊÇº¯Êýf()ÓÐ¸±×÷ÓÃ
-			bool HasSideEffects;
+namespace compiler {
+namespace ast {
+struct EvalStatus {
+  enum ValueKind { IntKind, BoolKind, AnonymousKind };
 
-			EvalStatus() : HasSideEffects(false), result(Result::Pending){}
+  enum Result {
+    Constant,
+    NotConstant,
+    // ï¿½ï¿½ï¿½Úµï¿½Ç°ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½Ú»ï¿½Ã»ï¿½Ð½ï¿½ï¿½ï¿½evaluateï¿½Ä·ï¿½ï¿½Å£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü±ï¿½evaluateï¿½ï¿½
+    Pending
+  };
+  /// \brief ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½evaluatedï¿½Ä±ï¿½ï¿½Ê½ï¿½Ç·ï¿½ï¿½Ð¸ï¿½ï¿½ï¿½ï¿½Ã¡ï¿½
+  /// ï¿½ï¿½ï¿½ç£º (f() && 0) ï¿½ï¿½ï¿½Ô±ï¿½ï¿½Ûµï¿½ï¿½ï¿½0ï¿½ï¿½ï¿½ï¿½ï¿½Çºï¿½ï¿½ï¿½f()ï¿½Ð¸ï¿½ï¿½ï¿½ï¿½ï¿½
+  bool HasSideEffects;
 
-			// hasSideEffects - Return true if the evaluated expression has side 
-			// effects.
-			bool hasSideEffects() const
-			{
-				return HasSideEffects;
-			}
+  EvalStatus() : HasSideEffects(false), result(Result::Pending) {}
 
-			// Note: clangÖÐ¼äÌá¹©ÁËÒ»¸öExprResult{}½á¹¹Ìå£¬ÕâÀï¼òµ¥Æð¼û£¬²»»áÌá¹©¡£
-			// Èç½ñmosesÖ»Ìá¹©boolÓëintÀàÐÍ£¬ËùÒÔ²»ÐèÒªÌØ±ð¸´ÔÓµÄÖµ±íÊ¾£¬ºóÃæÔÚ·á¸»
-			// mosesµÄÊ±ºò¾ÍÐèÒªÌá¹©Ò»¸öÍêÉÆµÄÖµ±íÊ¾¡£
-			unsigned intVal;
-			bool boolVal;
-			// To Do: AnonymousTypeÊÇÖµÔÝÊ±²»Ö§³Ö£¬AnonymousTypeµÄÖµÐèÒªÓÃÊ÷À´´æ´¢¡£
-			// AnonymousTreeVal;
+  // hasSideEffects - Return true if the evaluated expression has side
+  // effects.
+  bool hasSideEffects() const { return HasSideEffects; }
 
-			ValueKind kind;
-			Result result;
-		};
+  // Note: clangï¿½Ð¼ï¿½ï¿½á¹©ï¿½ï¿½Ò»ï¿½ï¿½ExprResult{}ï¿½á¹¹ï¿½å£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á¹©ï¿½ï¿½
+  // ï¿½ï¿½ï¿½mosesÖ»ï¿½á¹©boolï¿½ï¿½intï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½Ô²ï¿½ï¿½ï¿½Òªï¿½Ø±ï¿½ï¿½Óµï¿½Öµï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú·á¸»
+  // mosesï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½á¹©Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Æµï¿½Öµï¿½ï¿½Ê¾ï¿½ï¿½
+  unsigned intVal;
+  bool boolVal;
+  // To Do: AnonymousTypeï¿½ï¿½Öµï¿½ï¿½Ê±ï¿½ï¿½Ö§ï¿½Ö£ï¿½AnonymousTypeï¿½ï¿½Öµï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ´¢ï¿½ï¿½
+  // AnonymousTreeVal;
 
-		/// EvalInfo - EvalInfo²»Í¬ÓÚEvalStatus£¬EvalInfo±íÊ¾µÄÊÇÍÆµ¼¹ý³ÌÖÐ£¬¼ÇÂ¼Eval»·¾³ÐÅÏ¢
-		/// EvalStatus±íÊ¾µÄevaluateµÄ½á¹û¡£
-		/// Note: ¶ÔÓÚCallExprÀ´Ëµ£¬constant-evaluatorÖ»»áÍÆµ¼Ò»´Îµ÷ÓÃ£¨ÕâÀïÇ¿ÖÆ£¬º¯ÊýÖ»ÄÜÓÐ
-		/// Ò»ÌõreturnÓï¾ä£©
-		struct EvalInfo
-		{
-			// ÍÆµ¼µÄÊ±ËùÔÚÕ»Ö¡µÄÉî¶È£¬
-			// (1) var num = start + end + mid; ÕâÀïÃæDepthÊÇ0
-			// (2) var num = func(num); ÕâÀïÃæDepthÊÇ1
-			unsigned CallStackDepth;
+  ValueKind kind;
+  Result result;
+};
 
-			EvalStatus evalstatus;
+/// EvalInfo - EvalInfoï¿½ï¿½Í¬ï¿½ï¿½EvalStatusï¿½ï¿½EvalInfoï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½Â¼Evalï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
+/// EvalStatusï¿½ï¿½Ê¾ï¿½ï¿½evaluateï¿½Ä½ï¿½ï¿½ï¿½ï¿½
+/// Note: ï¿½ï¿½ï¿½ï¿½CallExprï¿½ï¿½Ëµï¿½ï¿½constant-evaluatorÖ»ï¿½ï¿½ï¿½Æµï¿½Ò»ï¿½Îµï¿½ï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½Ç¿ï¿½Æ£ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½
+/// Ò»ï¿½ï¿½returnï¿½ï¿½ä£©
+struct EvalInfo {
+  // ï¿½Æµï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Õ»Ö¡ï¿½ï¿½ï¿½ï¿½È£ï¿½
+  // (1) var num = start + end + mid; ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Depthï¿½ï¿½0
+  // (2) var num = func(num); ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Depthï¿½ï¿½1
+  unsigned CallStackDepth;
 
-			enum EvaluationMode
-			{
-				/// ¸ÃÄ£Ê½ÏÂ£¬Ö»ÓÐÓöµ½²»¿ÉevaluateµÄÇé¿ö²Å»áÍ£ÏÂ£¬¼´Ê¹ÓÐside-effect.
-				EM_PotentialConstantExpression,
+  EvalStatus evalstatus;
 
-				/// Fold the expression to a constant. Stop if we hit a side-effect
-				/// that we can't model.	-Clang
-				/// ¸ÃÄ£Ê½ÊÇmoses constant-evaluatorÖ÷ÒªµÄÄ£Ê½¡£
-				EM_ConstantFold
-			} EvalMode;
-			/// Are we checking whether the expression is a potential constant 
-			/// expression?
-			bool checkingPotentialConstantExpression() const
-			{
-				return EvalMode == EM_PotentialConstantExpression;
-			}
+  enum EvaluationMode {
+    /// ï¿½ï¿½Ä£Ê½ï¿½Â£ï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½evaluateï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Å»ï¿½Í£ï¿½Â£ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½side-effect.
+    EM_PotentialConstantExpression,
 
-			// To Do: ¶ÔÓÚCompile-timeµÄÍÆµ¼£¬Ó¦¸ÃÓÐ²½ÊýÏÞÖÆ£¬ÕâÀïÃ»ÓÐÉèÖÃsteps limit
-			// Ö»ÊÇ¶ÔevalµÄº¯Êýµ÷ÓÃ²ãÊýÓÐËùÏÞÖÆ¡£ 
-			EvalInfo(EvalStatus::ValueKind vk, EvaluationMode Mode)
-				: CallStackDepth(0), EvalMode(Mode)
-			{
-				evalstatus.kind = vk;
-			}
+    /// Fold the expression to a constant. Stop if we hit a side-effect
+    /// that we can't model.	-Clang
+    /// ï¿½ï¿½Ä£Ê½ï¿½ï¿½moses constant-evaluatorï¿½ï¿½Òªï¿½ï¿½Ä£Ê½ï¿½ï¿½
+    EM_ConstantFold
+  } EvalMode;
+  /// Are we checking whether the expression is a potential constant
+  /// expression?
+  bool checkingPotentialConstantExpression() const {
+    return EvalMode == EM_PotentialConstantExpression;
+  }
 
-			// Note that we had a side-effect.
-			bool noteSideEffect();
-		};
+  // To Do: ï¿½ï¿½ï¿½ï¿½Compile-timeï¿½ï¿½ï¿½Æµï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½Ð²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ£ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½steps limit
+  // Ö»ï¿½Ç¶ï¿½evalï¿½Äºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¡ï¿½
+  EvalInfo(EvalStatus::ValueKind vk, EvaluationMode Mode)
+      : CallStackDepth(0), EvalMode(Mode) {
+    evalstatus.kind = vk;
+  }
 
-		class EvaluatedExprVisitorBase
-		{
-		public:
-			// ÔÚ¶Ô CallExpr ½øÐÐevalµÄÊ±ºò£¬ÐèÒª¶ÔÊµ²Î½øÐÐÍÆµ¼£¬ËùÒÔÔÚ¶Ôº¯ÊýÌå½øÐÐevalµÄ
-			// Ê±ºò£¬ÐèÒª¼ÇÂ¼Êµ²ÎµÄÖµ£¨¾ÍÏñÕæÕýµÄº¯Êýµ÷ÓÃÒ»Ñù£©
-			// ÀýÈç£º
-			// const length = 20;
-			//	func add(parm1 : int, parm2 : int) -> int 
-			//	{
-			//		return parm1 + parm2 * length;
-			//	}
-			//	
-			//	const start = 10;
-			//	const end = 11;
-			//	var num = add(start, end);
-			//
-			//	level0:		¶ÔÊµ²Î½øÐÐeval£¬µÃµ½value_listÈçÏÂ£¬
-			//			value_list <start, 10> <end, 11> 
-			//
-			//	level1:		return parm1 + parm2 * length;
-			//
-			//	ÔÚ¶ÔreturnÓï¾ä½øÐÐevalµÄÊ±ºò£¬ÐèÒª¶Ôexpression±í´ïÊ½ÖÐµÄ±äÁ¿½øÐÐeval£¬ËùÒÔ¾ÍÐèÒª¼ÇÂ¼µ½ÒÔÇ°
-			//	evalµÃµ½µÄ½á¹û¡£
-			// Note: ÏÖÔÚÎÒÃÇ¶ÔCallExprÖ»ÄÜevalÒ»²ã£¬ÒÔºóÒ²ÓÐ¿ÉÄÜeval¶à²ã
-			//		0£º				add(start, end)				¼ÇÂ¼µÚ0²ãµÄÊµ²ÎÖµ
-			//							   ||
-			//							   ||
-			//							   \/
-			//		1£º		return parm1 + parm2 * length;		ÓÐ¿ÉÄÜÐèÒª¼ÇÂ¼µÚ1²ãµÄÊµ²ÎÖµ
-			//						//				\\
+  // Note that we had a side-effect.
+  bool noteSideEffect();
+};
+
+class EvaluatedExprVisitorBase {
+public:
+  // ï¿½Ú¶ï¿½ CallExpr ï¿½ï¿½ï¿½ï¿½evalï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Êµï¿½Î½ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú¶Ôºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½evalï¿½ï¿½
+  // Ê±ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Â¼Êµï¿½Îµï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Äºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½
+  // ï¿½ï¿½ï¿½ç£º
+  // const length = 20;
+  //	func add(parm1 : int, parm2 : int) -> int
+  //	{
+  //		return parm1 + parm2 * length;
+  //	}
+  //
+  //	const start = 10;
+  //	const end = 11;
+  //	var num = add(start, end);
+  //
+  //	level0:		ï¿½ï¿½Êµï¿½Î½ï¿½ï¿½ï¿½evalï¿½ï¿½ï¿½Ãµï¿½value_listï¿½ï¿½ï¿½Â£ï¿½
+  //			value_list <start, 10> <end, 11>
+  //
+  //	level1:		return parm1 + parm2 * length;
+  //
+  //	ï¿½Ú¶ï¿½returnï¿½ï¿½ï¿½ï¿½ï¿½ï¿½evalï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½expressionï¿½ï¿½ï¿½Ê½ï¿½ÐµÄ±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½evalï¿½ï¿½ï¿½ï¿½ï¿½Ô¾ï¿½ï¿½ï¿½Òªï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½Ç°
+  //	evalï¿½Ãµï¿½ï¿½Ä½ï¿½ï¿½ï¿½ï¿½
+  // Note: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¶ï¿½CallExprÖ»ï¿½ï¿½evalÒ»ï¿½ã£¬ï¿½Ôºï¿½Ò²ï¿½Ð¿ï¿½ï¿½ï¿½evalï¿½ï¿½ï¿½
+  //		0ï¿½ï¿½				add(start, end)
+  //ï¿½ï¿½Â¼ï¿½ï¿½0ï¿½ï¿½ï¿½Êµï¿½ï¿½Öµ
+  //							   ||
+  //							   ||
+  //							   \/
+  //		1ï¿½ï¿½		return parm1 + parm2 * length;
+  //ï¿½Ð¿ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Â¼ï¿½ï¿½1ï¿½ï¿½ï¿½Êµï¿½ï¿½Öµ
+  //						// \\
 			//					   //				 \\
 			//
-			//		2£º	ÓÐ¿ÉÄÜÓÐµÚÈý²ã£¬ËùÒÔÐèÒª					ÓÐ¿ÉÄÜÐèÒª¼ÇÂ¼µÚ2²ãµÄÊµ²ÎÖµ
+  //		2ï¿½ï¿½	ï¿½Ð¿ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½ã£¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òª
+  //ï¿½Ð¿ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Â¼ï¿½ï¿½2ï¿½ï¿½ï¿½Êµï¿½ï¿½Öµ
 
-			// To Do: Ê¹ÓÃÕ»À´¼ÇÂ¼Êµ²ÎÖµ£¨Ä£ÄâÕæÊµ³ÌÐòÔËÐÐ£©
-			// ÀýÈç£º ¶¯Ì¬À©Õ¹µÄactive stack£¬Ã¿Ò»¸öÕ»Ö¡¶¼»á´æ´¢Êµ²ÎÖµ¶Ô
-			//	$$<start, 11> <end, 10> $$ <flag, false> $$ <>
-			//  <level0, 2> <level2, 1> 
-			// Note: moses¶ÔCallExprµÄÍÆµ¼ÔÝÊ±Ö»ÓÐÒ»²ã¡£
+  // To Do: Ê¹ï¿½ï¿½Õ»ï¿½ï¿½ï¿½ï¿½Â¼Êµï¿½ï¿½Öµï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð£ï¿½
+  // ï¿½ï¿½ï¿½ç£º ï¿½ï¿½Ì¬ï¿½ï¿½Õ¹ï¿½ï¿½active stackï¿½ï¿½Ã¿Ò»ï¿½ï¿½Õ»Ö¡ï¿½ï¿½ï¿½ï¿½æ´¢Êµï¿½ï¿½Öµï¿½ï¿½
+  //	$$<start, 11> <end, 10> $$ <flag, false> $$ <>
+  //  <level0, 2> <level2, 1>
+  // Note: mosesï¿½ï¿½CallExprï¿½ï¿½ï¿½Æµï¿½ï¿½ï¿½Ê±Ö»ï¿½ï¿½Ò»ï¿½ã¡£
 
-			// £¨1£© ¸Ãvector´æ´¢active stack info.
-			std::vector<std::pair<std::string, EvalInfo>> ActiveStack;
+  // ï¿½ï¿½1ï¿½ï¿½ ï¿½ï¿½vectorï¿½æ´¢active stack info.
+  std::vector<std::pair<std::string, EvalInfo>> ActiveStack;
 
-			// £¨2£© ¸Ãvector´æ´¢stack bookkeeping info£¬levelÒÔ¼°Ã¿²ãÓÐ¶àÉÙ¸öÊµ²ÎÖµ.
-			std::vector<std::pair<int, unsigned>> ActiveBookingInfo;
+  // ï¿½ï¿½2ï¿½ï¿½ ï¿½ï¿½vectorï¿½æ´¢stack bookkeeping infoï¿½ï¿½levelï¿½Ô¼ï¿½Ã¿ï¿½ï¿½ï¿½Ð¶ï¿½ï¿½Ù¸ï¿½Êµï¿½ï¿½Öµ.
+  std::vector<std::pair<int, unsigned>> ActiveBookingInfo;
 
-		public:
-			typedef EvalStatus::ValueKind ValueKind;
-			typedef EvalStatus::Result Result;
+public:
+  typedef EvalStatus::ValueKind ValueKind;
+  typedef EvalStatus::Result Result;
 
-			typedef EvalInfo::EvaluationMode EvaluationMode;
-		public:
-			virtual bool Evaluate(ExprASTPtr expr, EvalInfo& info);
+  typedef EvalInfo::EvaluationMode EvaluationMode;
 
-			virtual bool EvalBinaryExpr(BinaryPtr B, EvalInfo &info, EvalInfo &lhs, 
-				EvalInfo &rhs) = 0;
+public:
+  virtual bool Evaluate(ExprASTPtr expr, EvalInfo &info);
 
-			/// \brief ¸Ãº¯ÊýÓÃÓÚÔÚEvalCall()µÄ½áÎ²´¦Àíbookkeeping info
-			virtual void handleEvalCallTail();
+  virtual bool EvalBinaryExpr(BinaryPtr B, EvalInfo &info, EvalInfo &lhs,
+                              EvalInfo &rhs) = 0;
 
-			/// \brief ¸Ãº¯ÊýÓÃÓÚÔÚEvalCallÖ®Ç°½øÐÐ¼ì²é
-			virtual ReturnStmtPtr handleEvalCallStart(CallExprPtr CE);
+  /// \brief ï¿½Ãºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½EvalCall()ï¿½Ä½ï¿½Î²ï¿½ï¿½ï¿½ï¿½bookkeeping info
+  virtual void handleEvalCallTail();
 
-			virtual bool EvalUnaryExpr(UnaryPtr U, EvalInfo &info, EvalInfo &subVal) = 0;
+  /// \brief ï¿½Ãºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½EvalCallÖ®Ç°ï¿½ï¿½ï¿½Ð¼ï¿½ï¿½
+  virtual ReturnStmtPtr handleEvalCallStart(CallExprPtr CE);
 
-			// virtual bool EvalAnonymousInitExpr(const AnonymousInitExpr* Exp, EvalInfo &info) = 0;
-			virtual bool EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) = 0;
+  virtual bool EvalUnaryExpr(UnaryPtr U, EvalInfo &info, EvalInfo &subVal) = 0;
 
-			/// \brief ¶ÔÓÚCallExpr£¬ÒªÇó±»µ÷ÓÃº¯ÊýÖ»ÄÜÓÐÒ»¸öreturnÓï¾ä.
-			virtual bool EvalCallExpr(CallExprPtr CE, EvalInfo &info);
+  // virtual bool EvalAnonymousInitExpr(const AnonymousInitExpr* Exp, EvalInfo
+  // &info) = 0;
+  virtual bool EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) = 0;
 
-			/// \brief ÔÝÊ±mosesµÄconstant-evaluator»úÖÆ»¹²»ÊÇºÜÇ¿´ó£¬Ö»Ö§³Öconst±äÁ¿µÄeval¡£
-			/// ²»»áÑØÍ¾ÊÕ¼¯¶ÔnumµÄ¸³ÖµÐÅÏ¢¡£
-			virtual bool EvalDeclRefExpr(DeclRefExprPtr DRE, EvalInfo &info);
-		};
+  /// \brief ï¿½ï¿½ï¿½ï¿½CallExprï¿½ï¿½Òªï¿½ó±»µï¿½ï¿½Ãºï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½returnï¿½ï¿½ï¿½.
+  virtual bool EvalCallExpr(CallExprPtr CE, EvalInfo &info);
 
-		/// \biref ±éÀúExpressionÓÃÓÚIntÖµµÄevaluate.
-		class IntExprEvaluator final : public EvaluatedExprVisitorBase
-		{
-		public:
-			/// \brief µÝ¹é±éÀú LHS ºÍ RHS£¬Ö´ÐÐÔËËã·û¶ÔÓ¦µÄ²Ù×÷¡£
-			/// »ù±¾µÄÓïÒå·ÖÎöÒÑ¾­Íê³É£¨ÀýÈçTypeCheckingµÈ£©£¬²»»á³öÏÖÀàÐÍ´íÎó
-			bool EvalBinaryExpr(BinaryPtr B, EvalInfo &info, EvalInfo &lhs, EvalInfo &rhs) override;
+  /// \brief ï¿½ï¿½Ê±mosesï¿½ï¿½constant-evaluatorï¿½ï¿½ï¿½Æ»ï¿½ï¿½ï¿½ï¿½Çºï¿½Ç¿ï¿½ï¿½Ö»Ö§ï¿½ï¿½constï¿½ï¿½ï¿½ï¿½ï¿½ï¿½evalï¿½ï¿½
+  /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¾ï¿½Õ¼ï¿½ï¿½ï¿½numï¿½Ä¸ï¿½Öµï¿½ï¿½Ï¢ï¿½ï¿½
+  virtual bool EvalDeclRefExpr(DeclRefExprPtr DRE, EvalInfo &info);
+};
 
-			/// \brief ÓÃÓÚEvaluate Unary Expression.
-			/// ÀýÈç£º -num.
-			bool EvalUnaryExpr(UnaryPtr U, EvalInfo &info, EvalInfo &subVal) override;
+/// \biref ï¿½ï¿½ï¿½ï¿½Expressionï¿½ï¿½ï¿½ï¿½IntÖµï¿½ï¿½evaluate.
+class IntExprEvaluator final : public EvaluatedExprVisitorBase {
+public:
+  /// \brief ï¿½Ý¹ï¿½ï¿½ï¿½ï¿½ LHS ï¿½ï¿½ RHSï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½
+  /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½É£ï¿½ï¿½ï¿½ï¿½ï¿½TypeCheckingï¿½È£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í´ï¿½ï¿½ï¿½
+  bool EvalBinaryExpr(BinaryPtr B, EvalInfo &info, EvalInfo &lhs,
+                      EvalInfo &rhs) override;
 
-			/// \brief Èç¹ûMemberExprÖÐµÄ³ÉÔ±ÉùÃ÷Ê±constÀàÐÍ£¬Ôò¿ÉÒÔÖ±½ÓÊ¹ÓÃÏàÓ¦µÄÖµ×÷ÎªconstantÖµ.
-			bool EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) override;
-		};
+  /// \brief ï¿½ï¿½ï¿½ï¿½Evaluate Unary Expression.
+  /// ï¿½ï¿½ï¿½ç£º -num.
+  bool EvalUnaryExpr(UnaryPtr U, EvalInfo &info, EvalInfo &subVal) override;
 
-		/// \brief ±éÀúExpressionÓÃÓÚBoolÖµµÄevaluate.
-		class BoolExprEvaluator final : public EvaluatedExprVisitorBase
-		{
-		private:
-		public:
-			/// \brief ¶ÔÓÚbooleanÀàÐÍµÄÍÆµ¼£¬¶ÔÓ¦µÄBinaryExprÖ»ÄÜÊÇÂß¼­ÔËËã·û¡£
-			bool EvalBinaryExpr(BinaryPtr B, EvalInfo &info, EvalInfo &lhs, EvalInfo &rhs) override;
+  /// \brief ï¿½ï¿½ï¿½MemberExprï¿½ÐµÄ³ï¿½Ô±ï¿½ï¿½ï¿½ï¿½Ê±constï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½Öµï¿½ï¿½ÎªconstantÖµ.
+  bool EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) override;
+};
 
-			/// \brief ¶ÔÓÚbooleanÀàÐÍÀ´Ëµ£¬µ¥Ä¿ÔËËã·ûÖ»ÓÐ!
-			bool EvalUnaryExpr(UnaryPtr U, EvalInfo &info, EvalInfo &subVal) override;
+/// \brief ï¿½ï¿½ï¿½ï¿½Expressionï¿½ï¿½ï¿½ï¿½BoolÖµï¿½ï¿½evaluate.
+class BoolExprEvaluator final : public EvaluatedExprVisitorBase {
+private:
+public:
+  /// \brief
+  /// ï¿½ï¿½ï¿½ï¿½booleanï¿½ï¿½ï¿½Íµï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½BinaryExprÖ»ï¿½ï¿½ï¿½ï¿½ï¿½ß¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  bool EvalBinaryExpr(BinaryPtr B, EvalInfo &info, EvalInfo &lhs,
+                      EvalInfo &rhs) override;
 
-			/// \brief Èç¹ûMemberExprÖÐµÄ³ÉÔ±ÉùÃ÷Ê±constÀàÐÍ£¬Ôò¿ÉÒÔÖ±½ÓÊ¹ÓÃÏàÓ¦µÄÖµ×÷ÎªconstantÖµ.
-			bool EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) override;
-		};
-	}
-}
+  /// \brief ï¿½ï¿½ï¿½ï¿½booleanï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½!
+  bool EvalUnaryExpr(UnaryPtr U, EvalInfo &info, EvalInfo &subVal) override;
+
+  /// \brief ï¿½ï¿½ï¿½MemberExprï¿½ÐµÄ³ï¿½Ô±ï¿½ï¿½ï¿½ï¿½Ê±constï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½Öµï¿½ï¿½ÎªconstantÖµ.
+  bool EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) override;
+};
+} // namespace ast
+} // namespace compiler
 
 #endif

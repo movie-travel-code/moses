@@ -11,52 +11,52 @@ using namespace compiler::CodeGen;
 extern void print(std::shared_ptr<compiler::IR::Value> V);
 /// EmitVarDecl - This method handles emission of variable declaration inside
 /// a function.  Emit code and set the symbol table entry about this var.
-/// ÀýÈç£º
+/// ï¿½ï¿½ï¿½ç£º
 ///		func add() -> int
 ///		{
 ///			var num : int;
 ///		}
-/// ±äÁ¿ num ÐèÒªÒ»Ìõ alloca Ö¸Áî£¬·ÖÅäÒ»¿éÄÚ´æ¡£
-/// Note: ÔÚmosesÖÐ£¬¶ÔÓÚfunction local variableÀ´Ëµ£¬mosesÃ»ÓÐstaticÀàÐÍ¡£
-///	±äÁ¿ÉùÃ÷ÓÐÒÔÏÂ¼¸ÖÖÐÎÊ½£º
+/// ï¿½ï¿½ï¿½ï¿½ num ï¿½ï¿½ÒªÒ»ï¿½ï¿½ alloca Ö¸ï¿½î£¬ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ú´æ¡£
+/// Note: ï¿½ï¿½mosesï¿½Ð£ï¿½ï¿½ï¿½ï¿½ï¿½function local variableï¿½ï¿½Ëµï¿½ï¿½mosesÃ»ï¿½ï¿½staticï¿½ï¿½ï¿½Í¡ï¿½
+///	ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½
 ///
-/// (1) ÄÚÖÃÀàÐÍ£¬Ã»ÓÐ±äÁ¿³õÊ¼»¯
-///	 var num : int;		
-///  ´ËÀàVarDecl
-///		I.Ö»ÐèÒªÉú³ÉÒ»ÌõAllocaInst²¢×¢²áµ½SymbolTable.
-///	¿ÉÄÜµÄIRÖ¸Áî£º%num = alloca i32
+/// (1) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½Ã»ï¿½Ð±ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½
+///	 var num : int;
+///  ï¿½ï¿½ï¿½ï¿½VarDecl
+///		I.Ö»ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½AllocaInstï¿½ï¿½×¢ï¿½áµ½SymbolTable.
+///	ï¿½ï¿½ï¿½Üµï¿½IRÖ¸ï¿½î£º%num = alloca i32
 ///
-/// (2) ÓÃ»§×Ô¶¨ÒåÀàÐÍ£¬Ã»ÓÐ±äÁ¿³õÊ¼»¯
+/// (2) ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½Ã»ï¿½Ð±ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½
 ///  var num : A;
-///	 ´ËÀàVarDecl
-///		I.Ö»ÐèÒªÉú³ÉÒ»ÌõAllocaInst²¢×¢²áµ½SymbolTable.
-///		II.»ñÈ¡ÓÃ»§×Ô¶¨ÒåÀàÐÍ£¬²¢×¢²áµ½CodeGenTypes.h ²¢×¢²áµ½MosesIRContext.h.
-///	¿ÉÄÜµÄIRÖ¸Áî£º%num = alloca %struct.A
+///	 ï¿½ï¿½ï¿½ï¿½VarDecl
+///		I.Ö»ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½AllocaInstï¿½ï¿½×¢ï¿½áµ½SymbolTable.
+///		II.ï¿½ï¿½È¡ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½×¢ï¿½áµ½CodeGenTypes.h ï¿½ï¿½×¢ï¿½áµ½MosesIRContext.h.
+///	ï¿½ï¿½ï¿½Üµï¿½IRÖ¸ï¿½î£º%num = alloca %struct.A
 ///
-/// (3) ÄäÃûÀàÐÍ£¬Ã»ÓÐ±äÁ¿³õÊ¼»¯
-///  var num : {int, {bool, int}, int}; 
-///  ´ËÀàVarDecl
-///		I.ÐèÒªÉú³ÉÒ»ÌõAllocaInstÖ¸Áî²¢×¢²áµ½SymbolTable.
-///		II.ÐèÒªÉú³É literal struct type(AggregateType). ×¢²áµ½CodeGenTypes.h ²¢×¢²áµ½MosesIRContext.h 
-///	¿ÉÄÜµÄIRÖ¸Áî£º%num = alloca %struct.1
+/// (3) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½Ã»ï¿½Ð±ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½
+///  var num : {int, {bool, int}, int};
+///  ï¿½ï¿½ï¿½ï¿½VarDecl
+///		I.ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½AllocaInstÖ¸ï¿½î²¢×¢ï¿½áµ½SymbolTable.
+///		II.ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ literal struct type(AggregateType). ×¢ï¿½áµ½CodeGenTypes.h ï¿½ï¿½×¢ï¿½áµ½MosesIRContext.h
+///	ï¿½ï¿½ï¿½Üµï¿½IRÖ¸ï¿½î£º%num = alloca %struct.1
 ///
-/// (4) ÄÚÖÃÀàÐÍ£¬±äÁ¿³õÊ¼»¯
-///  var num = 10;	 »òÕß    var num = mem;
-///	 ´ËÀàVarDecl
-///		I.ÐèÒªÉú³ÉAllocaInst²¢×¢²áµ½SymbolTable.
-///		II.ÐèÒªÎªInitEpxrÉú³É´úÂë£¬²¢½«¸Ã½á¹ûÓëAllocaInstÁ¬½ÓÆðÀ´.
-///	¿ÉÄÜµÄIRÖ¸Áî£º%num = alloca i32				»ò	%num = alloca i32
+/// (4) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½
+///  var num = 10;	 ï¿½ï¿½ï¿½ï¿½    var num = mem;
+///	 ï¿½ï¿½ï¿½ï¿½VarDecl
+///		I.ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½AllocaInstï¿½ï¿½×¢ï¿½áµ½SymbolTable.
+///		II.ï¿½ï¿½ÒªÎªInitEpxrï¿½ï¿½ï¿½É´ï¿½ï¿½ë£¬ï¿½ï¿½ï¿½ï¿½ï¿½Ã½ï¿½ï¿½ï¿½ï¿½AllocaInstï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
+///	ï¿½ï¿½ï¿½Üµï¿½IRÖ¸ï¿½î£º%num = alloca i32				ï¿½ï¿½	%num = alloca i32
 ///				 store i32 10, i32* %num			%1 = load i32* %mem
 ///													store i32 %1, i32* %num
 ///
-/// (5) ÄäÃûÀàÐÍ£¬±äÁ¿³õÊ¼»¯
+/// (5) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½
 ///  var num = {10, {11, true}, {true, false}};
-///  ´ËÀàVarDecl
-///		I.ÐèÒªÉú³ÉAllocaInst²¢×¢²áµ½SymbolTable.
-///		II.ÐèÒªÎªInitExprÉú³É´úÂë£¬²¢½«¸Ã½á¹ûÓëAllocaInstÁ¬½ÓÆðÀ´.
-///		III.´ÓASTContext»ñÈ¡µ½AnonymousType£¬×¢²áµ½CodeGenTypes.h ²¢×¢²áµ½MosesIRContext.h
+///  ï¿½ï¿½ï¿½ï¿½VarDecl
+///		I.ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½AllocaInstï¿½ï¿½×¢ï¿½áµ½SymbolTable.
+///		II.ï¿½ï¿½ÒªÎªInitExprï¿½ï¿½ï¿½É´ï¿½ï¿½ë£¬ï¿½ï¿½ï¿½ï¿½ï¿½Ã½ï¿½ï¿½ï¿½ï¿½AllocaInstï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
+///		III.ï¿½ï¿½ASTContextï¿½ï¿½È¡ï¿½ï¿½AnonymousTypeï¿½ï¿½×¢ï¿½áµ½CodeGenTypes.h ï¿½ï¿½×¢ï¿½áµ½MosesIRContext.h
 ///
-/// (6) ÓÃ»§×Ô¶¨ÒåÀàÐÍ£¬±äÁ¿³õÊ¼»¯ (´Ë´¦»¹ÓÐÎÊÌâ)
+/// (6) ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ (ï¿½Ë´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½)
 /// 1).		class A
 /// 2).		{
 ///	3).			var num : int;
@@ -66,12 +66,12 @@ extern void print(std::shared_ptr<compiler::IR::Value> V);
 ///	7).		object.num = 10;
 /// 8).		object.flag = true;
 /// 9).		object.num = 10;
-/// ´Ë´¦ÓÐÁ½¸öÎÊÌâ£º
-///	£¨Ò»£© ÓÃ»§×Ô¶¨ÒåÀàÐÍ²»ÄÜÁÐ±í³õÊ¼»¯£¬ÀýÈç£ºconst num : A; A = {10, {true, 10}};
-/// £¨¶þ£© ÓÃ»§×Ô¶¨ÒåÀàÐÍµÄconstÊôÐÔÃ»ÓÐÕýÈ·´¦Àí£¬ÈçÉÏÃæµÚ(6)ÐÐ´úÂë£¬constÊôÐÔÊÇ¸½¼ÓÔÚ
-///		  ±äÁ¿object£¨A£©ÉÏ£¬»¹ÊÇ¸½¼ÓÔÚnumºÍflagÉÏ¡£mosesÔÝÊ±´¦ÀíµÄÊÇ½«constÊôÐÔ¸½¼Ó
-///		  ÔÚobjectÉÏ¡£
-void ModuleBuilder::EmitLocalVarDecl(const VarDecl* var)
+/// ï¿½Ë´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â£º
+///	ï¿½ï¿½Ò»ï¿½ï¿½ ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í²ï¿½ï¿½ï¿½ï¿½Ð±ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ç£ºconst num : A; A = {10, {true, 10}};
+/// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Íµï¿½constï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½(6)ï¿½Ð´ï¿½ï¿½ë£¬constï¿½ï¿½ï¿½ï¿½ï¿½Ç¸ï¿½ï¿½ï¿½ï¿½ï¿½
+///		  ï¿½ï¿½ï¿½ï¿½objectï¿½ï¿½Aï¿½ï¿½ï¿½Ï£ï¿½ï¿½ï¿½ï¿½Ç¸ï¿½ï¿½ï¿½ï¿½ï¿½numï¿½ï¿½flagï¿½Ï¡ï¿½mosesï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç½ï¿½constï¿½ï¿½ï¿½Ô¸ï¿½ï¿½ï¿½
+///		  ï¿½ï¿½objectï¿½Ï¡ï¿½
+void ModuleBuilder::EmitLocalVarDecl(const VarDecl *var)
 {
 	// (1) Create AllocInst.
 	ValPtr DeclPtr = EmitLocalVarAlloca(var);
@@ -87,26 +87,26 @@ void ModuleBuilder::EmitLocalVarDecl(const VarDecl* var)
 		}
 		else
 		{
- 			ValPtr V = EmitScalarExpr(init.get());
+			ValPtr V = EmitScalarExpr(init.get());
 			EmitStoreOfScalar(V, DeclPtr);
-		}		
+		}
 	}
 }
 
 /// \brief EmitLocalVarAlloca - Emit tha alloca for a local variable.
-AllocaInstPtr ModuleBuilder::EmitLocalVarAlloca(const VarDecl* var)
+AllocaInstPtr ModuleBuilder::EmitLocalVarAlloca(const VarDecl *var)
 {
 	ASTTyPtr Ty = var->getDeclType();
 
-	// (1) ½«VarDeclÀàÐÍ×ª»»ÎªIR Type£¬²¢´´½¨Ò»Ìõ¶ÔÓ¦µÄAlloca Ö¸Áî
+	// (1) ï¿½ï¿½VarDeclï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½ÎªIR Typeï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½Alloca Ö¸ï¿½ï¿½
 	IRTyPtr IRTy = Types.ConvertType(Ty);
 	AllocaInstPtr allocInst = CreateAlloca(IRTy, LocalInstNamePrefix + var->getName() + ".addr");
 
 	print(allocInst);
 
-	// (2) ½«¸ÃÌõalloca instruction²åÈëµ½µ±Ç°VarDeclËùÔÚµÄSymbolTableÖÐ
-	if (std::shared_ptr<VariableSymbol> varSym = 
-		std::dynamic_pointer_cast<VariableSymbol>(CurScope->Resolve(var->getName())))
+	// (2) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½alloca instructionï¿½ï¿½ï¿½ëµ½ï¿½ï¿½Ç°VarDeclï¿½ï¿½ï¿½Úµï¿½SymbolTableï¿½ï¿½
+	if (std::shared_ptr<VariableSymbol> varSym =
+			std::dynamic_pointer_cast<VariableSymbol>(CurScope->Resolve(var->getName())))
 	{
 		assert(!varSym->getAllocaInst() && "Decl's alloca inst already exists.");
 		varSym->setAllocaInst(allocInst);
@@ -119,7 +119,7 @@ AllocaInstPtr ModuleBuilder::EmitLocalVarAlloca(const VarDecl* var)
 /// (1) Direct - Alloca Instruction, store.
 /// (2) Indirect - Aggregate, DeclPtr = Arg;
 /// (3) Ignore.
-void ModuleBuilder::EmitParmDecl(const VarDecl* VD, ValPtr Arg)
+void ModuleBuilder::EmitParmDecl(const VarDecl *VD, ValPtr Arg)
 {
 	ValPtr DeclPtr;
 	// A fixed sized single-value variable becomes an alloca in the entry block.
@@ -127,7 +127,7 @@ void ModuleBuilder::EmitParmDecl(const VarDecl* VD, ValPtr Arg)
 
 	std::string Name = VD->getName();
 	if (Ty->isSingleValueType())
-	{		
+	{
 		// e.g. define func(i32 %lhs, i32 %rhs)
 		//		{
 		//			%lhs.addr = alloca i32
@@ -156,22 +156,22 @@ void ModuleBuilder::EmitParmDecl(const VarDecl* VD, ValPtr Arg)
 	}
 }
 
-
-void ModuleBuilder::EmitScalarInit(const Expr* init, const VarDecl* D, LValue lvalue)
-{}
+void ModuleBuilder::EmitScalarInit(const Expr *init, const VarDecl *D, LValue lvalue)
+{
+}
 
 //===---------------------------------------------------------------------===//
 // Generate code for function declaration.
 //===---------------------------------------------------------------------===//
-void ModuleBuilder::EmitFunctionDecl(const FunctionDecl* FD)
+void ModuleBuilder::EmitFunctionDecl(const FunctionDecl *FD)
 {
 	// generate function info.
 	std::shared_ptr<CGFunctionInfo const> FI = Types.arrangeFunctionInfo(FD);
 
 	auto TypeAndName = Types.getFunctionType(FD, FI);
-	
+
 	CurFunc->CGFnInfo = FI;
-	CurFunc->CurFuncDecl = const_cast<FunctionDecl*>(FD);
+	CurFunc->CurFuncDecl = const_cast<FunctionDecl *>(FD);
 	CurFunc->FnRetTy = Types.ConvertType(FD->getReturnType());
 	FuncPtr func = Function::create(TypeAndName.first, FD->getFDName(), TypeAndName.second);
 	CurFunc->CurFn = func;
@@ -192,7 +192,7 @@ void ModuleBuilder::EmitFunctionDecl(const FunctionDecl* FD)
 
 	StartFunction(FI, func);
 
-	// (2) Emit the function body.	
+	// (2) Emit the function body.
 	EmitFunctionBody(FD->getCompoundBody());
 
 	// (3) Finish function.
@@ -237,14 +237,14 @@ void ModuleBuilder::FinishFunction()
 	EmitFunctionEpilogue(CurFunc->CGFnInfo);
 }
 
-ValPtr ModuleBuilder::visit(const VarDecl* VD)
+ValPtr ModuleBuilder::visit(const VarDecl *VD)
 {
 	EmitLocalVarDecl(VD);
 	return nullptr;
 }
 
 /// \brief Handle function declaration.
-ValPtr ModuleBuilder::visit(const FunctionDecl* FD)
+ValPtr ModuleBuilder::visit(const FunctionDecl *FD)
 {
 	// (1) switch the scope and save the context-info.
 	// e.g.		var num = 10;							----> Old Scope.
@@ -267,7 +267,7 @@ ValPtr ModuleBuilder::visit(const FunctionDecl* FD)
 	return nullptr;
 }
 
-ValPtr ModuleBuilder::visit(const UnpackDecl* UD)
+ValPtr ModuleBuilder::visit(const UnpackDecl *UD)
 {
 	return nullptr;
 }

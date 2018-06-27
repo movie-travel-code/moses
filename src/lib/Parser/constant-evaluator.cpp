@@ -5,103 +5,95 @@
 //===---------------------------------------------------------------------===//
 #include "../../include/Parser/constant-evaluator.h"
 using namespace compiler::ast;
-/// \brief ¸Ãº¯ÊýÊÇ×ÜÀ¨ÐÔº¯ÊýÓÃÀ´¶Ôº¯Êý½øÐÐÍÆµ¼¡£
-/// ¸Ãº¯Êý»áµ÷ÓÃÍÆµ¼µÄ¿ìËÙ°æ±¾(FastEvaluateAsRValue)ºÍÇ¿»¯°æ±¾(EvaluateAsRValue).
-bool ConstantEvaluator::EvaluateAsRValue(ExprASTPtr Exp, EvalInfo &Result) const
-{
-	// µ÷ÓÃ¿ìËÙevaluate°æ±¾£¬Èç¹ûÄÜ¹»½øÐÐconstant-evalute£¬ÔòÖ±½Ó·µ»Ø
-	if (FastEvaluateAsRValue(Exp, Result))
-		return true;
+/// \brief ï¿½Ãºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ôºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½ï¿½
+/// ï¿½Ãºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½Ä¿ï¿½ï¿½Ù°æ±¾(FastEvaluateAsRValue)ï¿½ï¿½Ç¿ï¿½ï¿½ï¿½æ±¾(EvaluateAsRValue).
+bool ConstantEvaluator::EvaluateAsRValue(ExprASTPtr Exp,
+                                         EvalInfo &Result) const {
+  // ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½ï¿½evaluateï¿½æ±¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¹ï¿½ï¿½ï¿½ï¿½ï¿½constant-evaluteï¿½ï¿½ï¿½ï¿½Ö±ï¿½Ó·ï¿½ï¿½ï¿½
+  if (FastEvaluateAsRValue(Exp, Result))
+    return true;
 
-	// µ÷ÓÃÇ¿»¯°æ±¾£¬Ä¬ÈÏevaluateµÄ²½ÊýÊÇ32
-	if (Evaluate(Exp, Result))
-		return true;
-	return false;
+  // ï¿½ï¿½ï¿½ï¿½Ç¿ï¿½ï¿½ï¿½æ±¾ï¿½ï¿½Ä¬ï¿½ï¿½evaluateï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½32
+  if (Evaluate(Exp, Result))
+    return true;
+  return false;
 }
 
-/// \brief ¼ì²éExpÄÜ·ñÍÆµ¼³ÉÎªÒ»¸öintÖµ£¬²¢½«½á¹û´æ·Åµ½ResultÖÐ.
-/// µ÷ÓÃEvaluateAsRValue(const Expr *Exp, EvalStatus &Result)º¯Êý.
-bool ConstantEvaluator::EvaluateAsInt(ExprASTPtr Exp, int &Result) const
-{
-	// ¸Ã±í´ïÊ½²»ÊÇÕûÐÍ
-	if (Exp->getType()->getKind() != TypeKind::INT)
-		return false;
+/// \brief ï¿½ï¿½ï¿½Expï¿½Ü·ï¿½ï¿½Æµï¿½ï¿½ï¿½ÎªÒ»ï¿½ï¿½intÖµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åµï¿½Resultï¿½ï¿½.
+/// ï¿½ï¿½ï¿½ï¿½EvaluateAsRValue(const Expr *Exp, EvalStatus &Result)ï¿½ï¿½ï¿½ï¿½.
+bool ConstantEvaluator::EvaluateAsInt(ExprASTPtr Exp, int &Result) const {
+  // ï¿½Ã±ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  if (Exp->getType()->getKind() != TypeKind::INT)
+    return false;
 
-	EvalInfo info(ValueKind::IntKind, EvaluationMode::EM_ConstantFold);
-	// constant evaluator
-	EvaluateAsRValue(Exp, info);
+  EvalInfo info(ValueKind::IntKind, EvaluationMode::EM_ConstantFold);
+  // constant evaluator
+  EvaluateAsRValue(Exp, info);
 
-	// ²»¿ÉÍÆµ¼
-	if (info.evalstatus.result == Result::NotConstant)
-		return false;
-	Result = info.evalstatus.intVal;
-	return true;
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Æµï¿½
+  if (info.evalstatus.result == Result::NotConstant)
+    return false;
+  Result = info.evalstatus.intVal;
+  return true;
 }
 
-/// \brief ¼ì²éExpÄÜ·ñÍÆµ¼³ÉÎªÒ»¸öboolÖµ£¬²¢½«½á¹û´æ·Åµ½ResultÖÐ.
-/// µ÷ÓÃEvaluateAsRValue(const Expr *Exp, EvalStatus &Result)º¯Êý.
-bool ConstantEvaluator::EvaluateAsBooleanCondition(ExprASTPtr Exp, bool &Result) const
-{
-	// ¸Ã±í´ïÊ½²»ÊÇboolÀàÐÍ
-	if (Exp->getType()->getKind() != TypeKind::BOOL)
-		return false;
-	EvalInfo info(EvalStatus::ValueKind::BoolKind, EvaluationMode::EM_ConstantFold);
-	// constant evaluator
-	EvaluateAsRValue(Exp, info);
+/// \brief ï¿½ï¿½ï¿½Expï¿½Ü·ï¿½ï¿½Æµï¿½ï¿½ï¿½ÎªÒ»ï¿½ï¿½boolÖµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Åµï¿½Resultï¿½ï¿½.
+/// ï¿½ï¿½ï¿½ï¿½EvaluateAsRValue(const Expr *Exp, EvalStatus &Result)ï¿½ï¿½ï¿½ï¿½.
+bool ConstantEvaluator::EvaluateAsBooleanCondition(ExprASTPtr Exp,
+                                                   bool &Result) const {
+  // ï¿½Ã±ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½boolï¿½ï¿½ï¿½ï¿½
+  if (Exp->getType()->getKind() != TypeKind::BOOL)
+    return false;
+  EvalInfo info(EvalStatus::ValueKind::BoolKind,
+                EvaluationMode::EM_ConstantFold);
+  // constant evaluator
+  EvaluateAsRValue(Exp, info);
 
-	// ²»¿ÉÍÆµ¼
-	if (info.evalstatus.result == EvalStatus::Result::NotConstant)
-		return false;
-	Result = info.evalstatus.boolVal;
-	return true;
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Æµï¿½
+  if (info.evalstatus.result == EvalStatus::Result::NotConstant)
+    return false;
+  Result = info.evalstatus.boolVal;
+  return true;
 }
 
-/// \brief FastEvaluateAsRValueµÄ¿ìËÙ°æ±¾£¬Èç¹û¸Ãº¯ÊýÄÜ¹»ÍÆµ¼³öconstantÖµ£¬ÔòÖ±½Ó·µ»Ø.
-bool ConstantEvaluator::FastEvaluateAsRValue(ExprASTPtr Exp, EvalInfo &Result)
-{
-	if (Result.evalstatus.kind == EvalStatus::ValueKind::IntKind)
-	{
-		if (std::shared_ptr<NumberExpr> Num = std::dynamic_pointer_cast<NumberExpr>(Exp))
-		{
-			Result.evalstatus.intVal = Num->getVal();
-			Result.evalstatus.result = EvalStatus::Result::Constant;
-			return true;
-		}
-	}
+/// \brief FastEvaluateAsRValueï¿½Ä¿ï¿½ï¿½Ù°æ±¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãºï¿½ï¿½ï¿½ï¿½Ü¹ï¿½ï¿½Æµï¿½ï¿½ï¿½constantÖµï¿½ï¿½ï¿½ï¿½Ö±ï¿½Ó·ï¿½ï¿½ï¿½.
+bool ConstantEvaluator::FastEvaluateAsRValue(ExprASTPtr Exp, EvalInfo &Result) {
+  if (Result.evalstatus.kind == EvalStatus::ValueKind::IntKind) {
+    if (std::shared_ptr<NumberExpr> Num =
+            std::dynamic_pointer_cast<NumberExpr>(Exp)) {
+      Result.evalstatus.intVal = Num->getVal();
+      Result.evalstatus.result = EvalStatus::Result::Constant;
+      return true;
+    }
+  }
 
-	if (Result.evalstatus.kind == EvalStatus::ValueKind::BoolKind)
-	{
-		if (std::shared_ptr<BoolLiteral> BL = std::dynamic_pointer_cast<BoolLiteral>(Exp))
-		{
-			Result.evalstatus.boolVal = BL->getVal();
-			Result.evalstatus.result = EvalStatus::Result::Constant;
-			return true;
-		}
-	}
-	return false;
+  if (Result.evalstatus.kind == EvalStatus::ValueKind::BoolKind) {
+    if (std::shared_ptr<BoolLiteral> BL =
+            std::dynamic_pointer_cast<BoolLiteral>(Exp)) {
+      Result.evalstatus.boolVal = BL->getVal();
+      Result.evalstatus.result = EvalStatus::Result::Constant;
+      return true;
+    }
+  }
+  return false;
 }
 
-/// \brief ½øÐÐevaluateµÄÖÕ¼«º¯Êý
-bool ConstantEvaluator::Evaluate(ExprASTPtr Exp, EvalInfo &Result)
-{
-	if (Result.evalstatus.kind == ValueKind::IntKind)
-	{
-		IntExprEvaluator evaluator;
-		if (!evaluator.Evaluate(Exp, Result))
-		{
-			Result.evalstatus.result = Result::NotConstant;
-			return false;
-		}			
-	}
+/// \brief ï¿½ï¿½ï¿½ï¿½evaluateï¿½ï¿½ï¿½Õ¼ï¿½ï¿½ï¿½ï¿½ï¿½
+bool ConstantEvaluator::Evaluate(ExprASTPtr Exp, EvalInfo &Result) {
+  if (Result.evalstatus.kind == ValueKind::IntKind) {
+    IntExprEvaluator evaluator;
+    if (!evaluator.Evaluate(Exp, Result)) {
+      Result.evalstatus.result = Result::NotConstant;
+      return false;
+    }
+  }
 
-	if (Result.evalstatus.kind == ValueKind::BoolKind)
-	{
-		BoolExprEvaluator evaluator;
-		if (!evaluator.Evaluate(Exp, Result))
-		{
-			Result.evalstatus.result = Result::NotConstant;
-			return false;
-		}
-	}
-	return true;
+  if (Result.evalstatus.kind == ValueKind::BoolKind) {
+    BoolExprEvaluator evaluator;
+    if (!evaluator.Evaluate(Exp, Result)) {
+      Result.evalstatus.result = Result::NotConstant;
+      return false;
+    }
+  }
+  return true;
 }

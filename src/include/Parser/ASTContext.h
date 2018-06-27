@@ -5,106 +5,109 @@
 //===---------------------------------------------------------------------===//
 #ifndef AST_CONTEXT_H
 #define AST_CONTEXT_H
-#include "Type.h"
 #include "../Support/Hasing.h"
 #include "../Support/TypeSet.h"
+#include "Type.h"
+
 using namespace compiler::SupportStructure;
-namespace compiler
-{
-	namespace ast
-	{
-		/// ASTContext - This class holds types that can be referred to thorought
-		/// the semantic analysis of a file.
-		///
-		/// Note: ÔÚsemaÖÐµÄsymbol tableÒ²»á±£´æ±àÒë¹ý³ÌÖÐµÃµ½µÄ·ûºÅ£¬°üÀ¨userdefined
-		/// type decl, ÒÔ¼°¸÷ÖÖdecl£¬ÆäÖÐ¾Í°üº¬¹ØÓÚClassTypeµÄ¾ßÌåÐÅÏ¢¡£µ«ÊÇÓÉÓÚClassType
-		/// Ó¦¸ÃÊÇÈ«¾ÖÖ»»áÓÐÒ»·Ý¶ù£¬ÁíÍâAnonymousTypeÒ²Ó¦¸Ã±£´æÆðÀ´£¬ËùÒÔÎÒÃÇÕâÀï¶¨ÒåÁË
-		/// ASTContextÀ´±£´æ¸÷ÖÖType info¡£È»ºóASTNodeÒÔ¼°SymbolTable¶¼ÊÇ´ÓASTContextÖÐ
-		/// ¿½±´¹ýÀ´µÄ¡£
-		/// 
-		///		 --------------			-------------			------------------
-		///		|  ASTContext  |	   |   ASTNode	 |		   | SymbolTableEntry |
-		///		 --------------		    -------------		    ------------------
-		///				|					  |						      |
-		///				|					  |						      |
-		///			   \|/					 \|/					     \|/
-		///	vector<shared_ptr<Type>>  shared_ptr<Type>		     shared_ptr<Type>
-		///					/       £¨´ÓASTContext¿½±´£©			(´ÓASTContext¿½±´)
-		///				   /				/					
-		///		==========/==============  /
-		///	   ||		 /			    ||/
-		///	   ||	ClassTypes		    |/
-		///	   ||	AnonymousTypes		/|
-		///	   ||	BuiltinTypes	   /||
-		///	   ||					    ||
-		///		=========================
-		///
-		/// ÀýÈç£º
-		/// class B
-		///	{
-		///		var flag : bool;
-		/// }
-		/// class A
-		///	{
-		///		var start : B;
-		///		var end : int;
-		///	};
-		/// var num : int;
-		/// var anonyWithInit = {10, {0, true}, {false, 10}};
-		/// var anonyWithoutInit : {int, bool};
-		/// ´ËÊ±ÔÚASTContextÖÐÓÐÈçÏÂµÄÀàÐÍÐÅÏ¢£º
-		///	
-		///				==============		=============
-		///			   ||	bool 	 ||	   ||	int 	||
-		///				===|==========	   /=============
-		///				   |			  /
-		///		===========|==========   /
-		///	   ||	B{bool} : UDType || /
-		///		========|============= /
-		///				|			  /
-		///				|			 /
-		///		========|=========	/	 ========================
-		///	   ||		|	 	 ||		||						||
-		///	   ||	A : UDType	 ||	   /|| {int, bool} : Anony	||
-		///	   ||				 ||	  /	||						||
-		///		==================	 /	 ========================
-		///							/
-		///			===============/=================
-		///		   ||			  /					||
-		///		   ||	{int, Anony, Anony} : Anony	||
-		///		   ||					|			||
-		///			====================|============
-		///								|
-		///					============|==========
-		///				   ||			|		  ||
-		///				   ||	{bool, int}		  ||
-		///				   ||					  ||
-		///				    =======================
-		///
-		/// Ò²¾ÍÊÇËµÔÚmosesÔ´´úÂëÖÐ³öÏÖµÄËùÓÐÀàÐÍelement£¬ÔÚASTContextÖÐ¶¼»áÓÐÎ¨Ò»µÄ´æÔÚ¡£
-		///
-		class ASTContext
-		{
-		private:
-			typedef TypeKeyInfo::UserDefinedTypeKeyInfo UDKeyInfo;
-			typedef TypeKeyInfo::AnonTypeKeyInfo AnonTypeKeyInfo;
-		public:
-			// Ô¤·ÖÅäÄÚÖÃÀàÐÍ
-			ASTContext() : 
-				Int(std::make_shared<BuiltinType>(TypeKind::INT)), 
-				Bool(std::make_shared<BuiltinType>(TypeKind::BOOL)),
-				Void(std::make_shared<BuiltinType>(TypeKind::VOID)),
-				isParseOrSemaSuccess(true) {}
+namespace compiler {
+namespace ast {
+/// ASTContext - This class holds types that can be referred to thorought
+/// the semantic analysis of a file.
+///
+/// Note: ï¿½ï¿½semaï¿½Ðµï¿½symbol tableÒ²ï¿½á±£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÐµÃµï¿½ï¿½Ä·ï¿½ï¿½Å£ï¿½ï¿½ï¿½ï¿½ï¿½userdefined
+/// type decl, ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½declï¿½ï¿½ï¿½ï¿½ï¿½Ð¾Í°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ClassTypeï¿½Ä¾ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ClassType
+/// Ó¦ï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½Ò»ï¿½Ý¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½AnonymousTypeÒ²Ó¦ï¿½Ã±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¶¨ï¿½ï¿½ï¿½ï¿½
+/// ASTContextï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Type infoï¿½ï¿½È»ï¿½ï¿½ASTNodeï¿½Ô¼ï¿½SymbolTableï¿½ï¿½ï¿½Ç´ï¿½ASTContextï¿½ï¿½
+/// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¡ï¿½
+///
+///		 --------------			-------------
+///------------------ 		|  ASTContext  |	   |   ASTNode	 |		   |
+///SymbolTableEntry |
+///		 --------------		    -------------
+///------------------ 				|					  |
+///| 				|					  |
+///|
+///			   \|/					 \|/
+///\|/ 	vector<shared_ptr<Type>>  shared_ptr<Type> shared_ptr<Type> 					/
+///ï¿½ï¿½ï¿½ï¿½ASTContextï¿½ï¿½ï¿½ï¿½ï¿½ï¿½			(ï¿½ï¿½ASTContextï¿½ï¿½ï¿½ï¿½) 				   /
+////
+///		==========/==============  /
+///	   ||		 /			    ||/
+///	   ||	ClassTypes		    |/
+///	   ||	AnonymousTypes		/|
+///	   ||	BuiltinTypes	   /||
+///	   ||					    ||
+///		=========================
+///
+/// ï¿½ï¿½ï¿½ç£º
+/// class B
+///	{
+///		var flag : bool;
+/// }
+/// class A
+///	{
+///		var start : B;
+///		var end : int;
+///	};
+/// var num : int;
+/// var anonyWithInit = {10, {0, true}, {false, 10}};
+/// var anonyWithoutInit : {int, bool};
+/// ï¿½ï¿½Ê±ï¿½ï¿½ASTContextï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Âµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½
+///
+///				==============		=============
+///			   ||	bool 	 ||	   ||	int 	||
+///				===|==========	   /=============
+///				   |			  /
+///		===========|==========   /
+///	   ||	B{bool} : UDType || /
+///		========|============= /
+///				|			  /
+///				|			 /
+///		========|=========	/	 ========================
+///	   ||		|	 	 ||		||
+///||
+///	   ||	A : UDType	 ||	   /|| {int, bool} : Anony	||
+///	   ||				 ||	  /	||
+///||
+///		==================	 /	 ========================
+///							/
+///			===============/=================
+///		   ||			  / ||
+///		   ||	{int, Anony, Anony} : Anony	||
+///		   ||					| ||
+///			====================|============
+///								|
+///					============|==========
+///				   ||			|		  ||
+///				   ||	{bool, int}		  ||
+///				   ||					  ||
+///				    =======================
+///
+/// Ò²ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½mosesÔ´ï¿½ï¿½ï¿½ï¿½ï¿½Ð³ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½elementï¿½ï¿½ï¿½ï¿½ASTContextï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½Î¨Ò»ï¿½Ä´ï¿½ï¿½Ú¡ï¿½
+///
+class ASTContext {
+private:
+  typedef TypeKeyInfo::UserDefinedTypeKeyInfo UDKeyInfo;
+  typedef TypeKeyInfo::AnonTypeKeyInfo AnonTypeKeyInfo;
 
-			std::shared_ptr<BuiltinType> Int;
-			std::shared_ptr<BuiltinType> Bool;
-			std::shared_ptr<BuiltinType> Void;
+public:
+  // Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  ASTContext()
+      : Int(std::make_shared<BuiltinType>(TypeKind::INT)),
+        Bool(std::make_shared<BuiltinType>(TypeKind::BOOL)),
+        Void(std::make_shared<BuiltinType>(TypeKind::VOID)),
+        isParseOrSemaSuccess(true) {}
 
-			TypeSet<std::shared_ptr<UserDefinedType>, UDKeyInfo> UDTypes;
-			TypeSet<std::shared_ptr<AnonymousType>, AnonTypeKeyInfo> AnonTypes;
+  std::shared_ptr<BuiltinType> Int;
+  std::shared_ptr<BuiltinType> Bool;
+  std::shared_ptr<BuiltinType> Void;
 
-			bool isParseOrSemaSuccess;
-		};
-	}
-}
+  TypeSet<std::shared_ptr<UserDefinedType>, UDKeyInfo> UDTypes;
+  TypeSet<std::shared_ptr<AnonymousType>, AnonTypeKeyInfo> AnonTypes;
+
+  bool isParseOrSemaSuccess;
+};
+} // namespace ast
+} // namespace compiler
 #endif

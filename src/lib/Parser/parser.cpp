@@ -1,7 +1,7 @@
 //===--------------------------------parser.h-----------------------------===//
-// 
+//
 // This file is used to implement the parser.
-// 
+//
 //===---------------------------------------------------------------------===//
 #include "../../include/Parser/Parser.h"
 using namespace compiler::parse;
@@ -9,336 +9,309 @@ using namespace compiler::parse::OperatorPrec;
 using namespace compiler::lex;
 using namespace compiler::tok;
 
-/// \brief »ñÈ¡ÔËËã·ûµÄÓÅÏÈ¼¶£¬ÓÃÓÚ½âÎö¶þÔª±í´ïÊ½
-static Level getBinOpPrecedence(TokenValue Kind)
-{
-	switch (Kind)
-	{
-	case TokenValue::PUNCTUATOR_Comma:
-		return Level::Comma;
-	case TokenValue::BO_Mul:
-	case TokenValue::BO_Div:
-		return Level::Multiplicative;
-	case TokenValue::BO_Add:
-	case TokenValue::BO_Sub:
-		return Level::Additive;
-	case TokenValue::BO_LT:
-	case TokenValue::BO_GT:
-	case TokenValue::BO_LE:
-	case TokenValue::BO_GE:
-		return Level::Relational;
-	case TokenValue::BO_EQ:
-	case TokenValue::BO_NE:
-		return Level::Equality;
-	case TokenValue::BO_Assign:
-	case TokenValue::BO_MulAssign:
-	case TokenValue::BO_DivAssign:
-	case TokenValue::BO_RemAssign:
-	case TokenValue::BO_AddAssign:
-	case TokenValue::BO_SubAssign:
-		return Level::Assignment;
-	case TokenValue::BO_And:
-		return Level::LogicalAnd;
-	case TokenValue::BO_Or:
-		return Level::LogicalOr;
-	case TokenValue::PUNCTUATOR_Member_Access:
-		return Level::PointerToMember;
-	default:
-		return Level::Unknown;
-	}
-	return Level::Unknown;
+/// \brief
+/// ï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½ï¿½ï¿½Ôªï¿½ï¿½ï¿½Ê½
+static Level getBinOpPrecedence(TokenValue Kind) {
+  switch (Kind) {
+  case TokenValue::PUNCTUATOR_Comma:
+    return Level::Comma;
+  case TokenValue::BO_Mul:
+  case TokenValue::BO_Div:
+    return Level::Multiplicative;
+  case TokenValue::BO_Add:
+  case TokenValue::BO_Sub:
+    return Level::Additive;
+  case TokenValue::BO_LT:
+  case TokenValue::BO_GT:
+  case TokenValue::BO_LE:
+  case TokenValue::BO_GE:
+    return Level::Relational;
+  case TokenValue::BO_EQ:
+  case TokenValue::BO_NE:
+    return Level::Equality;
+  case TokenValue::BO_Assign:
+  case TokenValue::BO_MulAssign:
+  case TokenValue::BO_DivAssign:
+  case TokenValue::BO_RemAssign:
+  case TokenValue::BO_AddAssign:
+  case TokenValue::BO_SubAssign:
+    return Level::Assignment;
+  case TokenValue::BO_And:
+    return Level::LogicalAnd;
+  case TokenValue::BO_Or:
+    return Level::LogicalOr;
+  case TokenValue::PUNCTUATOR_Member_Access:
+    return Level::PointerToMember;
+  default:
+    return Level::Unknown;
+  }
+  return Level::Unknown;
 }
-
 
 /// \brief Parser constructor.
 /// Get the first token and start parse	tokens.
-/// Note: ËäÈ»moses²ÉÓÃÁËÀàÐÍÍÆµ¼£¬µ«ÊÇmosesÈÔÈ»ÊÇ¾²Ì¬ÀàÐÍÓïÑÔ
-/// ÔÚmosesÖÐ£¬Ã¿¸ö±äÁ¿µÄÀàÐÍÔÚ±àÒëÆÚ¼ä¶¼ÊÇ¿ÉÒÔÎ¨Ò»È·¶¨µÄ
-Parser::Parser(Scanner& scan, Sema& sema, ASTContext& Ctx) : scan(scan), Actions(sema), Ctx(Ctx)
-{
-	scan.getNextToken();
-	Actions.getScannerPointer(&(this->scan));
+/// Note: ï¿½ï¿½È»mosesï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½È»ï¿½Ç¾ï¿½Ì¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+/// ï¿½ï¿½mosesï¿½Ð£ï¿½Ã¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú±ï¿½ï¿½ï¿½ï¿½Ú¼ä¶¼ï¿½Ç¿ï¿½ï¿½ï¿½Î¨Ò»È·ï¿½ï¿½ï¿½ï¿½
+Parser::Parser(Scanner &scan, Sema &sema, ASTContext &Ctx)
+    : scan(scan), Actions(sema), Ctx(Ctx) {
+  scan.getNextToken();
+  Actions.getScannerPointer(&(this->scan));
 }
 
-/// @brief ¸Ãº¯ÊýÊÇ½âÎöÕû¸öÎÄ¼þµÄÖ÷º¯Êý£¬mosesºÍC/C++²»Í¬£¬C/C++µÄtop-levelÊÇÒ»ÏµÁÐ
-/// µÄDecl£¬¶ømosesµÄtop-levelÊÇÒ»ÏµÁÐµÄdeclºÍstmt
-ASTPtr& Parser::parse()
-{
-	if (scan.getToken().getValue() == TokenValue::FILE_EOF)
-	{
-		AST.clear();
-		return AST;
-	}
+/// @brief ï¿½Ãºï¿½ï¿½ï¿½ï¿½Ç½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½C/C++ï¿½ï¿½Í¬ï¿½ï¿½C/C++ï¿½ï¿½top-levelï¿½ï¿½Ò»Ïµï¿½ï¿½
+/// ï¿½ï¿½Declï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½top-levelï¿½ï¿½Ò»Ïµï¿½Ðµï¿½declï¿½ï¿½stmt
+ASTPtr &Parser::parse() {
+  if (scan.getToken().getValue() == TokenValue::FILE_EOF) {
+    AST.clear();
+    return AST;
+  }
 
-	// ÔÚTranslationUnit¿ªÊ¼Ê±£¬´´½¨Top-Level scope.
-	Actions.ActOnTranslationUnitStart();
+  // ï¿½ï¿½TranslationUnitï¿½ï¿½Ê¼Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Top-Level scope.
+  Actions.ActOnTranslationUnitStart();
 
-	// ParserµÄÖ÷Ñ­»·
-	for (;;)
-	{
-		// Ê¹ÓÃµÝ¹éÏÂ½µµÄÔ¤²â·ÖÎö·¨½øÐÐÓï·¨·ÖÎö¡£
-		// Ô¤²â¼¯¼ûhttps://github.com/movie-travel-code/moses
-		// ¸ÃswitchÓï¾äÓÃÓÚhandleµÈ²ãµÄstmtºÍdecl.
-		switch (scan.getToken().getKind())
-		{
-			// Predict for { statement -> compound-statement }
-			// Left Brace {, This represents the compound statement.
-			// In Top-Level this is allowed.
-		case TokenValue::PUNCTUATOR_Left_Brace:
-			AST.push_back(ParseCompoundStatement());
-			break;
-		case TokenValue::KEYWORD_if:
-			AST.push_back(ParseIfStatement());
-			break;
-		case TokenValue::KEYWORD_while:
-			AST.push_back(ParseWhileStatement());
-			break;
-			// Predict for { statement -> expression-statement }
-			// ;, -, !, identifier, (, INT-LITERAL, BOOL-LITERAL
-		case TokenValue::PUNCTUATOR_Semicolon:
-			scan.getNextToken();
-			break;
-		case TokenValue::BO_Sub:
-		case TokenValue::IDENTIFIER:
-		case TokenValue::UO_Exclamatory:
-		case TokenValue::UO_Dec:
-		case TokenValue::UO_Inc:
-		case TokenValue::PUNCTUATOR_Left_Paren:
-		case TokenValue::INTEGER_LITERAL:
-		case TokenValue::BOOL_TRUE:
-		case TokenValue::BOOL_FALSE:
-			AST.push_back(ParseExpressionStatement());
-			break;
-		case TokenValue::KEYWORD_var:
-		case TokenValue::KEYWORD_const:
-		case TokenValue::KEYWORD_class:
-			AST.push_back(ParseDeclStmt());
-			break;
-		case TokenValue::KEYWORD_func:
-			AST.push_back(ParseFunctionDefinition());
-			break;
-		case TokenValue::FILE_EOF:
-			std::cout << "done!" << std::endl;
-			goto DONE;
-		default:
-			// Handle syntax error.
-			// For example,break unlikely appear in Top-Level.
-			errorReport("Illegal token '" + scan.getToken().getLexem() + "'.");
-			syntaxErrorRecovery(ParseContext::context::Statement);
-			break;
-		}
-	}
+  // Parserï¿½ï¿½ï¿½ï¿½Ñ­ï¿½ï¿½
+  for (;;) {
+    // Ê¹ï¿½ÃµÝ¹ï¿½ï¿½Â½ï¿½ï¿½ï¿½Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    // Ô¤ï¿½â¼¯ï¿½ï¿½https://github.com/movie-travel-code/moses
+    // ï¿½ï¿½switchï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½handleï¿½È²ï¿½ï¿½stmtï¿½ï¿½decl.
+    switch (scan.getToken().getKind()) {
+      // Predict for { statement -> compound-statement }
+      // Left Brace {, This represents the compound statement.
+      // In Top-Level this is allowed.
+    case TokenValue::PUNCTUATOR_Left_Brace:
+      AST.push_back(ParseCompoundStatement());
+      break;
+    case TokenValue::KEYWORD_if:
+      AST.push_back(ParseIfStatement());
+      break;
+    case TokenValue::KEYWORD_while:
+      AST.push_back(ParseWhileStatement());
+      break;
+      // Predict for { statement -> expression-statement }
+      // ;, -, !, identifier, (, INT-LITERAL, BOOL-LITERAL
+    case TokenValue::PUNCTUATOR_Semicolon:
+      scan.getNextToken();
+      break;
+    case TokenValue::BO_Sub:
+    case TokenValue::IDENTIFIER:
+    case TokenValue::UO_Exclamatory:
+    case TokenValue::UO_Dec:
+    case TokenValue::UO_Inc:
+    case TokenValue::PUNCTUATOR_Left_Paren:
+    case TokenValue::INTEGER_LITERAL:
+    case TokenValue::BOOL_TRUE:
+    case TokenValue::BOOL_FALSE:
+      AST.push_back(ParseExpressionStatement());
+      break;
+    case TokenValue::KEYWORD_var:
+    case TokenValue::KEYWORD_const:
+    case TokenValue::KEYWORD_class:
+      AST.push_back(ParseDeclStmt());
+      break;
+    case TokenValue::KEYWORD_func:
+      AST.push_back(ParseFunctionDefinition());
+      break;
+    case TokenValue::FILE_EOF:
+      std::cout << "done!" << std::endl;
+      goto DONE;
+    default:
+      // Handle syntax error.
+      // For example,break unlikely appear in Top-Level.
+      errorReport("Illegal token '" + scan.getToken().getLexem() + "'.");
+      syntaxErrorRecovery(ParseContext::context::Statement);
+      break;
+    }
+  }
 DONE:
-	return AST;
+  return AST;
 }
 
 /// \brief ParseIfStatement - This function mainly used to parse if statement.
-/// sample code: 
-///		if flag-expression 
+/// sample code:
+///		if flag-expression
 ///		{
 ///			// then-part.
-///		} 
-///		else 
+///		}
+///		else
 ///		{
 ///			// else part.
 ///		}
-StmtASTPtr Parser::ParseIfStatement()
-{
-	auto locStart = scan.getToken().getTokenLoc();
+StmtASTPtr Parser::ParseIfStatement() {
+  auto locStart = scan.getToken().getTokenLoc();
 
-	// Whether the current token is the "if", match "if" and go ahead.
-	// ÅÐ¶Ïµ±Ç°µÄtokenÊÇ·ñÊÇ"if"¹Ø¼ü×Ö£¬Æ¥Åäµ½"if"²¢ÏòÇ°×ß
-	if (!expectToken(TokenValue::KEYWORD_if, "if", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::Statement);
-		return nullptr;
-	}
+  // Whether the current token is the "if", match "if" and go ahead.
+  // ï¿½Ð¶Ïµï¿½Ç°ï¿½ï¿½tokenï¿½Ç·ï¿½ï¿½ï¿½"if"ï¿½Ø¼ï¿½ï¿½Ö£ï¿½Æ¥ï¿½äµ½"if"ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½
+  if (!expectToken(TokenValue::KEYWORD_if, "if", true)) {
+    syntaxErrorRecovery(ParseContext::context::Statement);
+    return nullptr;
+  }
 
-	// ÕâÀïÊµÐÐÒ»ÖÖ¼òµ¥µÄ»Ö¸´²ßÂÔ£¬¼Ù×°'('´æÔÚ
-	// expectToken(TokenValue::PUNCTUATOR_Left_Paren, "(", true);
+  // ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½Ò»ï¿½Ö¼òµ¥µÄ»Ö¸ï¿½ï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½×°'('ï¿½ï¿½ï¿½ï¿½
+  // expectToken(TokenValue::PUNCTUATOR_Left_Paren, "(", true);
 
-	// Parse condition expression and go head.
-	auto condition = ParseExpression();
+  // Parse condition expression and go head.
+  auto condition = ParseExpression();
 
-	if (!condition)
-	{
-		errorReport("Error occured in condition expression.");
-	}
-	else
-	{
-		// To Do: Perform simple semantic analysis
-		// (Check whether the type of the conditional expression is a Boolean type).
-		Actions.ActOnConditionExpr(condition->getType());
-	}	
+  if (!condition) {
+    errorReport("Error occured in condition expression.");
+  } else {
+    // To Do: Perform simple semantic analysis
+    // (Check whether the type of the conditional expression is a Boolean type).
+    Actions.ActOnConditionExpr(condition->getType());
+  }
 
-	// Perform simple semantic analysis for then part(Create new scope).
-	Actions.ActOnCompoundStmt();
-	// parse then part and expect then statement.
-	auto thenPart = ParseCompoundStatement();
+  // Perform simple semantic analysis for then part(Create new scope).
+  Actions.ActOnCompoundStmt();
+  // parse then part and expect then statement.
+  auto thenPart = ParseCompoundStatement();
 
-	// To Do: ´úÂë½á¹¹ÓÅ»¯£¬Actions.PopScope()ºÍPushScope()Ó¦¸Ã³É¶Ô³öÏÖ
-	// ÓÉÓÚPushScopeÔÚ´´½¨ÐÂµÄScopeÊ±»áÁ¢¿Ìµ÷ÓÃPushScope(),¶øPopScope()
-	// Ö»ÄÜ·ÅÔÚ´Ë´¦¡£
-	Actions.PopScope();
+  // To Do: ï¿½ï¿½ï¿½ï¿½á¹¹ï¿½Å»ï¿½ï¿½ï¿½Actions.PopScope()ï¿½ï¿½PushScope()Ó¦ï¿½Ã³É¶Ô³ï¿½ï¿½ï¿½
+  // ï¿½ï¿½ï¿½ï¿½PushScopeï¿½Ú´ï¿½ï¿½ï¿½ï¿½Âµï¿½ScopeÊ±ï¿½ï¿½ï¿½ï¿½ï¿½Ìµï¿½ï¿½ï¿½PushScope(),ï¿½ï¿½PopScope()
+  // Ö»ï¿½Ü·ï¿½ï¿½Ú´Ë´ï¿½ï¿½ï¿½
+  Actions.PopScope();
 
-	if (!thenPart)
-	{
-		errorReport("then statement is not valid.");
-		syntaxErrorRecovery(ParseContext::context::Statement);
-		return nullptr;
-	}
+  if (!thenPart) {
+    errorReport("then statement is not valid.");
+    syntaxErrorRecovery(ParseContext::context::Statement);
+    return nullptr;
+  }
 
-	StmtASTPtr elsePart = nullptr;
-	// ÅÐ¶Ïµ±Ç°tokenÊÇ·ñÎª"else"
-	if (validateToken(TokenValue::KEYWORD_else))
-	{
-		// Perform simple semantic analysis for else part(Create new scope).
-		Actions.ActOnCompoundStmt();
+  StmtASTPtr elsePart = nullptr;
+  // ï¿½Ð¶Ïµï¿½Ç°tokenï¿½Ç·ï¿½Îª"else"
+  if (validateToken(TokenValue::KEYWORD_else)) {
+    // Perform simple semantic analysis for else part(Create new scope).
+    Actions.ActOnCompoundStmt();
 
-		elsePart = ParseCompoundStatement();
-		if (!elsePart)
-		{
-			errorReport("else statement is not valid.");
-			syntaxErrorRecovery(ParseContext::context::Statement);
-			return nullptr;
-		}
-		// To Do: ´úÂë½á¹¹ÓÅ»¯
-		Actions.PopScope();
-	}
-	auto locEnd = scan.getToken().getTokenLoc();
+    elsePart = ParseCompoundStatement();
+    if (!elsePart) {
+      errorReport("else statement is not valid.");
+      syntaxErrorRecovery(ParseContext::context::Statement);
+      return nullptr;
+    }
+    // To Do: ï¿½ï¿½ï¿½ï¿½á¹¹ï¿½Å»ï¿½
+    Actions.PopScope();
+  }
+  auto locEnd = scan.getToken().getTokenLoc();
 
-	return std::make_shared<IfStatement>(locStart, locEnd, condition, thenPart, elsePart);
+  return std::make_shared<IfStatement>(locStart, locEnd, condition, thenPart,
+                                       elsePart);
 }
 
-/// \brief ParseNumberExpr - Õâ¸öº¯ÊýÓÃÓÚ½âÎönumber literal.
-ExprASTPtr Parser::ParseNumberExpr()
-{
-	auto curTok = scan.getToken();
-	if (!expectToken(TokenValue::INTEGER_LITERAL, "integer literal", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
-	}
-	auto locStart = curTok.getTokenLoc();
-	// Get the number value.
-	double numVal = strtod(curTok.getLexem().c_str(), nullptr);
-	auto locEnd = scan.getToken().getTokenLoc();
-	auto NumE = std::make_shared<NumberExpr>(locStart, locEnd, numVal);
-	NumE->setIntType(Ctx.Int);
-	return NumE;
+/// \brief ParseNumberExpr - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½number literal.
+ExprASTPtr Parser::ParseNumberExpr() {
+  auto curTok = scan.getToken();
+  if (!expectToken(TokenValue::INTEGER_LITERAL, "integer literal", true)) {
+    syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
+  }
+  auto locStart = curTok.getTokenLoc();
+  // Get the number value.
+  double numVal = strtod(curTok.getLexem().c_str(), nullptr);
+  auto locEnd = scan.getToken().getTokenLoc();
+  auto NumE = std::make_shared<NumberExpr>(locStart, locEnd, numVal);
+  NumE->setIntType(Ctx.Int);
+  return NumE;
 }
 
-/// \brief ParseCharLiteral - Õâ¸öº¯ÊýÓÃÓÚ½âÎöchar literal.
-ExprASTPtr Parser::ParseCharLiteral()
-{
-	auto curTok = scan.getToken();
-	if (!expectToken(TokenValue::CHAR_LITERAL, "char literal", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
-	}
-	auto locStart = curTok.getTokenLoc();
-	// Get the number value.
-	auto locEnd = scan.getToken().getTokenLoc();
-	auto CharE = std::make_shared<CharExpr>(locStart, locEnd, curTok.getLexem());
-	CharE->setCharType(Ctx.Int);
-	return CharE;
+/// \brief ParseCharLiteral - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½char literal.
+ExprASTPtr Parser::ParseCharLiteral() {
+  auto curTok = scan.getToken();
+  if (!expectToken(TokenValue::CHAR_LITERAL, "char literal", true)) {
+    syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
+  }
+  auto locStart = curTok.getTokenLoc();
+  // Get the number value.
+  auto locEnd = scan.getToken().getTokenLoc();
+  auto CharE = std::make_shared<CharExpr>(locStart, locEnd, curTok.getLexem());
+  CharE->setCharType(Ctx.Int);
+  return CharE;
 }
 
-
-/// \brief ParseParenExpr - ¸Ãº¯ÊýÖ÷ÒªÓÃÓÚ½âÎöparen expr.
-/// ÀýÈç, "( num + 10 )".
+/// \brief ParseParenExpr - ï¿½Ãºï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½paren expr.
+/// ï¿½ï¿½ï¿½ï¿½, "( num + 10 )".
 /// -------------------------nonsense for coding---------------------------
-/// This function will consume the all tokens of "( expression )".	
+/// This function will consume the all tokens of "( expression )".
 /// As you can see, ParseParenExpr() will call ParseExpression() and Parse-
 /// expression() possible call ParseParenExpr() too. This recursive way
 /// allows us to handle recursive grammars, and keeps each production very
 /// simple.
 /// -------------------------nonsense for coding---------------------------
 /// Note that parenthese do not cause construction of AST nodes themselves.
-/// While we could do it this way, the most important role of parentheses 
+/// While we could do it this way, the most important role of parentheses
 /// are to guide the Parser and provide grouping. Once the Parser constructs
 /// the AST, parentheses are not used.
 /// " primary-expression -> identifier | identifier arg-list | ( expression )
 ///					| INT-LITERAL | BOOL-LITERAL "
 /// parenExpr -> ( expression )
 
-// Note: ´Ë´¦ÎÒÃÇ²¢Ã»ÓÐÔÚASTÊ÷ÉÏÏÔÊ¾¹¹Ôì³öParenExpr½Úµã£¬²»ÏñClangÔÚASTÉÏhold×¡
-// ËùÓÐµÄÐÅÏ¢£¬mosesµÄASTÖ»ÊÇÎªÁË½øÐÐºóÐøµÄÓïÒåºÍ´úÂëÉú³É¶ø¹¹½¨µÄ£¬ËùÒÔ¼ò½àÎªÖ÷¡£
-ExprASTPtr Parser::ParseParenExpr()
-{
-	if (!expectToken(TokenValue::PUNCTUATOR_Left_Paren, "(", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
-	}
-	auto expr = ParseExpression();
+// Note: ï¿½Ë´ï¿½ï¿½ï¿½ï¿½Ç²ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ASTï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½ï¿½ï¿½ParenExprï¿½Úµã£¬ï¿½ï¿½ï¿½ï¿½Clangï¿½ï¿½ASTï¿½ï¿½hold×¡
+// ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½Ï¢ï¿½ï¿½mosesï¿½ï¿½ASTÖ»ï¿½ï¿½Îªï¿½Ë½ï¿½ï¿½Ðºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½
+ExprASTPtr Parser::ParseParenExpr() {
+  if (!expectToken(TokenValue::PUNCTUATOR_Left_Paren, "(", true)) {
+    syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
+  }
+  auto expr = ParseExpression();
 
-	if (!expr)
-	{
-		syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
-	}
-	// Next token is whether or not ")".
-	if (!expectToken(TokenValue::PUNCTUATOR_Right_Paren, ")", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
-	}
-	return expr;
+  if (!expr) {
+    syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
+  }
+  // Next token is whether or not ")".
+  if (!expectToken(TokenValue::PUNCTUATOR_Right_Paren, ")", true)) {
+    syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
+  }
+  return expr;
 }
 
-/// \brief ParseIdentifierExpr - Õâ¸öº¯ÊýÓÃÓÚ½âÎö±êÊ¶·û£¬identifier.
-/// ÓÐ¿ÉÄÜÊÇ±äÁ¿ÒýÓÃ£¬Ò²ÓÐ¿ÉÄÜÊÇº¯Êýµ÷ÓÃ£¬ÀýÈçadd();
-/// ÎªÁËÊµÏÖÅÐ¶ÏÊÇÆÕÍ¨±äÁ¿ÒýÓÃ»¹ÊÇº¯Êýµ÷ÓÃ£¬ÎÒÃÇÐèÒªlook-ahead¡£Èç¹ûÏÂÒ»¸ötokenÊÇ'('
-/// ÄÇÃ´ÐèÒª¹¹½¨CallExpr£¬Èç¹û²»ÊÇ'('£¬ÄÇÃ´¹¹½¨DeclRefExpr.
-/// " identifierexpr 
+/// \brief ParseIdentifierExpr - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¶ï¿½ï¿½ï¿½ï¿½identifier.
+/// ï¿½Ð¿ï¿½ï¿½ï¿½ï¿½Ç±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½Ò²ï¿½Ð¿ï¿½ï¿½ï¿½ï¿½Çºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½add();
+/// Îªï¿½ï¿½Êµï¿½ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½Çºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªlook-aheadï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½tokenï¿½ï¿½'('
+/// ï¿½ï¿½Ã´ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½CallExprï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½'('ï¿½ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½ï¿½DeclRefExpr.
+/// " identifierexpr
 ///		-> identifier
 ///		-> identifier arg-list "
-ExprASTPtr Parser::ParseIdentifierExpr()
-{
-	// To Do: Çø·Ö¿ªIdentifierExprºÍDeclRefExpr
-	// IdentifierExprÖ»ÒªÊÇ±êÊ¶·û¶¼¿ÉÒÔ£¬µ«ÊÇDeclRefExpr±ØÐëÊÇ±äÁ¿ÒýÓÃ£¬ÀýÈç'class Base{};'
-	// ÖÐµÄ'var b : Base', ÊÇVarDecl£¬µ«ÊÇ'Base'ÊÇIdentifierExpr£¬²»ÊÇDeclRefExpr.
-	auto curTok = scan.getToken();
-	auto locStart = curTok.getTokenLoc();
-	std::string IdName = curTok.getLexem();
+ExprASTPtr Parser::ParseIdentifierExpr() {
+  // To Do: ï¿½ï¿½ï¿½Ö¿ï¿½IdentifierExprï¿½ï¿½DeclRefExpr
+  // IdentifierExprÖ»Òªï¿½Ç±ï¿½Ê¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½ï¿½ï¿½DeclRefExprï¿½ï¿½ï¿½ï¿½ï¿½Ç±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã£ï¿½ï¿½ï¿½ï¿½ï¿½'class
+  // Base{};' ï¿½Ðµï¿½'var b : Base',
+  // ï¿½ï¿½VarDeclï¿½ï¿½ï¿½ï¿½ï¿½ï¿½'Base'ï¿½ï¿½IdentifierExprï¿½ï¿½ï¿½ï¿½ï¿½ï¿½DeclRefExpr.
+  auto curTok = scan.getToken();
+  auto locStart = curTok.getTokenLoc();
+  std::string IdName = curTok.getLexem();
 
-	// eat identifier
-	scan.getNextToken();
+  // eat identifier
+  scan.getNextToken();
 
-	if (validateToken(TokenValue::PUNCTUATOR_Left_Paren))
-	{
-		return ParseCallExpr(curTok);
-	}
-	else
-	{
-		// Semantic analysis.(IdentifierÖ»ÄÜÊÇVariableSymbol)
-		// ÔÚ½âÎöDeclRefExprÊ±£¬»ñÈ¡InitExpr.
-		VarDeclPtr var = Actions.ActOnDeclRefExpr(IdName);
-		auto locEnd = scan.getToken().getTokenLoc();
-		return std::make_shared<DeclRefExpr>(locStart, locEnd, 
-			var ? var->getDeclType() : nullptr, IdName, var);
-	}
+  if (validateToken(TokenValue::PUNCTUATOR_Left_Paren)) {
+    return ParseCallExpr(curTok);
+  } else {
+    // Semantic analysis.(IdentifierÖ»ï¿½ï¿½ï¿½ï¿½VariableSymbol)
+    // ï¿½Ú½ï¿½ï¿½ï¿½DeclRefExprÊ±ï¿½ï¿½ï¿½ï¿½È¡InitExpr.
+    VarDeclPtr var = Actions.ActOnDeclRefExpr(IdName);
+    auto locEnd = scan.getToken().getTokenLoc();
+    return std::make_shared<DeclRefExpr>(
+        locStart, locEnd, var ? var->getDeclType() : nullptr, IdName, var);
+  }
 }
 
-/// \brief ParseDeclStmt - ½âÎöDeclStmt.
-StmtASTPtr Parser::ParseDeclStmt()
-{
-	StmtASTPtr curStmt = nullptr;
-	switch (scan.getToken().getValue())
-	{
-		// To Do: ÐèÒª¼ÇÂ¼constÀàÐÍÐÅÏ¢
-	case TokenValue::KEYWORD_var:
-	case TokenValue::KEYWORD_const:
-		curStmt = ParseVarDecl();
-		break;
-	case TokenValue::KEYWORD_class:
-		curStmt = ParseClassDecl();
-		break;
-	case TokenValue::KEYWORD_func:
-		break;
-	default:
-		break;
-	}
-	// ÊµÐÐ¼òµ¥µÄ´íÎó»Ö¸´²ßÂÔ£¬¼Ù×°';'´æÔÚ
-	expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true);
-	return curStmt;
+/// \brief ParseDeclStmt - ï¿½ï¿½ï¿½ï¿½DeclStmt.
+StmtASTPtr Parser::ParseDeclStmt() {
+  StmtASTPtr curStmt = nullptr;
+  switch (scan.getToken().getValue()) {
+    // To Do: ï¿½ï¿½Òªï¿½ï¿½Â¼constï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
+  case TokenValue::KEYWORD_var:
+  case TokenValue::KEYWORD_const:
+    curStmt = ParseVarDecl();
+    break;
+  case TokenValue::KEYWORD_class:
+    curStmt = ParseClassDecl();
+    break;
+  case TokenValue::KEYWORD_func:
+    break;
+  default:
+    break;
+  }
+  // Êµï¿½Ð¼òµ¥µÄ´ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½×°';'ï¿½ï¿½ï¿½ï¿½
+  expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true);
+  return curStmt;
 }
 
 /// \brief ParseCompoundStatement - Parse {} statement.
@@ -347,357 +320,336 @@ StmtASTPtr Parser::ParseDeclStmt()
 /// compound statement's Grammar as below:
 ///		compound-statement -> { statement* }
 /// --------------------------------------------------------------
-StmtASTPtr Parser::ParseCompoundStatement()
-{
-	return ParseCompoundStatementBody();
+StmtASTPtr Parser::ParseCompoundStatement() {
+  return ParseCompoundStatementBody();
 }
 
-/// \brief ParseCompoundStatementBody - ¸Ãº¯ÊýÓÃÓÚ½âÎöcompound statement.
-StmtASTPtr Parser::ParseCompoundStatementBody()
-{
-	auto locStart = scan.getToken().getTokenLoc();
-	expectToken(TokenValue::PUNCTUATOR_Left_Brace, "{", true);
-	std::vector<StmtASTPtr> bodyStmts;
-	for (;;)
-	{
-		StmtASTPtr currentASTPtr = nullptr;
-		// Èç¹ûÓöµ½'}'ÔòÖ±½ÓÍË³ö
-		if (validateToken(TokenValue::PUNCTUATOR_Right_Brace, false))
-		{
-			break;
-		}
-		// Use the Predicts Sets to decide which function to call.
-		// This switch use to handle top level statements and definition.
-		switch (scan.getToken().getKind())
-		{
-		case TokenValue::PUNCTUATOR_Left_Brace:
-			// Create new scope.
-			Actions.ActOnCompoundStmt();
-			bodyStmts.push_back(ParseCompoundStatement());
-			// To Do: ÓÅ»¯´úÂë½á¹¹
-			Actions.PopScope();
-			break;
-		case TokenValue::KEYWORD_if:
-			bodyStmts.push_back(ParseIfStatement());
-			break;
-		case TokenValue::KEYWORD_while:
-			bodyStmts.push_back(ParseWhileStatement());
-			break;
-		case TokenValue::PUNCTUATOR_Semicolon:
-			scan.getNextToken();
-			break;
-		case TokenValue::IDENTIFIER:
-		case TokenValue::PUNCTUATOR_Left_Paren:
-		case TokenValue::UO_Exclamatory:
-		case TokenValue::BO_Sub:
-		case TokenValue::INTEGER_LITERAL:
-		case TokenValue::BOOL_TRUE:
-		case TokenValue::BOOL_FALSE:
-			bodyStmts.push_back(ParseExpression());
-			break;
-		case TokenValue::KEYWORD_var:
-		case TokenValue::KEYWORD_const:
-		case TokenValue::KEYWORD_class:
-			bodyStmts.push_back(ParseDeclStmt());
-			// ÏÖÔÚmoses²¢²»Ö§³Ö±Õ°ü
-			//case TokenValue::KEYWORD_func:
-			//	ParseFunctionDefinition();
-			break;
-		case TokenValue::KEYWORD_return:
-			// Check whether current scope is function scope.
-			bodyStmts.push_back(ParseReturnStatement());
-			break;
-		case TokenValue::KEYWORD_break:
-			Actions.ActOnBreakAndContinueStmt(CurrentContext == ContextKind::While);
-			bodyStmts.push_back(ParseBreakStatement());
-			break;
-		case TokenValue::KEYWORD_continue:
-			Actions.ActOnBreakAndContinueStmt(CurrentContext == ContextKind::While);
-			bodyStmts.push_back(ParseContinueStatement());
-		default:
-			// Handle syntax error.
-			// For example, break unlikely appear in Top-Level.
-			errorReport("Illegal token.");
-			syntaxErrorRecovery(ParseContext::context::CompoundStatement);
-			break;
-		}
-	}
-	// ÈçºÎ´¦Àí´íÎó»Ö¸´
-	if (!expectToken(TokenValue::PUNCTUATOR_Right_Brace, "}", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::CompoundStatement);
-	}
-	return std::make_shared<CompoundStmt>(locStart, scan.getToken().getTokenLoc(), bodyStmts);
+/// \brief ParseCompoundStatementBody - ï¿½Ãºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½compound statement.
+StmtASTPtr Parser::ParseCompoundStatementBody() {
+  auto locStart = scan.getToken().getTokenLoc();
+  expectToken(TokenValue::PUNCTUATOR_Left_Brace, "{", true);
+  std::vector<StmtASTPtr> bodyStmts;
+  for (;;) {
+    StmtASTPtr currentASTPtr = nullptr;
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½'}'ï¿½ï¿½Ö±ï¿½ï¿½ï¿½Ë³ï¿½
+    if (validateToken(TokenValue::PUNCTUATOR_Right_Brace, false)) {
+      break;
+    }
+    // Use the Predicts Sets to decide which function to call.
+    // This switch use to handle top level statements and definition.
+    switch (scan.getToken().getKind()) {
+    case TokenValue::PUNCTUATOR_Left_Brace:
+      // Create new scope.
+      Actions.ActOnCompoundStmt();
+      bodyStmts.push_back(ParseCompoundStatement());
+      // To Do: ï¿½Å»ï¿½ï¿½ï¿½ï¿½ï¿½á¹¹
+      Actions.PopScope();
+      break;
+    case TokenValue::KEYWORD_if:
+      bodyStmts.push_back(ParseIfStatement());
+      break;
+    case TokenValue::KEYWORD_while:
+      bodyStmts.push_back(ParseWhileStatement());
+      break;
+    case TokenValue::PUNCTUATOR_Semicolon:
+      scan.getNextToken();
+      break;
+    case TokenValue::IDENTIFIER:
+    case TokenValue::PUNCTUATOR_Left_Paren:
+    case TokenValue::UO_Exclamatory:
+    case TokenValue::BO_Sub:
+    case TokenValue::INTEGER_LITERAL:
+    case TokenValue::BOOL_TRUE:
+    case TokenValue::BOOL_FALSE:
+      bodyStmts.push_back(ParseExpression());
+      break;
+    case TokenValue::KEYWORD_var:
+    case TokenValue::KEYWORD_const:
+    case TokenValue::KEYWORD_class:
+      bodyStmts.push_back(ParseDeclStmt());
+      // ï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½ï¿½ï¿½Ö§ï¿½Ö±Õ°ï¿½
+      // case TokenValue::KEYWORD_func:
+      //	ParseFunctionDefinition();
+      break;
+    case TokenValue::KEYWORD_return:
+      // Check whether current scope is function scope.
+      bodyStmts.push_back(ParseReturnStatement());
+      break;
+    case TokenValue::KEYWORD_break:
+      Actions.ActOnBreakAndContinueStmt(CurrentContext == ContextKind::While);
+      bodyStmts.push_back(ParseBreakStatement());
+      break;
+    case TokenValue::KEYWORD_continue:
+      Actions.ActOnBreakAndContinueStmt(CurrentContext == ContextKind::While);
+      bodyStmts.push_back(ParseContinueStatement());
+    default:
+      // Handle syntax error.
+      // For example, break unlikely appear in Top-Level.
+      errorReport("Illegal token.");
+      syntaxErrorRecovery(ParseContext::context::CompoundStatement);
+      break;
+    }
+  }
+  // ï¿½ï¿½Î´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½
+  if (!expectToken(TokenValue::PUNCTUATOR_Right_Brace, "}", true)) {
+    syntaxErrorRecovery(ParseContext::context::CompoundStatement);
+  }
+  return std::make_shared<CompoundStmt>(locStart, scan.getToken().getTokenLoc(),
+                                        bodyStmts);
 }
 
-/// \brief ParseWhileStatement - ¸Ãº¯ÊýÓÃÓÚ½âÎöwhileÓï¾ä.
-StmtASTPtr Parser::ParseWhileStatement()
-{
-	auto locStart = scan.getToken().getTokenLoc();
+/// \brief ParseWhileStatement - ï¿½Ãºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½whileï¿½ï¿½ï¿½.
+StmtASTPtr Parser::ParseWhileStatement() {
+  auto locStart = scan.getToken().getTokenLoc();
 
-	// Shit Code!
-	// To Do: Éè¼ÆÒ»ÖÖ¸üºÃµÄ»úÖÆ£¬À´±£´æµ±Ç°µÄParse context.
-	// ÔÝÊ±Ö÷ÒªÓÃÓÚwhileÖÐbreak¼ì²éµ±Ç°µÄ»·¾³ÊÇ·ñÊÇwhile-loop
-	// ÉèÖÃµ±Ç°µÄ»·¾³Îªwhile£¬ÎªÁË¼ì²âbreak»·¾³²»Æ¥ÅäµÄÎÊÌâ¡£
-	auto oldContext = CurrentContext;
-	CurrentContext = ContextKind::While;
+  // Shit Code!
+  // To Do: ï¿½ï¿½ï¿½Ò»ï¿½Ö¸ï¿½ï¿½ÃµÄ»ï¿½ï¿½Æ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æµ±Ç°ï¿½ï¿½Parse context.
+  // ï¿½ï¿½Ê±ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½whileï¿½ï¿½breakï¿½ï¿½éµ±Ç°ï¿½Ä»ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½while-loop
+  // ï¿½ï¿½ï¿½Ãµï¿½Ç°ï¿½Ä»ï¿½ï¿½ï¿½Îªwhileï¿½ï¿½Îªï¿½Ë¼ï¿½ï¿½breakï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ¥ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â¡£
+  auto oldContext = CurrentContext;
+  CurrentContext = ContextKind::While;
 
-	// consume 'while'.
-	scan.getNextToken();
-	auto condition = ParsePrimaryExpr();
+  // consume 'while'.
+  scan.getNextToken();
+  auto condition = ParsePrimaryExpr();
 
-	if (!condition || !(condition->getType()))
-	{
-		errorReport("Error occured in condition expression.");
-	}
-	// Perform semantic analysis.
-	// (Check whether the type of the conditional expression is a boolean type).
-	Actions.ActOnConditionExpr(condition->getType());
+  if (!condition || !(condition->getType())) {
+    errorReport("Error occured in condition expression.");
+  }
+  // Perform semantic analysis.
+  // (Check whether the type of the conditional expression is a boolean type).
+  Actions.ActOnConditionExpr(condition->getType());
 
-	// Perform semantic analysis.
-	// (Create new scope for CompoundStmt.)
-	Actions.ActOnCompoundStmt();
+  // Perform semantic analysis.
+  // (Create new scope for CompoundStmt.)
+  Actions.ActOnCompoundStmt();
 
-	auto compoundStmt = ParseCompoundStatement();
+  auto compoundStmt = ParseCompoundStatement();
 
-	// To Do: Perform semantic analysis.
-	// Pop Scope.
-	Actions.PopScope();
+  // To Do: Perform semantic analysis.
+  // Pop Scope.
+  Actions.PopScope();
 
-	// Shit code!
-	CurrentContext = oldContext;
+  // Shit code!
+  CurrentContext = oldContext;
 
-	auto locEnd = scan.getToken().getTokenLoc();
-	return std::make_shared<WhileStatement>(locStart, locEnd, condition, compoundStmt);
+  auto locEnd = scan.getToken().getTokenLoc();
+  return std::make_shared<WhileStatement>(locStart, locEnd, condition,
+                                          compoundStmt);
 }
 
-/// \brief ParseBreakStatement - ½âÎöbreak statement.
+/// \brief ParseBreakStatement - ï¿½ï¿½ï¿½ï¿½break statement.
 /// ---------------------nonsense for coding----------------------
-/// break statementÖ»ÄÜ´¦ÓÚwhileºÍforÀï
+/// break statementÖ»ï¿½Ü´ï¿½ï¿½ï¿½whileï¿½ï¿½forï¿½ï¿½
 /// ---------------------nonsense for coding----------------------
-StmtASTPtr Parser::ParseBreakStatement()
-{
-	auto locStart = scan.getToken().getTokenLoc();
-	scan.getNextToken();
-	// parse break statement×îÖ÷ÒªµÄÊÇÓïÒå·ÖÎö
-	if (!expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::Statement);
-	}
-	auto locEnd = scan.getToken().getTokenLoc();
-	return std::make_shared<BreakStatement>(locStart, locEnd);
+StmtASTPtr Parser::ParseBreakStatement() {
+  auto locStart = scan.getToken().getTokenLoc();
+  scan.getNextToken();
+  // parse break statementï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  if (!expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true)) {
+    syntaxErrorRecovery(ParseContext::context::Statement);
+  }
+  auto locEnd = scan.getToken().getTokenLoc();
+  return std::make_shared<BreakStatement>(locStart, locEnd);
 }
 
-/// \brief ParseContinueStatement - ½âÎöcontinue statement.
+/// \brief ParseContinueStatement - ï¿½ï¿½ï¿½ï¿½continue statement.
 /// --------------------nonsense for coding---------------------
-/// continue statementÖ»ÄÜ´¦ÓÚwhileºÍforÀï
+/// continue statementÖ»ï¿½Ü´ï¿½ï¿½ï¿½whileï¿½ï¿½forï¿½ï¿½
 /// --------------------nonsense for coding---------------------
-StmtASTPtr Parser::ParseContinueStatement()
-{
-	auto locStart = scan.getToken().getTokenLoc();
-	if (!expectToken(TokenValue::KEYWORD_continue, "continue", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::Statement);
-	}
-	// parse continue statement×îÖ÷ÒªµÄÊÇÓïÒå·ÖÎö
-	if (!expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::Statement);
-	}
-	auto locEnd = scan.getToken().getTokenLoc();
-	return std::make_shared<ContinueStatement>(locStart, locEnd);
+StmtASTPtr Parser::ParseContinueStatement() {
+  auto locStart = scan.getToken().getTokenLoc();
+  if (!expectToken(TokenValue::KEYWORD_continue, "continue", true)) {
+    syntaxErrorRecovery(ParseContext::context::Statement);
+  }
+  // parse continue statementï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  if (!expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true)) {
+    syntaxErrorRecovery(ParseContext::context::Statement);
+  }
+  auto locEnd = scan.getToken().getTokenLoc();
+  return std::make_shared<ContinueStatement>(locStart, locEnd);
 }
 
-/// \brief ParsereturnStatement() - ½âÎöreturn statement.
+/// \brief ParsereturnStatement() - ï¿½ï¿½ï¿½ï¿½return statement.
 /// \parm funcSym - Current function context thar parser dealing with.
 /// -------------------------------------------------------------
 /// Return Statement's Grammar as below:
 /// return-statement -> 'return' expression ? ;
 /// return-statement -> 'return' anonymous-initial ? ;
 /// -------------------------------------------------------------
-StmtASTPtr Parser::ParseReturnStatement()
-{
-	auto locStart = scan.getToken().getTokenLoc();
-	if (!expectToken(TokenValue::KEYWORD_return, "return", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::Statement);
-	}
-	// Èç¹ûÊÇ"return;"£¬ÔòÖ±½Ó·µ»Ø
-	if (validateToken(TokenValue::PUNCTUATOR_Semicolon))
-	{
-		return std::make_shared<ReturnStatement>(locStart, scan.getToken().getTokenLoc(),
-			nullptr);
-	}
+StmtASTPtr Parser::ParseReturnStatement() {
+  auto locStart = scan.getToken().getTokenLoc();
+  if (!expectToken(TokenValue::KEYWORD_return, "return", true)) {
+    syntaxErrorRecovery(ParseContext::context::Statement);
+  }
+  // ï¿½ï¿½ï¿½ï¿½ï¿½"return;"ï¿½ï¿½ï¿½ï¿½Ö±ï¿½Ó·ï¿½ï¿½ï¿½
+  if (validateToken(TokenValue::PUNCTUATOR_Semicolon)) {
+    return std::make_shared<ReturnStatement>(
+        locStart, scan.getToken().getTokenLoc(), nullptr);
+  }
 
-	ExprASTPtr returnExpr = nullptr;
-	/// (1) mosesÖ§³ÖÄäÃûÀàÐÍÏÂµÄ¶àÖµ·µ»Ø£¬ÅÐ¶ÏÊÇÕý³£expression·µ»Ø£¬»¹ÊÇÄäÃûÀàÐÍ·µ»Ø
-	/// ÀýÈç£º return {num, num};
-	if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false))
-	{
-		returnExpr = ParseAnonymousInitExpr();
-		/// Perform simple semantic analysis(Mainly for type checking.)
-		Actions.ActOnReturnAnonymous(returnExpr->getType());
-	}
-	else
-	{
-		returnExpr = ParseExpression();
-		if (!returnExpr)
-			return nullptr;
-		/// Perform fimple semantic analysis(Mainly for type checking.)
-		Actions.ActOnReturnStmt(returnExpr->getType());
-	}
+  ExprASTPtr returnExpr = nullptr;
+  /// (1) mosesÖ§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÂµÄ¶ï¿½Öµï¿½ï¿½ï¿½Ø£ï¿½ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½expressionï¿½ï¿½ï¿½Ø£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í·ï¿½ï¿½ï¿½
+  /// ï¿½ï¿½ï¿½ç£º return {num, num};
+  if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false)) {
+    returnExpr = ParseAnonymousInitExpr();
+    /// Perform simple semantic analysis(Mainly for type checking.)
+    Actions.ActOnReturnAnonymous(returnExpr->getType());
+  } else {
+    returnExpr = ParseExpression();
+    if (!returnExpr)
+      return nullptr;
+    /// Perform fimple semantic analysis(Mainly for type checking.)
+    Actions.ActOnReturnStmt(returnExpr->getType());
+  }
 
-	if (!expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::Statement);
-	}
-	return std::make_shared<ReturnStatement>(locStart, scan.getToken().getTokenLoc(), returnExpr);
+  if (!expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true)) {
+    syntaxErrorRecovery(ParseContext::context::Statement);
+  }
+  return std::make_shared<ReturnStatement>(
+      locStart, scan.getToken().getTokenLoc(), returnExpr);
 }
 
 /// \brief ParseStringLiteral - parse string literal.
-ExprASTPtr Parser::ParseStringLiteral()
-{
-	auto locStart = scan.getToken().getTokenLoc();
-	if (!expectToken(TokenValue::STRING_LITERAL, "string", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
-	}
-	return std::make_shared<StringLiteral>(locStart, scan.getToken().getTokenLoc(), nullptr,
-		scan.getToken().getLexem());
+ExprASTPtr Parser::ParseStringLiteral() {
+  auto locStart = scan.getToken().getTokenLoc();
+  if (!expectToken(TokenValue::STRING_LITERAL, "string", true)) {
+    syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
+  }
+  return std::make_shared<StringLiteral>(locStart,
+                                         scan.getToken().getTokenLoc(), nullptr,
+                                         scan.getToken().getLexem());
 }
 
 /// \brief ParseBoolLiteral - parse bool literal.
-ExprASTPtr Parser::ParseBoolLiteral(bool isTrue)
-{
-	auto locStart = scan.getToken().getTokenLoc();
-	// consume bool literal token
-	scan.getNextToken();
-	auto BoolL = std::make_shared<BoolLiteral>(locStart, scan.getToken().getTokenLoc(), isTrue);
-	BoolL->setBoolType(Ctx.Bool);
-	return BoolL;
+ExprASTPtr Parser::ParseBoolLiteral(bool isTrue) {
+  auto locStart = scan.getToken().getTokenLoc();
+  // consume bool literal token
+  scan.getNextToken();
+  auto BoolL = std::make_shared<BoolLiteral>(
+      locStart, scan.getToken().getTokenLoc(), isTrue);
+  BoolL->setBoolType(Ctx.Bool);
+  return BoolL;
 }
 
 /// \brief ParseExpression - Parse the expression.
-/// µ±tokenÎª '-' '!' 'identifier' '(' 'INTLITERAL' ºÍ 'BOOLLITERAL'µÄÊ±ºò²Å»á½øÐÐµ½¸Ãº¯Êý¡£
+/// ï¿½ï¿½tokenÎª '-' '!' 'identifier' '(' 'INTLITERAL' ï¿½ï¿½
+/// 'BOOLLITERAL'ï¿½ï¿½Ê±ï¿½ï¿½Å»ï¿½ï¿½ï¿½Ðµï¿½ï¿½Ãºï¿½ï¿½ï¿½ï¿½ï¿½
 /// --------------------------nonsense for coding-------------------------------
-/// ±í´ïÊ½ÊÇÒ»¸ö¿ÉÒÔµÝ¹éµÄÎÄ·¨µ¥Ôª£¬ËùÒÔÈçºÎ´¦ÀíÆäÖÐµÄÓÅÏÈ¼¶ºÍ½áºÏÐÔÊÇÒ»¸öºÜÖØÒªµÄÎÊÌâ
+/// ï¿½ï¿½ï¿½Ê½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ÔµÝ¹ï¿½ï¿½ï¿½Ä·ï¿½ï¿½ï¿½Ôªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½Í½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 /// " expr1 + expr2 * expr3 + expr4 / (expr5 - 10) + true + !10 "
-/// ÈçºÎ¿¼ÂÇµ½´Ó×óÖÁÓÒµÄ½áºÏÐÔ£¬²¢ÇÒÕÕ¹Ëµ½ÓÅÏÈ¼¶¡£
+/// ï¿½ï¿½Î¿ï¿½ï¿½Çµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÒµÄ½ï¿½ï¿½ï¿½Ô£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ¹Ëµï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½
 /// The basic idea of operator precedence parsing is to break down an expression
 /// with potentially ambigous binary operators into pieces. Consider, for exam-
-/// -ple, the expression "a + b + ( c + d ) * e * f + g". Operator precedence 
+/// -ple, the expression "a + b + ( c + d ) * e * f + g". Operator precedence
 /// parsing considiers this as a stream of primary expressions separated by bi-
 /// -nary opreators. As such it will first parse the leading primary expression
-/// "a", then it will see the pairs [+, b] [+, (c+d)], [*, e], [*, f] and [+, g].
-/// Note that because parenthese are primary expressions, the binary expression
-/// Parser doesn't need to worry about nested subexpressions like (c+d) at all.
+/// "a", then it will see the pairs [+, b] [+, (c+d)], [*, e], [*, f] and [+,
+/// g]. Note that because parenthese are primary expressions, the binary
+/// expression Parser doesn't need to worry about nested subexpressions like
+/// (c+d) at all.
 /// --------------------------nonsense for coding-------------------------------
 /// --------------------------nonsense for coding-------------------------------
-/// primary expressionÓ¦¸Ã°üº¬ÄÄÐ©±í´ïÊ½£¬ÊÇ·ñ°üÀ¨ ( expression ), -identifier, 
-/// !identifierµÈµÈ¡£×¢Òâ±í´ïÊ½ÖÐexpression + - identifier£¬ÊÇ¿ÉÒÔ±»½ÓÊÜµÄ£¬ÕâÀï»á½«
-/// -identifierÊ¶±ðÎªÒ»¸öµ¥±í´ïÊ½¡£µ«ÊÇÀàËÆÓÚÕâÖÖ " expr1 -- expr2 "ÊÇ²»»á±»ÔÊÐíµÄ£¬
-/// ÒòÎªÕâÀï»á½«--Ê¶±ðºóÔöÔËËã·û£¬ËùÒÔ»á³öÏÖÕâ¸öÎÊÌâ¡£ÆäÊµÕâÐ©ÎÊÌâÎÞÐèµ£ÐÄ£¬ÒòÎªÕâÐ©
-/// ÒÑ¾­±»Ê¶±ð³Étoken¡£
+/// primary expressionÓ¦ï¿½Ã°ï¿½ï¿½ï¿½ï¿½ï¿½Ð©ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½ ( expression ), -identifier,
+/// !identifierï¿½ÈµÈ¡ï¿½×¢ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½expression + - identifierï¿½ï¿½ï¿½Ç¿ï¿½ï¿½Ô±ï¿½ï¿½ï¿½ï¿½ÜµÄ£ï¿½ï¿½ï¿½ï¿½ï¿½á½«
+/// -identifierÊ¶ï¿½ï¿½ÎªÒ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ " expr1 -- expr2 "ï¿½Ç²ï¿½ï¿½á±»ï¿½ï¿½ï¿½ï¿½Ä£ï¿½
+/// ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½á½«--Ê¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â¡£ï¿½ï¿½Êµï¿½ï¿½Ð©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½èµ£ï¿½Ä£ï¿½ï¿½ï¿½Îªï¿½ï¿½Ð©
+/// ï¿½Ñ¾ï¿½ï¿½ï¿½Ê¶ï¿½ï¿½ï¿½tokenï¿½ï¿½
 /// --------------------------nonsense for coding-------------------------------
 
-ExprASTPtr Parser::ParseExpression()
-{
-	auto LHS = ParseWrappedUnaryExpression();
-	if (!LHS)
-	{
-		syntaxErrorRecovery(ParseContext::context::Expression);
-	}
+ExprASTPtr Parser::ParseExpression() {
+  auto LHS = ParseWrappedUnaryExpression();
+  if (!LHS) {
+    syntaxErrorRecovery(ParseContext::context::Expression);
+  }
 
-	// ½«ÓÅÏÈ¼¶³õÊ¼»¯Îª×îµÍµÄ "Assignment"£¬Ö±µ½Óöµ½±ÈËü¸üµÍµÄÓÅÏÈ¼¶£¬¼´ÍË³ö"expression"µÄ½âÎö
-	// ÀýÈç£ºnum0 * num1 - num2 / num3 - 5;
-	// ';'¾ÍÊÇ×îµÍµÄÓÅÏÈ¼¶£¬unknown
-	// " num = num0 * num1 - num2 / num3 - 5;"
-	// ¿ªÊ¼Í¨¹ýParseWarppedUnaryExpression()½âÎöµônum0£¬È»ºóÓÅÏÈ¼¶ÉèÖÃÎª 'Multiplicative' *£¬
-	// È»ºóÔÙ½âÎöµônum1£¬×¢Òâ '=' < '*'£¬ËùÒÔ½« 'num0*num1' ºÏ²¢³ÉÒ»¸ö²Ù×÷Êý¼ÌÐøahead. ÖÐ¼ä»¹
-	// ²ôÔÓ×ÅÏà¹ØµÄÓïÒå·ÖÎö£¬×îÖÕÓöµ½ÁËÓÅÏÈ¼¶×îµÍµÄ';'½áÊø£¬ÓïÒå·ÖÎöÒ²½áÊø
-	// ------------------------nonsense for coding--------------------------------
-	// Õû¸ö¹ý³ÌÓÐµã¶ùÏñ³¬¼¶ÂêÀö¡£
-	// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-	//		Óöµ½'*'£¬½«×îµÍµÄÓÅÏÈ¼¶ÌáÉý_______£¨ÔÚÕâÉÏÃæÔËÐÐÖªµÀÓÅÏÈ¼¶½µµÍ£©____
-	// (ÓÅÏÈ¼¶³õÊ¼»¯ÎªAssignmen)______|									   |__________
-	// >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-	// ÓÅÏÈ¼¶¸ßµÄ»°£¬¾ÍÌøÉÏÈ¥ÔËÐÐÒ»¸öÐÂµÄParseBinOpRHS()£¬Ö±µ½Óöµ½Ò»¸öÓÅÏÈ¼¶¸ü¸ßµÄ£¬»òÕß¸üµÍµÄ
-	// ÓÅÏÈ¼¶£¬ÔÙµ÷ÓÃÒ»¸öÐÂµÄParseBinOpRHS()º¯Êý£¬½øÐÐ½âÎö£¨ÖØµãÊÇÓïÒå·ÖÎö£©£¬Ö´ÐÐÍêÖ®ºó
-	// ½«½á¹û·µ»Ø²¢½µÏÂÀ´£¬½«ÓÅÏÈ¼¶¸ßµÄÒ»¸ö×Ó±í´ïÊ½×÷ÎªÒ»¸öÐÂµÄRHS²¢ºÍÒÔÇ°µÄºÏ²¢ÎªÐÂµÄLHS£¬È»ºó¼ÌÐø
-	// ÔÚÔ­ÓÐµÄ²ã¼¶ÉÏ½âÎö¡£
-	// ------------------------nonsense for coding--------------------------------
-	return ParseBinOpRHS(OperatorPrec::Level::Assignment, LHS);
+  // ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½Îªï¿½ï¿½Íµï¿½
+  // "Assignment"ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Íµï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë³ï¿½"expression"ï¿½Ä½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ç£ºnum0 * num1
+  // - num2 / num3 - 5;
+  // ';'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Íµï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½unknown
+  // " num = num0 * num1 - num2 / num3 - 5;"
+  // ï¿½ï¿½Ê¼Í¨ï¿½ï¿½ParseWarppedUnaryExpression()ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½num0ï¿½ï¿½È»ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½ï¿½ï¿½Îª
+  // 'Multiplicative' *ï¿½ï¿½ È»ï¿½ï¿½ï¿½Ù½ï¿½ï¿½ï¿½ï¿½ï¿½num1ï¿½ï¿½×¢ï¿½ï¿½ '=' < '*'ï¿½ï¿½ï¿½ï¿½ï¿½Ô½ï¿½ 'num0*num1'
+  // ï¿½Ï²ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ahead. ï¿½Ð¼ä»¹
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½Íµï¿½';'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò²ï¿½ï¿½ï¿½ï¿½
+  // ------------------------nonsense for coding--------------------------------
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½ñ³¬¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  //		ï¿½ï¿½ï¿½ï¿½'*'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Íµï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½ï¿½ï¿½_______ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öªï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½ï¿½Í£ï¿½____
+  // (ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ÎªAssignmen)______|
+  // |__________
+  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+  // ï¿½ï¿½ï¿½È¼ï¿½ï¿½ßµÄ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¥ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Âµï¿½ParseBinOpRHS()ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½ï¿½ßµÄ£ï¿½ï¿½ï¿½ï¿½ß¸ï¿½ï¿½Íµï¿½
+  // ï¿½ï¿½ï¿½È¼ï¿½ï¿½ï¿½ï¿½Ùµï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Âµï¿½ParseBinOpRHS()ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½Ö®ï¿½ï¿½
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ßµï¿½Ò»ï¿½ï¿½ï¿½Ó±ï¿½ï¿½Ê½ï¿½ï¿½ÎªÒ»ï¿½ï¿½ï¿½Âµï¿½RHSï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ÄºÏ²ï¿½Îªï¿½Âµï¿½LHSï¿½ï¿½È»ï¿½ï¿½ï¿½ï¿½ï¿½
+  // ï¿½ï¿½Ô­ï¿½ÐµÄ²ã¼¶ï¿½Ï½ï¿½ï¿½ï¿½ï¿½ï¿½
+  // ------------------------nonsense for coding--------------------------------
+  return ParseBinOpRHS(OperatorPrec::Level::Assignment, LHS);
 }
 
-/// \brief ParseWrappedUnaryExpression - ÓÃÓÚparse UnaryExpression
+/// \brief ParseWrappedUnaryExpression - ï¿½ï¿½ï¿½ï¿½parse UnaryExpression
 /// u-expression's Grammar as below.
-/// "u-expression -> - u-expression | ! u-expression | ++ u-expression 
+/// "u-expression -> - u-expression | ! u-expression | ++ u-expression
 ///			| -- u-expression | post-expression"
 /// The code like this "int num = - + + - + + num1;" is accepted.
 /// fxxk expression!!!
 /// Token is the key to understand Parser, not the character!!!
 /// -----------------nonsense for coding--------------------------
-/// ¸Ãº¯ÊýÓÃÓÚ½âÎö¼òµ¥µÄunary expression£¬Ò²¾ÍÊÇ¿ÉÒÔ×÷Îª²Ù×÷ÊýµÄ±í´ïÊ½
+/// ï¿½Ãºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½ï¿½òµ¥µï¿½unary
+/// expressionï¿½ï¿½Ò²ï¿½ï¿½ï¿½Ç¿ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä±ï¿½ï¿½Ê½
 /// -----------------nonsense for coding--------------------------
-ExprASTPtr Parser::ParseWrappedUnaryExpression()
-{
-	auto tok = scan.getToken();
-	TokenValue tokKind = tok.getKind();
-	auto locStart = scan.getToken().getTokenLoc();
-	ExprASTPtr RHS = nullptr;
+ExprASTPtr Parser::ParseWrappedUnaryExpression() {
+  auto tok = scan.getToken();
+  TokenValue tokKind = tok.getKind();
+  auto locStart = scan.getToken().getTokenLoc();
+  ExprASTPtr RHS = nullptr;
 
-	if (tokKind == TokenValue::BO_Sub)
-	{
-		/// Note: ±íÊ¾µ¥Ä¿ÔËËã·û-
-		scan.getNextToken();
-		RHS = ParseWrappedUnaryExpression();
-		if (!RHS || !(RHS->getType()))
-		{
-			errorReport("Error occured in left hand expression.");
-		}
-		RHS = Actions.ActOnUnarySubExpr(RHS);
-		RHS = std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(),
-			RHS->getType(), tok.getLexem(), RHS, Expr::ExprValueKind::VK_RValue);
-	}
-	else if (tokKind == TokenValue::UO_Exclamatory)
-	{
-		/// Note: ±íÊ¾µ¥Ä¿ÔËËã!
-		scan.getNextToken();
-		RHS = ParseWrappedUnaryExpression();
-		if (!RHS || !(RHS->getType()))
-		{
-			errorReport("Error occured in left hand expression.");
-		}
-		RHS = Actions.ActOnUnarySubExpr(RHS);
-		RHS = std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(),
-			RHS->getType(), tok.getLexem(), RHS, Expr::ExprValueKind::VK_RValue);
-	}
-	else if (tokKind == TokenValue::UO_Dec || tokKind == TokenValue::UO_Inc)
-	{
-		/// Note: ±íÊ¾µ¥Ä¿ÔËËã++ --
-		scan.getNextToken();
-		RHS = ParseWrappedUnaryExpression();
-		if (!RHS || !(RHS->getType()))
-		{
-			errorReport("Error occured in left hand expression.");
-		}
-		RHS = Actions.ActOnDecOrIncExpr(RHS);
-		// Ç°ÖÃ++ --µÃµ½µÄÔËËã±í´ïÊ½ÊÇLValue
-		RHS = std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(),
-			RHS->getType(), tok.getLexem(), RHS, Expr::ExprValueKind::VK_LValue);
-	}
-	else
-	{
-		RHS = ParsePostfixExpression();
-	}
-	return RHS;
+  if (tokKind == TokenValue::BO_Sub) {
+    /// Note: ï¿½ï¿½Ê¾ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½-
+    scan.getNextToken();
+    RHS = ParseWrappedUnaryExpression();
+    if (!RHS || !(RHS->getType())) {
+      errorReport("Error occured in left hand expression.");
+    }
+    RHS = Actions.ActOnUnarySubExpr(RHS);
+    RHS = std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(),
+                                      RHS->getType(), tok.getLexem(), RHS,
+                                      Expr::ExprValueKind::VK_RValue);
+  } else if (tokKind == TokenValue::UO_Exclamatory) {
+    /// Note: ï¿½ï¿½Ê¾ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½!
+    scan.getNextToken();
+    RHS = ParseWrappedUnaryExpression();
+    if (!RHS || !(RHS->getType())) {
+      errorReport("Error occured in left hand expression.");
+    }
+    RHS = Actions.ActOnUnarySubExpr(RHS);
+    RHS = std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(),
+                                      RHS->getType(), tok.getLexem(), RHS,
+                                      Expr::ExprValueKind::VK_RValue);
+  } else if (tokKind == TokenValue::UO_Dec || tokKind == TokenValue::UO_Inc) {
+    /// Note: ï¿½ï¿½Ê¾ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½++ --
+    scan.getNextToken();
+    RHS = ParseWrappedUnaryExpression();
+    if (!RHS || !(RHS->getType())) {
+      errorReport("Error occured in left hand expression.");
+    }
+    RHS = Actions.ActOnDecOrIncExpr(RHS);
+    // Ç°ï¿½ï¿½++ --ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½LValue
+    RHS = std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(),
+                                      RHS->getType(), tok.getLexem(), RHS,
+                                      Expr::ExprValueKind::VK_LValue);
+  } else {
+    RHS = ParsePostfixExpression();
+  }
+  return RHS;
 }
 
-/// \brief ParsePostfixExpression - ÓÃÓÚparse PostfixExpression
+/// \brief ParsePostfixExpression - ï¿½ï¿½ï¿½ï¿½parse PostfixExpression
 /// for example - " ++num" or "point.mem"
 /// post-expression's Grammar as below.
-/// "post-expression -> primary-expression 
-///					| primary-expression post-expression-tail"
+/// "post-expression -> primary-expression
+///					| primary-expression
+///post-expression-tail"
 /// "post-expression-tail -> . identifier post-expression-tail
 ///					| ++ post-expression-tail
 ///					| -- post-expression-tail
@@ -705,21 +657,21 @@ ExprASTPtr Parser::ParseWrappedUnaryExpression()
 
 /// ----------------------nonsense for coding-----------------
 /// There is a bug need to fix.
-/// ÀýÈç£ºnum++·µ»ØµÄÊÇrvalue( Ïà¶ÔÓ¦µÄ ++num·µ»ØµÄÊÇ×óÖµ)£¬
-/// ËùÒÔnum++ ++ÕâÖÖÐÎÊ½ÊÇÎ¥·¨µÄ¡£ÎÄ·¨ÓÐÎó£¬'.'¿ÉÒÔµÝ¹éÈ¡£¬¶ø'++'
-/// ²»ÄÜµÝ¹éÊ¹ÓÃ¡£
+/// ï¿½ï¿½ï¿½ç£ºnum++ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½rvalue( ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ ++numï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½Öµ)ï¿½ï¿½
+/// ï¿½ï¿½ï¿½ï¿½num++ ++ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½Î¥ï¿½ï¿½ï¿½Ä¡ï¿½ï¿½Ä·ï¿½ï¿½ï¿½ï¿½ï¿½'.'ï¿½ï¿½ï¿½ÔµÝ¹ï¿½È¡ï¿½ï¿½ï¿½ï¿½'++'
+/// ï¿½ï¿½ï¿½ÜµÝ¹ï¿½Ê¹ï¿½Ã¡ï¿½
 /// ----------------------nonsense for coding-----------------
-/// ÆäÊµ'num++ ++'²»ÄÜËãÊÇÓï·¨´íÎó£¬Ó¦¸ÃÊÇÓïÒå´íÎó£¬ÒòÎªÓÒÖµ²»ÄÜ
-/// ±»¸³Öµ£¬ËùÒÔÔÚÓï·¨·ÖÎöµÄ¹ý³ÌÖÐÐèÒª¼ÇÂ¼×óÓÒÖµÐÅÏ¢¡£
+/// ï¿½ï¿½Êµ'num++
+/// ++'ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½
+/// ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Â¼ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½Ï¢ï¿½ï¿½
 /// https://code.woboq.org/llvm/clang/include/clang/AST/Expr.h.html 247
-/// ----------------------nonsense for coding-----------------		
-ExprASTPtr Parser::ParsePostfixExpression()
-{
-	// First we parse the leading part of a postfix-expression.
-	// Second we parse the suffix of the postfix-expression, for example '.' '++'
-	ExprASTPtr LHS = ParsePrimaryExpr();
-	// These can be followed by postfix-expr pieces.
-	return ParsePostfixExpressionSuffix(LHS);
+/// ----------------------nonsense for coding-----------------
+ExprASTPtr Parser::ParsePostfixExpression() {
+  // First we parse the leading part of a postfix-expression.
+  // Second we parse the suffix of the postfix-expression, for example '.' '++'
+  ExprASTPtr LHS = ParsePrimaryExpr();
+  // These can be followed by postfix-expr pieces.
+  return ParsePostfixExpressionSuffix(LHS);
 }
 
 /// \brief Once the leading part of a postfix-expression is parsed, this method
@@ -730,184 +682,173 @@ ExprASTPtr Parser::ParsePostfixExpression()
 ///			| post-expression ++
 ///			| post-expression --"
 /// post-expression is eimple for now.
-ExprASTPtr Parser::ParsePostfixExpressionSuffix(ExprASTPtr LHS)
-{
-	auto locStart = scan.getToken().getTokenLoc();
-	std::shared_ptr<Type> type = nullptr;
+ExprASTPtr Parser::ParsePostfixExpressionSuffix(ExprASTPtr LHS) {
+  auto locStart = scan.getToken().getTokenLoc();
+  std::shared_ptr<Type> type = nullptr;
 
-	// To Do: Shit code!
-	std::string OpName;
+  // To Do: Shit code!
+  std::string OpName;
 
-	// Now that the primary-expression piece of the postfix-expression has been
-	// parsed, See if there are any postfix-expresison pieces here.
-	// For example, B.member.mem.num;
-	while (1)
-	{
-		switch (scan.getToken().getKind())
-		{
-		case TokenValue::PUNCTUATOR_Member_Access:
-			// postfix-expression: p-e '.'
-			// Note:in moses, have no pointer
-			// Note: If LHS is nullptr, it's meaningless to analyze the subsequent.
-			if (!LHS)
-				return nullptr;
-			scan.getNextToken();
-			// Eat the identifier
-			if (!expectToken(TokenValue::IDENTIFIER, "identifier", false))
-			{
-				syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
-			}
+  // Now that the primary-expression piece of the postfix-expression has been
+  // parsed, See if there are any postfix-expresison pieces here.
+  // For example, B.member.mem.num;
+  while (1) {
+    switch (scan.getToken().getKind()) {
+    case TokenValue::PUNCTUATOR_Member_Access:
+      // postfix-expression: p-e '.'
+      // Note:in moses, have no pointer
+      // Note: If LHS is nullptr, it's meaningless to analyze the subsequent.
+      if (!LHS)
+        return nullptr;
+      scan.getNextToken();
+      // Eat the identifier
+      if (!expectToken(TokenValue::IDENTIFIER, "identifier", false)) {
+        syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
+      }
 
-			LHS = Actions.ActOnMemberAccessExpr(LHS, scan.getToken());
-			scan.getNextToken();
-			break;
-		case TokenValue::UO_Inc: // postfix-expression: postfix-expression '++'
-		case TokenValue::UO_Dec: // postfix-expression: postfix-expression '--'					
-			// mosesÖÐµÄ×Ô¶¨ÒåÀàÐÍÔÝÊ±²»Ö§³ÖÔËËã·ûÖØÔØ£¬ËùÒÔÄÜ¹»½øÐÐ++ --µÄÖ»ÄÜÊÇintÀàÐÍ
-			OpName = scan.getToken().getLexem();
-			LHS = Actions.ActOnDecOrIncExpr(LHS);
-			// Consume the '++' or '--'
-			scan.getNextToken();
-			return std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(), LHS->getType(),
-				OpName, LHS, Expr::ExprValueKind::VK_RValue);
-		default:	// Not a postfix-expression suffix.
-			return LHS;
-		}
-	}
+      LHS = Actions.ActOnMemberAccessExpr(LHS, scan.getToken());
+      scan.getNextToken();
+      break;
+    case TokenValue::UO_Inc: // postfix-expression: postfix-expression '++'
+    case TokenValue::UO_Dec: // postfix-expression: postfix-expression '--'
+      // mosesï¿½Ðµï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½Ö§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ü¹ï¿½ï¿½ï¿½ï¿½ï¿½++ --ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½intï¿½ï¿½ï¿½ï¿½
+      OpName = scan.getToken().getLexem();
+      LHS = Actions.ActOnDecOrIncExpr(LHS);
+      // Consume the '++' or '--'
+      scan.getNextToken();
+      return std::make_shared<UnaryExpr>(
+          locStart, scan.getToken().getTokenLoc(), LHS->getType(), OpName, LHS,
+          Expr::ExprValueKind::VK_RValue);
+    default: // Not a postfix-expression suffix.
+      return LHS;
+    }
+  }
 }
 
-/// \brief ParseExpressionStatement() - This function is a transfer function from statement to
-/// expression.
-StmtASTPtr Parser::ParseExpressionStatement()
-{
-	auto Expr = ParseExpression();
-	// ¹¹Ôì³öExpressionStatement AST
-	// expect ;
-	if (!expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::Statement);
-	}
-	return Expr;
+/// \brief ParseExpressionStatement() - This function is a transfer function
+/// from statement to expression.
+StmtASTPtr Parser::ParseExpressionStatement() {
+  auto Expr = ParseExpression();
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ExpressionStatement AST
+  // expect ;
+  if (!expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true)) {
+    syntaxErrorRecovery(ParseContext::context::Statement);
+  }
+  return Expr;
 }
 
 /// \brief ParseBinOpRHS - Parse the expression-tail.
-/// Parser¾ÍÊÇÒ»¸ö³¬¼¶ÂêÀö£¬²»¶ÏÌøÉÏÌøÏÂµÄÇÐ»»ParseBinOpRHS()£¬²¢Ö»ÔÚÍ¬²ã¼¶ÉÏÖ´ÐÐÓï·¨½âÎö
-/// ÇÐ»»²ã¼¶µÄÊ±ºò£¨Ò²¾ÍÊÇ×îÖÕ·µ»ØÍùÏÂÌø¼¶µÄÊ±ºò£©£¬½«½á¹û·µ»Ø£¬½«ÓÅÏÈ¼¶¸ßµÄ×Ó±í´ïÊ½×÷ÎªÒ»¸ö
-/// ÕûµÄ²Ù×÷Êý
+/// Parserï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Âµï¿½ï¿½Ð»ï¿½ParseBinOpRHS()ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½Í¬ï¿½ã¼¶ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½ï¿½ï¿½
+/// ï¿½Ð»ï¿½ï¿½ã¼¶ï¿½ï¿½Ê±ï¿½ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Õ·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ò£©£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½ßµï¿½ï¿½Ó±ï¿½ï¿½Ê½ï¿½ï¿½ÎªÒ»ï¿½ï¿½
+/// ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½
 /// Note: Anonymous type need specially handled.
-ExprASTPtr Parser::ParseBinOpRHS(OperatorPrec::Level MinPrec, ExprASTPtr lhs)
-{
-	auto locStart = scan.getToken().getTokenLoc();
-	OperatorPrec::Level NextTokPrec = getBinOpPrecedence(scan.getToken().getKind());
-	while (1)
-	{
-		// --------------------annotation from clang-------------------------------
-		// If this token has a lower precedence than we are allowed to parse (e.g.
-		// because we are called recursively, or because the token is not a binop),
-		// then we are done!
-		// --------------------annotation from clang-------------------------------
-		// For example, we are parsing "num = num * 10 - max + num ;"
-		// The ";" is the end character for parsing expression. And we set ";" the 
-		// lowest precedence.
-		// The initial precedence is "="
-		if (NextTokPrec < MinPrec)
-			return lhs;
-		Token OpToken = scan.getToken();
+ExprASTPtr Parser::ParseBinOpRHS(OperatorPrec::Level MinPrec, ExprASTPtr lhs) {
+  auto locStart = scan.getToken().getTokenLoc();
+  OperatorPrec::Level NextTokPrec =
+      getBinOpPrecedence(scan.getToken().getKind());
+  while (1) {
+    // --------------------annotation from clang-------------------------------
+    // If this token has a lower precedence than we are allowed to parse (e.g.
+    // because we are called recursively, or because the token is not a binop),
+    // then we are done!
+    // --------------------annotation from clang-------------------------------
+    // For example, we are parsing "num = num * 10 - max + num ;"
+    // The ";" is the end character for parsing expression. And we set ";" the
+    // lowest precedence.
+    // The initial precedence is "="
+    if (NextTokPrec < MinPrec)
+      return lhs;
+    Token OpToken = scan.getToken();
 
-		if (!OpToken.isBinaryOp())
-		{
-			errorReport("Must be binary operator!");
-		}
+    if (!OpToken.isBinaryOp()) {
+      errorReport("Must be binary operator!");
+    }
 
-		// Handled anonymous initexpr specially.
-		// num = {expr1, expr2};
-		if (OpToken.getLexem() == "=")
-		{
-			scan.getNextToken();
-			// Anonymous initexpr.
-			if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false))
-			{
-				ExprASTPtr RHS = ParseAnonymousInitExpr();
-				return Actions.ActOnAnonymousTypeVariableAssignment(lhs, RHS);
-			}
-		}
+    // Handled anonymous initexpr specially.
+    // num = {expr1, expr2};
+    if (OpToken.getLexem() == "=") {
+      scan.getNextToken();
+      // Anonymous initexpr.
+      if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false)) {
+        ExprASTPtr RHS = ParseAnonymousInitExpr();
+        return Actions.ActOnAnonymousTypeVariableAssignment(lhs, RHS);
+      }
+    }
 
-		// consume the operator
-		if (OpToken.getLexem() != "=")
-			scan.getNextToken();
+    // consume the operator
+    if (OpToken.getLexem() != "=")
+      scan.getNextToken();
 
-		// Parse another leaf here for the RHS of the operator.
-		// For example, "num1 * ++num2", '++num2' is a operand
-		ExprASTPtr RHS = ParseWrappedUnaryExpression();
+    // Parse another leaf here for the RHS of the operator.
+    // For example, "num1 * ++num2", '++num2' is a operand
+    ExprASTPtr RHS = ParseWrappedUnaryExpression();
 
-		// Update the information after consume the operand			
-		// "num1* ++num2;"
-		// At first NextTokPrec -> '*', after consume '++num2', 
-		// ThisPrec = NextTokPrex -> '*', and NextTokPrex -> ';'
-		// -------------------annotation from clang-------------------------
-		// Remember the precedence of this operator and get the precedence of 
-		// the operator immediatiely to the right of the RHS.
-		// -------------------annotation from clang--------------------------
-		OperatorPrec::Level ThisPrec = NextTokPrec;
-		NextTokPrec = getBinOpPrecedence(scan.getToken().getKind());
+    // Update the information after consume the operand
+    // "num1* ++num2;"
+    // At first NextTokPrec -> '*', after consume '++num2',
+    // ThisPrec = NextTokPrex -> '*', and NextTokPrex -> ';'
+    // -------------------annotation from clang-------------------------
+    // Remember the precedence of this operator and get the precedence of
+    // the operator immediatiely to the right of the RHS.
+    // -------------------annotation from clang--------------------------
+    OperatorPrec::Level ThisPrec = NextTokPrec;
+    NextTokPrec = getBinOpPrecedence(scan.getToken().getKind());
 
-		// Assignment exression are right-associative.
-		bool isRightAssoc = ThisPrec == OperatorPrec::Level::Assignment;
+    // Assignment exression are right-associative.
+    bool isRightAssoc = ThisPrec == OperatorPrec::Level::Assignment;
 
-		// -----------------------annotation from clang------------------------
-		// Get the precedence of the operator to the right of the RHS. If it
-		// binds more tightly with RHS than we do, evaluate it completely first.
-		// -----------------------annotation from clang------------------------
-		// For example, "num0 + num1 * num2", ThisPrec -> '+', NextTokPrec -> '*'
-		// we will promote the precedence to '*',  and Call ParserHSOfBinaryExpression()
-		// And if now the expression is "num0 = num1 = num2", right association, so 
-		// "num0 = (num1 = num2)", num1 is binds more tightly with num2.
-		// ½áºÏÐÔÖ»ÓÃÓÚ±í´ïÊ½ÖÐ³öÏÖÁ½¸öÒÔÉÏÏàÍ¬ÓÅÏÈ¼¶µÄ²Ù×÷·ûµÄÇé¿ö£¬ÓÃÓÚÏû³ýÆçÒå
-		if (ThisPrec < NextTokPrec || (ThisPrec == NextTokPrec && isRightAssoc))
-		{
-			RHS = ParseBinOpRHS(static_cast<OperatorPrec::Level>(ThisPrec + !isRightAssoc), RHS);
-			// µ±´ÓParseBinOpRHS()·µ»ØµÄÊ±ºò£¬ÏÂÒ»¸öOpµÄÓÅÏÈ¼¶Î´Öª
-			NextTokPrec = getBinOpPrecedence(scan.getToken().getKind());
-		}
-		// Èç¹ûÃ»ÓÐµÝ¹éµ÷ÓÃParseBinOpRHS()µÄ»°£¬NextTokPrecµÄÓÅÏÈ¼¶ÊÇ¹Ì¶¨µÄ
-		// Perform semantic and combine the LHS and RHS into LHS (e.g. build AST)
-		lhs = Actions.ActOnBinaryOperator(lhs, OpToken, RHS);
-
-	}
-	return lhs;
+    // -----------------------annotation from clang------------------------
+    // Get the precedence of the operator to the right of the RHS. If it
+    // binds more tightly with RHS than we do, evaluate it completely first.
+    // -----------------------annotation from clang------------------------
+    // For example, "num0 + num1 * num2", ThisPrec -> '+', NextTokPrec -> '*'
+    // we will promote the precedence to '*',  and Call
+    // ParserHSOfBinaryExpression() And if now the expression is "num0 = num1 =
+    // num2", right association, so "num0 = (num1 = num2)", num1 is binds more
+    // tightly with num2.
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½Ú±ï¿½ï¿½Ê½ï¿½Ð³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬ï¿½ï¿½ï¿½È¼ï¿½ï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    if (ThisPrec < NextTokPrec || (ThisPrec == NextTokPrec && isRightAssoc)) {
+      RHS = ParseBinOpRHS(
+          static_cast<OperatorPrec::Level>(ThisPrec + !isRightAssoc), RHS);
+      // ï¿½ï¿½ï¿½ï¿½ParseBinOpRHS()ï¿½ï¿½ï¿½Øµï¿½Ê±ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½Opï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½Î´Öª
+      NextTokPrec = getBinOpPrecedence(scan.getToken().getKind());
+    }
+    // ï¿½ï¿½ï¿½Ã»ï¿½ÐµÝ¹ï¿½ï¿½ï¿½ï¿½ParseBinOpRHS()ï¿½Ä»ï¿½ï¿½ï¿½NextTokPrecï¿½ï¿½ï¿½ï¿½ï¿½È¼ï¿½ï¿½Ç¹Ì¶ï¿½ï¿½ï¿½
+    // Perform semantic and combine the LHS and RHS into LHS (e.g. build AST)
+    lhs = Actions.ActOnBinaryOperator(lhs, OpToken, RHS);
+  }
+  return lhs;
 }
 
 /// \brief This function for parsing PrimaryExpr.
 /// primary-expression -> identifier | identifier arg-list | ( expression )
 ///			| INT-LITERAL | BOOL-LITERAL
-ExprASTPtr Parser::ParsePrimaryExpr()
-{
-	TokenValue curTokVal = scan.getToken().getValue();
-	switch (curTokVal)
-	{
-	case TokenValue::IDENTIFIER:
-		return ParseIdentifierExpr();
-	case TokenValue::INTEGER_LITERAL:
-		return ParseNumberExpr();
-		// now moses0.1 only have int and bool
-		//case compiler::TokenValue::REAL_LITERAL:
-		//	return ParseNumberExpr();
-		//case compiler::TokenValue::CHAR_LITERAL:
-		//	return ParseCharLiteral();
-		//case compiler::TokenValue::STRING_LITERAL:
-		//	return ParseStringLitreal();
-	case TokenValue::BOOL_TRUE:
-		return ParseBoolLiteral(true);
-	case TokenValue::BOOL_FALSE:
-		return ParseBoolLiteral(false);
-	case TokenValue::PUNCTUATOR_Left_Paren:
-		return ParseParenExpr();
-	default:
-		errorReport("Error occured when parsing primary expression! Illegal token");
-		syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
-		break;
-	}
-	return nullptr;
+ExprASTPtr Parser::ParsePrimaryExpr() {
+  TokenValue curTokVal = scan.getToken().getValue();
+  switch (curTokVal) {
+  case TokenValue::IDENTIFIER:
+    return ParseIdentifierExpr();
+  case TokenValue::INTEGER_LITERAL:
+    return ParseNumberExpr();
+    // now moses0.1 only have int and bool
+    // case compiler::TokenValue::REAL_LITERAL:
+    //	return ParseNumberExpr();
+    // case compiler::TokenValue::CHAR_LITERAL:
+    //	return ParseCharLiteral();
+    // case compiler::TokenValue::STRING_LITERAL:
+    //	return ParseStringLitreal();
+  case TokenValue::BOOL_TRUE:
+    return ParseBoolLiteral(true);
+  case TokenValue::BOOL_FALSE:
+    return ParseBoolLiteral(false);
+  case TokenValue::PUNCTUATOR_Left_Paren:
+    return ParseParenExpr();
+  default:
+    errorReport("Error occured when parsing primary expression! Illegal token");
+    syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
+    break;
+  }
+  return nullptr;
 }
 
 /// \brief ParseCallExpr - Parse the call expr.
@@ -915,82 +856,72 @@ ExprASTPtr Parser::ParsePrimaryExpr()
 /// proper-arg-list->arg proper-arg - list - tail
 /// proper-arg-list-tail ->, arg proper-arg-list-tail | EPSILON
 /// arg->expression | anonymous - initial
-/// Note: mosesÖ§³Öº¯Êýµ÷ÓÃÊ±µÄÄäÃûÀàÐÍµÄÊµ²Î
-/// ÀýÈç£º add({lhs, rhs}, num);
-ExprASTPtr Parser::ParseCallExpr(Token tok)
-{
-	auto startLoc = tok.getTokenLoc();
-	std::string funcName = tok.getLexem();
-	std::vector<ExprASTPtr> Args;
-	std::vector<std::shared_ptr<Type>> ParmTyps;
-	bool first = true;
-	// [(] [param] [,parm] [,parm] [)]
-	// To Do: Shit code!
-	while (1)
-	{
-		// check ')'
-		if (validateToken(TokenValue::PUNCTUATOR_Right_Paren))
-		{
-			break;
-		}
+/// Note: mosesÖ§ï¿½Öºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Íµï¿½Êµï¿½ï¿½
+/// ï¿½ï¿½ï¿½ç£º add({lhs, rhs}, num);
+ExprASTPtr Parser::ParseCallExpr(Token tok) {
+  auto startLoc = tok.getTokenLoc();
+  std::string funcName = tok.getLexem();
+  std::vector<ExprASTPtr> Args;
+  std::vector<std::shared_ptr<Type>> ParmTyps;
+  bool first = true;
+  // [(] [param] [,parm] [,parm] [)]
+  // To Do: Shit code!
+  while (1) {
+    // check ')'
+    if (validateToken(TokenValue::PUNCTUATOR_Right_Paren)) {
+      break;
+    }
 
-		if (first)
-		{
-			first = false;
-		}
-		else
-		{
-			if (!expectToken(TokenValue::PUNCTUATOR_Comma, ",", true))
-			{
-				syntaxErrorRecovery(ParseContext::context::ParmDecl);
-				continue;
-			}
-		}
+    if (first) {
+      first = false;
+    } else {
+      if (!expectToken(TokenValue::PUNCTUATOR_Comma, ",", true)) {
+        syntaxErrorRecovery(ParseContext::context::ParmDecl);
+        continue;
+      }
+    }
 
-		ExprASTPtr arg = nullptr;
-		// (1) ½âÎöargument expression£¬Êµ²ÎÓÐÁ½ÖÖ£¬ÆÕÍ¨expressionºÍÄäÃûÊµ²Î
-		if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false))
-		{
-			arg = ParseAnonymousInitExpr();
-		}
-		else
-		{
-			arg = ParseExpression();
-		}
+    ExprASTPtr arg = nullptr;
+    // (1) ï¿½ï¿½ï¿½ï¿½argument expressionï¿½ï¿½Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö£ï¿½ï¿½ï¿½Í¨expressionï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
+    if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false)) {
+      arg = ParseAnonymousInitExpr();
+    } else {
+      arg = ParseExpression();
+    }
 
-		if (!arg)
-		{
-			return nullptr;
-		}
-		ParmTyps.push_back(arg->getType());
-		Args.push_back(arg);
-	}
+    if (!arg) {
+      return nullptr;
+    }
+    ParmTyps.push_back(arg->getType());
+    Args.push_back(arg);
+  }
 
-	// Perform simple semantic analysis
-	// (Check whether the function is defined or parameter types match).
+  // Perform simple semantic analysis
+  // (Check whether the function is defined or parameter types match).
 
-	// ²éÑ¯·ûºÅ±íµÄÊ±ºò´ÓÖÐ»ñÈ¡µ½FunctionDeclµÄµØÖ·
-	// To Do: ÕâÀï´æÔÚÒ»¸öµÝ¹éµÄbug.
-	FunctionDeclPtr fd = nullptr;
-	auto returnType = Actions.ActOnCallExpr(funcName, ParmTyps, fd);
+  // ï¿½ï¿½Ñ¯ï¿½ï¿½ï¿½Å±ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Ð»ï¿½È¡ï¿½ï¿½FunctionDeclï¿½Äµï¿½Ö·
+  // To Do: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ý¹ï¿½ï¿½bug.
+  FunctionDeclPtr fd = nullptr;
+  auto returnType = Actions.ActOnCallExpr(funcName, ParmTyps, fd);
 
-	// ¼ì²éCallExprÊÇ·ñÊÇ¿ÉÍÆµ¼µÄ£¬CallExprÊÇ·ñ¿ÉÍÆµ¼ÔÚÓÚreturn type.
+  // ï¿½ï¿½ï¿½CallExprï¿½Ç·ï¿½ï¿½Ç¿ï¿½ï¿½Æµï¿½ï¿½Ä£ï¿½CallExprï¿½Ç·ï¿½ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½return type.
 
-	auto endLoc = scan.getToken().getTokenLoc();
+  auto endLoc = scan.getToken().getTokenLoc();
 
-	// Note: ¹ØÓÚÉèÖÃCallExpr×óÓÒÖµÀàÐÍÓÐÁ½µãÐèÒª×¢Òâ£¬£¨1£©Èç¹ûº¯Êý·µ»Øvoid£¬ÔòÎªrvalue
-	// £¨2£©·ñÔò¸ù¾Ýreturn-typeÀ´ÉèÖÃvalueKind£¬Èç¹ûreturn-typeÊÇÄÚÖÃÀàÐÍÔòÎªrvalue
-	// ÀýÈç£ºfunc() = 10;
-	// ÒòÎªº¯ÊýµÄ·µ»ØÖµµÄ±¾ÖÊ¾ÍÊÇÒ»¸öÁÙÊ±±äÁ¿£¬ÔÚÊµÏÖ»úÖÆÉÏÊÇstack frameÉÏµÄÒ»¿éÁÙÊ±ÄÚ´æ¡£
-	// To Do: mosesÄâ²ÉÓÃÄÚÖÃÀàÐÍÖµÓïÒå£¬ÓÃ»§×Ô¶¨ÒåÀàÐÍÒýÓÃÓïÒå¡£
-	// µ«ÊÇÄ¿Ç°È«²¿²ÉÓÃÖµÓïÒå£¨ÀàËÆÓÚC/C++£©
-	if (returnType)
-	{
-		return std::make_shared<CallExpr>(startLoc, endLoc, returnType, tok.getLexem(), Args,
-			Expr::ExprValueKind::VK_RValue, fd, returnType->getKind() != TypeKind::USERDEFIED);
-	}
-	// Èç¹ûreturnTypeÎª¿Õ
-	return nullptr;
+  // Note: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½CallExprï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òª×¢ï¿½â£¬ï¿½ï¿½1ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½voidï¿½ï¿½ï¿½ï¿½Îªrvalue
+  // ï¿½ï¿½2ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½return-typeï¿½ï¿½ï¿½ï¿½ï¿½ï¿½valueKindï¿½ï¿½ï¿½ï¿½ï¿½return-typeï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªrvalue
+  // ï¿½ï¿½ï¿½ç£ºfunc() = 10;
+  // ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½Ä·ï¿½ï¿½ï¿½Öµï¿½Ä±ï¿½ï¿½Ê¾ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½stack frameï¿½Ïµï¿½Ò»ï¿½ï¿½ï¿½ï¿½Ê±ï¿½Ú´æ¡£
+  // To Do: mosesï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½å£¬ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å¡£
+  // ï¿½ï¿½ï¿½ï¿½Ä¿Ç°È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½å£¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½C/C++ï¿½ï¿½
+  if (returnType) {
+    return std::make_shared<CallExpr>(
+        startLoc, endLoc, returnType, tok.getLexem(), Args,
+        Expr::ExprValueKind::VK_RValue, fd,
+        returnType->getKind() != TypeKind::USERDEFIED);
+  }
+  // ï¿½ï¿½ï¿½returnTypeÎªï¿½ï¿½
+  return nullptr;
 }
 
 /// \brief ParseVarDefinition - Parse variable declaration.
@@ -999,233 +930,200 @@ ExprASTPtr Parser::ParseCallExpr(Token tok)
 /// variable-declaration -> var identifier init-expression ;
 ///				| var identifier type-annotation ;
 /// ---------------------------------------------------------------
-DeclASTPtr Parser::ParseVarDecl()
-{
-	auto locStart = scan.getToken().getTokenLoc();
+DeclASTPtr Parser::ParseVarDecl() {
+  auto locStart = scan.getToken().getTokenLoc();
 
-	// 'isConst' and 'isInitial' for const
-	// ÔÚmosesÖÐ£¬const±äÁ¿²»ÐèÒªÏñC++ÖÐµÄÄÇÑù£¬±ØÐë³õÊ¼»¯
-	// const num : int;
-	// num = 10;
-	// ÕâÁ½ÐÐ´úÂëÔÚmosesÖÐÒ²ÊÇÔÊÐíµÄ£¬ËùÒÔ¶ÔconstµÄ¸³Öµ²»ÄÜÈ«²¿±¨´í
-	// Èç¹ûconst±äÁ¿Ã»ÓÐ½øÐÐ¹ý³õÊ¼»¯£¬ÄÇÃ´¶ÔÆäµÄÊ×´Î¸³Öµ¾ÍÊÇÔÊÐíµÄ£¨Òà¼´³õÊ¼»¯£©£¬·ñÔò±¨´í.
-	// ËùÒÔÐèÒª¼ÇÂ¼const±äÁ¿ÊÇ·ñ³õÊ¼»¯µÄÐÅÏ¢.
-	bool isConst = false;
-	// ³õÊ¼»¯±í´ïÊ½£¬¿ÉÑ¡
-	ExprASTPtr InitExpr = nullptr;
+  // 'isConst' and 'isInitial' for const
+  // ï¿½ï¿½mosesï¿½Ð£ï¿½constï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½C++ï¿½Ðµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½
+  // const num : int;
+  // num = 10;
+  // ï¿½ï¿½ï¿½ï¿½ï¿½Ð´ï¿½ï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½constï¿½Ä¸ï¿½Öµï¿½ï¿½ï¿½ï¿½È«ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  // ï¿½ï¿½ï¿½constï¿½ï¿½ï¿½ï¿½Ã»ï¿½Ð½ï¿½ï¿½Ð¹ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×´Î¸ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½ï¿½à¼´ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ò±¨´ï¿½.
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Â¼constï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢.
+  bool isConst = false;
+  // ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½Ñ¡
+  ExprASTPtr InitExpr = nullptr;
 
-	if (validateToken(TokenValue::KEYWORD_const, false))
-	{
-		isConst = true;
-	}
-	// consume 'const' or 'var' token
-	scan.getNextToken();
+  if (validateToken(TokenValue::KEYWORD_const, false)) {
+    isConst = true;
+  }
+  // consume 'const' or 'var' token
+  scan.getNextToken();
 
-	if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false))
-	{
-		/// var {int, {int, int}} = num;
-		/// Õâ¸ödeclÖ÷ÒªÓÃÓÚ½øÐÐanonymous typeµÄunpack²Ù×÷
-		if (isConst)
-		{
-			errorReport("Unpack declaration can't have const qualifier.");
-		}
+  if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false)) {
+    /// var {int, {int, int}} = num;
+    /// ï¿½ï¿½ï¿½declï¿½ï¿½Òªï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½anonymous typeï¿½ï¿½unpackï¿½ï¿½ï¿½ï¿½
+    if (isConst) {
+      errorReport("Unpack declaration can't have const qualifier.");
+    }
 
-		/// (1) ½âÎöunpack declµÄ×ó²¿£¬ÀýÈç£ºvar {num, lhs} = ;
-		auto unpackDecl = ParseUnpackDecl(isConst);
-		// complicated actions routines.
-		if (!(validateToken(TokenValue::BO_Assign)))
-		{
-			// Note£ºÕâÀïÖ´ÐÐ¼òµ¥µÄ´íÎó»Ö¸´²ßÂÔ£¬¼òµ¥µÄ¼ÙÉè"="´æÔÚ
-			errorReport("Expected '=', but find " + scan.getToken().getLexem());
-		}
+    /// (1) ï¿½ï¿½ï¿½ï¿½unpack declï¿½ï¿½ï¿½ó²¿£ï¿½ï¿½ï¿½ï¿½ç£ºvar {num, lhs} = ;
+    auto unpackDecl = ParseUnpackDecl(isConst);
+    // complicated actions routines.
+    if (!(validateToken(TokenValue::BO_Assign))) {
+      // Noteï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö´ï¿½Ð¼òµ¥µÄ´ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½Ô£ï¿½ï¿½òµ¥µÄ¼ï¿½ï¿½ï¿½"="ï¿½ï¿½ï¿½ï¿½
+      errorReport("Expected '=', but find " + scan.getToken().getLexem());
+    }
 
-		/// (2) ½âÎöunpack declµÄÓÒ²¿£¬ÀýÈç£º = identifier | identifier()
-		auto initexpr = ParseIdentifierExpr();
+    /// (2) ï¿½ï¿½ï¿½ï¿½unpack declï¿½ï¿½ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ç£º = identifier | identifier()
+    auto initexpr = ParseIdentifierExpr();
 
-		/// (3) ½øÐÐ¼òµ¥µÄÓïÒå·ÖÎö£¬½øÐÐÀàÐÍ¼ì²é
-		return Actions.ActOnUnpackDecl(unpackDecl, initexpr->getType());
-	}
+    /// (3)
+    /// ï¿½ï¿½ï¿½Ð¼òµ¥µï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½ï¿½
+    return Actions.ActOnUnpackDecl(unpackDecl, initexpr->getType());
+  }
 
-	if (!validateToken(TokenValue::IDENTIFIER, false))
-	{
-		syntaxErrorRecovery(ParseContext::context::Statement);
-	}
+  if (!validateToken(TokenValue::IDENTIFIER, false)) {
+    syntaxErrorRecovery(ParseContext::context::Statement);
+  }
 
-	Token curTok = scan.getToken();
-	scan.getNextToken();
-	std::shared_ptr<Type> DeclType = nullptr;
+  Token curTok = scan.getToken();
+  scan.getNextToken();
+  std::shared_ptr<Type> DeclType = nullptr;
 
-	// type-annotation ':'
-	if (validateToken(TokenValue::PUNCTUATOR_Colon))
-	{
-		// type-annotation
-		// check whether the built-in type.
-		if (validateToken(TokenValue::KEYWORD_int))
-		{
-			DeclType = Ctx.Int;
-		}
-		else if (validateToken(TokenValue::KEYWORD_bool))
-		{
-			DeclType = Ctx.Bool;
-		}
-		else if (validateToken(TokenValue::IDENTIFIER, false))
-		{
-			// Simple semantic analysis. Check whether the user-defined type
-			// ÓÉÓÚfunc¶¨ÒåºÍclass¶¨ÒåÖ»´æÔÚÓÚTop-LevelÖÐ£¬ËùÒÔÖ»ÐèÒªÔÚTop-Level Scope
-			// ÖÐ½øÐÐname lookup¾Í¿ÉÒÔÁË¡£
-			DeclType = Actions.ActOnVarDeclUserDefinedType(scan.getToken());
-			scan.getNextToken();
-		}
-		else if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false))
-		{
-			DeclType = ParseAnony();
-			scan.getNextToken();
-		}
-		else
-		{
-			// syntax error
-			errorReport("expect 'int' ot 'bool', but find " + scan.getToken().getLexem());
-			syntaxErrorRecovery(ParseContext::context::Statement);
-			// ---------------------nonsense for coding-------------------------------
-			// ÎªÁË±ãÓÚ´Ó´íÎóÖÐ»Ö¸´£¬Óöµ½Óï·¨´íÎó£¬³ÌÐò²»Á¢¼´ÖÐÖ¹
-			// ---------------------nonsense for coding-------------------------------
-			scan.getNextToken();
-		}
-	}
-	else if (validateToken(TokenValue::BO_Assign))
-	{
-		// Parse init-expression
-		if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false))
-		{
-			// Class initial expression.
-			InitExpr = ParseAnonymousInitExpr();
-			DeclType = InitExpr->getType();
-		}
-		else
-		{
-			// Normal initial expression.
-			InitExpr = ParseExpression();
-			DeclType = InitExpr->getType();
-		}
-		// ÓÉÓÚInitExprÊÇÓÒÖµ£¬Ä¬ÈÏconstÀàÐÍ£¬ÔÚ¶Ô×ó²àÀàÐÍ½øÐÐÍÆµ¼Ê±£¬ÀýÈç£º"lhs = rhs + 10;"£¬Ó¦¸Ã¶ªµôconstÊôÐÔ
-		// DeclType = Type::const_remove(InitExpr->getType());
-	}
-	else
-	{
-		// syntax error
-		errorReport("expect ':' or '=', but find " + scan.getToken().getLexem());
-		syntaxErrorRecovery(ParseContext::context::Statement);
-	}
+  // type-annotation ':'
+  if (validateToken(TokenValue::PUNCTUATOR_Colon)) {
+    // type-annotation
+    // check whether the built-in type.
+    if (validateToken(TokenValue::KEYWORD_int)) {
+      DeclType = Ctx.Int;
+    } else if (validateToken(TokenValue::KEYWORD_bool)) {
+      DeclType = Ctx.Bool;
+    } else if (validateToken(TokenValue::IDENTIFIER, false)) {
+      // Simple semantic analysis. Check whether the user-defined type
+      // ï¿½ï¿½ï¿½ï¿½funcï¿½ï¿½ï¿½ï¿½ï¿½classï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Top-Levelï¿½Ð£ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½Òªï¿½ï¿½Top-Level Scope
+      // ï¿½Ð½ï¿½ï¿½ï¿½name lookupï¿½Í¿ï¿½ï¿½ï¿½ï¿½Ë¡ï¿½
+      DeclType = Actions.ActOnVarDeclUserDefinedType(scan.getToken());
+      scan.getNextToken();
+    } else if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false)) {
+      DeclType = ParseAnony();
+      scan.getNextToken();
+    } else {
+      // syntax error
+      errorReport("expect 'int' ot 'bool', but find " +
+                  scan.getToken().getLexem());
+      syntaxErrorRecovery(ParseContext::context::Statement);
+      // ---------------------nonsense for coding-------------------------------
+      // Îªï¿½Ë±ï¿½ï¿½Ú´Ó´ï¿½ï¿½ï¿½ï¿½Ð»Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½ï¿½ó£¬³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¹
+      // ---------------------nonsense for coding-------------------------------
+      scan.getNextToken();
+    }
+  } else if (validateToken(TokenValue::BO_Assign)) {
+    // Parse init-expression
+    if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false)) {
+      // Class initial expression.
+      InitExpr = ParseAnonymousInitExpr();
+      DeclType = InitExpr->getType();
+    } else {
+      // Normal initial expression.
+      InitExpr = ParseExpression();
+      DeclType = InitExpr->getType();
+    }
+    // ï¿½ï¿½ï¿½ï¿½InitExprï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½Ä¬ï¿½ï¿½constï¿½ï¿½ï¿½Í£ï¿½ï¿½Ú¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í½ï¿½ï¿½ï¿½ï¿½Æµï¿½Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ç£º"lhs = rhs +
+    // 10;"ï¿½ï¿½Ó¦ï¿½Ã¶ï¿½ï¿½ï¿½constï¿½ï¿½ï¿½ï¿½ DeclType = Type::const_remove(InitExpr->getType());
+  } else {
+    // syntax error
+    errorReport("expect ':' or '=', but find " + scan.getToken().getLexem());
+    syntaxErrorRecovery(ParseContext::context::Statement);
+  }
 
-	auto decl = std::make_shared<VarDecl>(locStart, scan.getToken().getTokenLoc(), 
-		curTok.getLexem(), DeclType, isConst, InitExpr);
+  auto decl =
+      std::make_shared<VarDecl>(locStart, scan.getToken().getTokenLoc(),
+                                curTok.getLexem(), DeclType, isConst, InitExpr);
 
-	// Perform simple semantic analysis(Create New Symbol
-	// Note: DeclType°üº¬constÊôÐÔ.
-	Actions.ActOnVarDecl(curTok.getLexem(), decl);
+  // Perform simple semantic analysis(Create New Symbol
+  // Note: DeclTypeï¿½ï¿½ï¿½ï¿½constï¿½ï¿½ï¿½ï¿½.
+  Actions.ActOnVarDecl(curTok.getLexem(), decl);
 
-	return decl;
+  return decl;
 }
-
 
 /// \brief This function parse unpack decl.
 /// var {num, {start, end}} = num;
-/// ÆäÖÐ{num, {start, end}}ÓÃÀ´½â°ünum.
-/// Note: ÄäÃûÀàÐÍ¿ÉÒÔÓÃN²æÊ÷À´±íÊ¾
+/// ï¿½ï¿½ï¿½ï¿½{num, {start, end}}ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½num.
+/// Note: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¿ï¿½ï¿½ï¿½ï¿½ï¿½Nï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾
 /// {int, {int, bool, {int, bool}, int}, {int, int}}
-/// Ò»¸öÄäÃûÀàÐÍÊ÷¿ÉÒÔ¸ù¾ÝÇ¶Ì×À´½øÐÐ·Ö²ã
-UnpackDeclPtr Parser::ParseUnpackDecl(bool isConst)
-{
-	// current token is '{'
-	if (!(expectToken(TokenValue::PUNCTUATOR_Left_Brace, "{", true)))
-	{
-		errorReport("Unpack declaration list must be start with '{'.");
-	}
-	auto startloc = scan.getToken().getTokenLoc();
-	std::vector<DeclASTPtr> decls;
+/// Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¸ï¿½ï¿½ï¿½Ç¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð·Ö²ï¿½
+UnpackDeclPtr Parser::ParseUnpackDecl(bool isConst) {
+  // current token is '{'
+  if (!(expectToken(TokenValue::PUNCTUATOR_Left_Brace, "{", true))) {
+    errorReport("Unpack declaration list must be start with '{'.");
+  }
+  auto startloc = scan.getToken().getTokenLoc();
+  std::vector<DeclASTPtr> decls;
 
-	while (1)
-	{
-		if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false))
-		{
-			decls.push_back(ParseUnpackDecl(isConst));
-		}
-		else if (validateToken(TokenValue::IDENTIFIER, false))
-		{
-			Actions.ActOnUnpackDeclElement(scan.getToken().getLexem());
-			/// ×¢Òâunpack declµÄtypeÖ»ÄÜÍ¨¹ýÓÒ²àµÄÄäÃûÀàÐÍ±äÁ¿À´ÉèÖÃ¡£
-			decls.push_back(std::make_shared<VarDecl>(startloc, scan.getToken().getTokenLoc(),
-				scan.getToken().getLexem(), nullptr, isConst, nullptr));
-			scan.getNextToken();
-		}
-		else
-		{
-			errorReport("Error occured in unpack declaration.");
-			syntaxErrorRecovery(ParseContext::context::Statement);
-		}
-		if (validateToken(TokenValue::PUNCTUATOR_Right_Brace))
-		{
-			break;
-		}
-		expectToken(TokenValue::PUNCTUATOR_Comma, ",", true);
-	}
-	return std::make_shared<UnpackDecl>(startloc, scan.getToken().getTokenLoc(), decls);
+  while (1) {
+    if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false)) {
+      decls.push_back(ParseUnpackDecl(isConst));
+    } else if (validateToken(TokenValue::IDENTIFIER, false)) {
+      Actions.ActOnUnpackDeclElement(scan.getToken().getLexem());
+      /// ×¢ï¿½ï¿½unpack declï¿½ï¿½typeÖ»ï¿½ï¿½Í¨ï¿½ï¿½ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¡ï¿½
+      decls.push_back(std::make_shared<VarDecl>(
+          startloc, scan.getToken().getTokenLoc(), scan.getToken().getLexem(),
+          nullptr, isConst, nullptr));
+      scan.getNextToken();
+    } else {
+      errorReport("Error occured in unpack declaration.");
+      syntaxErrorRecovery(ParseContext::context::Statement);
+    }
+    if (validateToken(TokenValue::PUNCTUATOR_Right_Brace)) {
+      break;
+    }
+    expectToken(TokenValue::PUNCTUATOR_Comma, ",", true);
+  }
+  return std::make_shared<UnpackDecl>(startloc, scan.getToken().getTokenLoc(),
+                                      decls);
 }
 
-
-/// \brief ÓÉÓÚmosesÖ§³Ö×Ô¶¨ÒåÀàÐÍµÄÍÆµ¼£¬ÀýÈç£º
+/// \brief ï¿½ï¿½ï¿½ï¿½mosesÖ§ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Íµï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ç£º
 /// var num = {{12, 234}, false};
-/// ÄÇÃ´numµÄÀàÐÍ¾ÍÊÇ class { class {int, int}, false}
-/// ÕâÑù¾Í¿ÉÒÔÍ¨¹ý½«num¸³Öµ¸øÀàÐÍ½á¹¹ÓëÆäÏàÍ¬µÄ±äÁ¿¡£
-/// ÕâÑùÊÇmoses²ÉÓÃ½á¹¹ÀàÐÍµÈ¼ÛµÄÖØÒªÌåÏÖ¡£
-/// Note: ¸Ãº¯Êý½ÓÊÜtokenÁ÷µÄ±ê×¼ÊÇÒÔ"{"¿ªÍ·
-ExprASTPtr Parser::ParseAnonymousInitExpr()
-{
-	auto startloc = scan.getToken().getTokenLoc();
-	// consume '{'
-	scan.getNextToken();
-	std::vector<ExprASTPtr> initExprs;
-	std::vector<std::shared_ptr<Type>> initTypes;
-	while (1)
-	{
-		switch (scan.getToken().getKind())
-		{
-		case TokenValue::BO_Sub:
-		case TokenValue::UO_Dec:
-		case TokenValue::UO_Exclamatory:
-		case TokenValue::UO_Inc:
-		case TokenValue::IDENTIFIER:
-		case TokenValue::PUNCTUATOR_Left_Paren:
-		case TokenValue::INTEGER_LITERAL:
-		case TokenValue::BOOL_FALSE:
-		case TokenValue::BOOL_TRUE:
-			initExprs.push_back(ParseExpression());
-			break;
-		case TokenValue::PUNCTUATOR_Left_Brace:
-			initExprs.push_back(ParseAnonymousInitExpr());
-			break;
-		default:
-			// Handle syntax error.
-			// For example, break unlikely appear in Top-Level.
-			errorReport("Error occured when parsing compound initial expression. ");
-			syntaxErrorRecovery(ParseContext::context::Statement);
-		}
-		if (validateToken(TokenValue::PUNCTUATOR_Right_Brace))
-		{
-			break;
-		}
-		expectToken(TokenValue::PUNCTUATOR_Comma, ",", true);
-	}
+/// ï¿½ï¿½Ã´numï¿½ï¿½ï¿½ï¿½ï¿½Í¾ï¿½ï¿½ï¿½ class { class {int, int}, false}
+/// ï¿½ï¿½ï¿½ï¿½ï¿½Í¿ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½numï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½Í½á¹¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¬ï¿½Ä±ï¿½ï¿½ï¿½ï¿½ï¿½
+/// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½ï¿½Ã½á¹¹ï¿½ï¿½ï¿½ÍµÈ¼Ûµï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½Ö¡ï¿½
+/// Note: ï¿½Ãºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½tokenï¿½ï¿½ï¿½Ä±ï¿½×¼ï¿½ï¿½ï¿½ï¿½"{"ï¿½ï¿½Í·
+ExprASTPtr Parser::ParseAnonymousInitExpr() {
+  auto startloc = scan.getToken().getTokenLoc();
+  // consume '{'
+  scan.getNextToken();
+  std::vector<ExprASTPtr> initExprs;
+  std::vector<std::shared_ptr<Type>> initTypes;
+  while (1) {
+    switch (scan.getToken().getKind()) {
+    case TokenValue::BO_Sub:
+    case TokenValue::UO_Dec:
+    case TokenValue::UO_Exclamatory:
+    case TokenValue::UO_Inc:
+    case TokenValue::IDENTIFIER:
+    case TokenValue::PUNCTUATOR_Left_Paren:
+    case TokenValue::INTEGER_LITERAL:
+    case TokenValue::BOOL_FALSE:
+    case TokenValue::BOOL_TRUE:
+      initExprs.push_back(ParseExpression());
+      break;
+    case TokenValue::PUNCTUATOR_Left_Brace:
+      initExprs.push_back(ParseAnonymousInitExpr());
+      break;
+    default:
+      // Handle syntax error.
+      // For example, break unlikely appear in Top-Level.
+      errorReport("Error occured when parsing compound initial expression. ");
+      syntaxErrorRecovery(ParseContext::context::Statement);
+    }
+    if (validateToken(TokenValue::PUNCTUATOR_Right_Brace)) {
+      break;
+    }
+    expectToken(TokenValue::PUNCTUATOR_Comma, ",", true);
+  }
 
-	/// ´´½¨Ò»¸öÄäÃûÀàÐÍ
-	unsigned size = initExprs.size();
-	for (unsigned i = 0; i < size; i++)
-	{
-		initTypes.push_back(initExprs[i]->getType());
-	}
-	// std::make_shared<AnonymousType>(initTypes);
-	return std::make_shared<AnonymousInitExpr>(startloc, scan.getToken().getTokenLoc(), initExprs, 
-		std::make_shared<AnonymousType>(initTypes));
+  /// ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  unsigned size = initExprs.size();
+  for (unsigned i = 0; i < size; i++) {
+    initTypes.push_back(initExprs[i]->getType());
+  }
+  // std::make_shared<AnonymousType>(initTypes);
+  return std::make_shared<AnonymousInitExpr>(
+      startloc, scan.getToken().getTokenLoc(), initExprs,
+      std::make_shared<AnonymousType>(initTypes));
 }
 
 /// \brief ParseFunctionDecl - Parse function declaration.
@@ -1236,103 +1134,98 @@ ExprASTPtr Parser::ParseAnonymousInitExpr()
 /// We parsed and verified that the specified Declarator is well formed.
 /// If this is a K&R function, read the parameters declaration-list, then
 /// start the compound-statement.
-StmtASTPtr Parser::ParseFunctionDefinition()
-{
-	auto locStart = scan.getToken().getTokenLoc();
-	// consume 'func' token
-	if (!expectToken(TokenValue::KEYWORD_func, "func", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::FunctionDefinition);
-	}
-	auto name = scan.getToken().getLexem();
-	if (!expectToken(TokenValue::IDENTIFIER, "identifier", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::FunctionDefinition);
-	}
+StmtASTPtr Parser::ParseFunctionDefinition() {
+  auto locStart = scan.getToken().getTokenLoc();
+  // consume 'func' token
+  if (!expectToken(TokenValue::KEYWORD_func, "func", true)) {
+    syntaxErrorRecovery(ParseContext::context::FunctionDefinition);
+  }
+  auto name = scan.getToken().getLexem();
+  if (!expectToken(TokenValue::IDENTIFIER, "identifier", true)) {
+    syntaxErrorRecovery(ParseContext::context::FunctionDefinition);
+  }
 
-	CurrentContext = ContextKind::Function;
+  CurrentContext = ContextKind::Function;
 
-	// now we get 'func identifier' Parse identifier
-	// Simple semantic analysis(Check redefinition and create new scope).
-	Actions.ActOnFunctionDeclStart(name);
+  // now we get 'func identifier' Parse identifier
+  // Simple semantic analysis(Check redefinition and create new scope).
+  Actions.ActOnFunctionDeclStart(name);
 
-	// parse parameters
-	auto parm = ParseParameterList();
+  // parse parameters
+  auto parm = ParseParameterList();
 
-	if (!expectToken(TokenValue::PUNCTUATOR_Arrow, "->", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::FunctionDefinition);
-	}
+  if (!expectToken(TokenValue::PUNCTUATOR_Arrow, "->", true)) {
+    syntaxErrorRecovery(ParseContext::context::FunctionDefinition);
+  }
 
-	std::shared_ptr<Type> returnType = nullptr;
+  std::shared_ptr<Type> returnType = nullptr;
 
-	switch (scan.getToken().getKind())
-	{
-	case TokenValue::KEYWORD_int:
-		returnType = Ctx.Int;
-		scan.getNextToken();
-		break;
-	case TokenValue::KEYWORD_bool:
-		returnType = Ctx.Bool;
-		scan.getNextToken();
-		break;
-	case TokenValue::KEYWORD_void:
-		returnType = Ctx.Void;
-		scan.getNextToken();
-		break;
-	case TokenValue::IDENTIFIER:
-		returnType = Actions.ActOnReturnType(scan.getToken().getLexem());
-		scan.getNextToken();
-		break;
-	case TokenValue::PUNCTUATOR_Left_Brace:
-		returnType = ParseAnony();
-		scan.getNextToken();
-		break;
-	default:
-		errorReport("Error occured. " + scan.getToken().getLexem() + " isn't type.");
-		syntaxErrorRecovery(ParseContext::context::ReturnType);
-		break;
-	}
+  switch (scan.getToken().getKind()) {
+  case TokenValue::KEYWORD_int:
+    returnType = Ctx.Int;
+    scan.getNextToken();
+    break;
+  case TokenValue::KEYWORD_bool:
+    returnType = Ctx.Bool;
+    scan.getNextToken();
+    break;
+  case TokenValue::KEYWORD_void:
+    returnType = Ctx.Void;
+    scan.getNextToken();
+    break;
+  case TokenValue::IDENTIFIER:
+    returnType = Actions.ActOnReturnType(scan.getToken().getLexem());
+    scan.getNextToken();
+    break;
+  case TokenValue::PUNCTUATOR_Left_Brace:
+    returnType = ParseAnony();
+    scan.getNextToken();
+    break;
+  default:
+    errorReport("Error occured. " + scan.getToken().getLexem() +
+                " isn't type.");
+    syntaxErrorRecovery(ParseContext::context::ReturnType);
+    break;
+  }
 
-	// ÕâÀï¼òµ¥µÄ¼ÇÂ¼µ½Funcition Symbol£¬
-	// Record return type and create new scope.
-	Actions.ActOnFunctionDecl(name, returnType);
+  // ï¿½ï¿½ï¿½ï¿½òµ¥µÄ¼ï¿½Â¼ï¿½ï¿½Funcition Symbolï¿½ï¿½
+  // Record return type and create new scope.
+  Actions.ActOnFunctionDecl(name, returnType);
 
-	auto body = ParseFunctionStatementBody();
+  auto body = ParseFunctionStatementBody();
 
-	CurrentContext = ContextKind::TopLevel;
+  CurrentContext = ContextKind::TopLevel;
 
-	auto FuncDecl = std::make_shared<FunctionDecl>(locStart, scan.getToken().getTokenLoc(), name, 
-		parm, body, returnType);
+  auto FuncDecl = std::make_shared<FunctionDecl>(
+      locStart, scan.getToken().getTokenLoc(), name, parm, body, returnType);
 
-	// To Do: ÕâÀï´úÂë½á¹¹²»ÊÇºÜºÏÀí
-	// ÏòFunctionSymbol¼ÇÂ¼FunctionDeclµÄµØÖ·
-	Actions.getFunctionStackTop()->setFunctionDeclPointer(FuncDecl);
+  // To Do: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á¹¹ï¿½ï¿½ï¿½ÇºÜºï¿½ï¿½ï¿½
+  // ï¿½ï¿½FunctionSymbolï¿½ï¿½Â¼FunctionDeclï¿½Äµï¿½Ö·
+  Actions.getFunctionStackTop()->setFunctionDeclPointer(FuncDecl);
 
-	// Pop function stack
-	Actions.PopFunctionStack();
+  // Pop function stack
+  Actions.PopFunctionStack();
 
-	// Pop parm scope.
-	Actions.PopScope();
+  // Pop parm scope.
+  Actions.PopScope();
 
-	return FuncDecl;
+  return FuncDecl;
 }
 
 /// \brief ParseFunctionStatementBody - Parse function body.
 /// ----------------------nonsense for coding-----------------------
-/// ËäÈ»function bodyºÍcompound statementºÜÏàËÆ£¬µ«ÊÇ»¹ÓÐÒ»Ð©scopeÉÏ
-/// µÄÇø±ð¡£ÁíÍâÎªÁËÊµÏÖºóÃæµÄº¯Êý±Õ°ü£¬ÕâÀï½«CompoundStatementºÍ
-/// FunctionStatementBodyµÄparse·Ö¿ª¡£
+/// ï¿½ï¿½È»function bodyï¿½ï¿½compound statementï¿½ï¿½ï¿½ï¿½ï¿½Æ£ï¿½ï¿½ï¿½ï¿½Ç»ï¿½ï¿½ï¿½Ò»Ð©scopeï¿½ï¿½
+/// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Êµï¿½Öºï¿½ï¿½ï¿½Äºï¿½ï¿½ï¿½ï¿½Õ°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï½«CompoundStatementï¿½ï¿½
+/// FunctionStatementBodyï¿½ï¿½parseï¿½Ö¿ï¿½ï¿½ï¿½
 /// ----------------------nonsense for coding-----------------------
-StmtASTPtr Parser::ParseFunctionStatementBody()
-{
-	// Temporarily call 'ParseCompoundStatement()'
-	auto body = ParseCompoundStatement();
+StmtASTPtr Parser::ParseFunctionStatementBody() {
+  // Temporarily call 'ParseCompoundStatement()'
+  auto body = ParseCompoundStatement();
 
-	// Pop function body'			
-	Actions.PopScope();
+  // Pop function body'
+  Actions.PopScope();
 
-	return body;
+  return body;
 }
 
 /// \brief ParseParameterList - Parse function parameter list.
@@ -1341,109 +1234,88 @@ StmtASTPtr Parser::ParseFunctionStatementBody()
 /// para-list -> ( proper-para-list? )
 /// proper-para-list -> para-declaration ( , para-declaration) *
 /// ------------------------------------------------------------
-std::vector<ParmDeclPtr> Parser::ParseParameterList()
-{
-	std::vector<ParmDeclPtr> parms;
-	if (!expectToken(TokenValue::PUNCTUATOR_Left_Paren, "(", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::ParmList);
-	}
+std::vector<ParmDeclPtr> Parser::ParseParameterList() {
+  std::vector<ParmDeclPtr> parms;
+  if (!expectToken(TokenValue::PUNCTUATOR_Left_Paren, "(", true)) {
+    syntaxErrorRecovery(ParseContext::context::ParmList);
+  }
 
-	// Cycle parse of formal parameters.
-	while (1)
-	{
-		if (validateToken(TokenValue::PUNCTUATOR_Right_Paren))
-		{
-			// ½âÎöÍê³É
-			break;
-		}
+  // Cycle parse of formal parameters.
+  while (1) {
+    if (validateToken(TokenValue::PUNCTUATOR_Right_Paren)) {
+      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+      break;
+    }
 
-		parms.push_back(ParseParmDecl());
+    parms.push_back(ParseParmDecl());
 
-		if (validateToken(TokenValue::PUNCTUATOR_Right_Paren))
-		{
-			// ½âÎöÍê³É
-			break;
-		}
-		else if (validateToken(TokenValue::PUNCTUATOR_Comma))
-		{
-			continue;
-		}
-		else
-		{
-			errorReport("expect ')' or ',' but find " + scan.getToken().getLexem());
-			syntaxErrorRecovery(ParseContext::context::ParmDecl);
-		}
-	}
-	return parms;
+    if (validateToken(TokenValue::PUNCTUATOR_Right_Paren)) {
+      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+      break;
+    } else if (validateToken(TokenValue::PUNCTUATOR_Comma)) {
+      continue;
+    } else {
+      errorReport("expect ')' or ',' but find " + scan.getToken().getLexem());
+      syntaxErrorRecovery(ParseContext::context::ParmDecl);
+    }
+  }
+  return parms;
 }
 
 /// \brief ParseParmDecl - Parse parameter declaration.
 /// parm decl's Grammar as below.
 /// para-declaration -> const ? identifier type-annotation
-/// type-annotation -> ¡°:¡± type
-/// type -> ¡°int¡± | ¡°bool¡± | identifier | anonymous
+/// type-annotation -> ï¿½ï¿½:ï¿½ï¿½ type
+/// type -> ï¿½ï¿½intï¿½ï¿½ | ï¿½ï¿½boolï¿½ï¿½ | identifier | anonymous
 /// To Do: handle const keyword.
-/// Note: º¯Êý¶¨Òå²ÎÕÕswift£¬parmÉùÃ÷Ê±²»ÐèÒª'var'¹Ø¼ü×Ö.
-ParmDeclPtr Parser::ParseParmDecl()
-{
-	auto locStart = scan.getToken().getTokenLoc();
-	// Get parm name.
-	std::string name = scan.getToken().getLexem();
-	bool isConst = false;
+/// Note: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½swiftï¿½ï¿½parmï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Òª'var'ï¿½Ø¼ï¿½ï¿½ï¿½.
+ParmDeclPtr Parser::ParseParmDecl() {
+  auto locStart = scan.getToken().getTokenLoc();
+  // Get parm name.
+  std::string name = scan.getToken().getLexem();
+  bool isConst = false;
 
-	if (validateToken(TokenValue::KEYWORD_const))
-	{
-		isConst = true;
-	}
+  if (validateToken(TokenValue::KEYWORD_const)) {
+    isConst = true;
+  }
 
-	if (!expectToken(TokenValue::IDENTIFIER, "identifier", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::ParmDecl);
-		return nullptr;
-	}
+  if (!expectToken(TokenValue::IDENTIFIER, "identifier", true)) {
+    syntaxErrorRecovery(ParseContext::context::ParmDecl);
+    return nullptr;
+  }
 
-	if (!expectToken(TokenValue::PUNCTUATOR_Colon, ":", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::ParmDecl);
-		return nullptr;
-	}
+  if (!expectToken(TokenValue::PUNCTUATOR_Colon, ":", true)) {
+    syntaxErrorRecovery(ParseContext::context::ParmDecl);
+    return nullptr;
+  }
 
-	std::shared_ptr<Type> DeclType = nullptr;
-	// Handle decl type.
-	if (validateToken(TokenValue::KEYWORD_int))
-	{
-		DeclType = Ctx.Int;
-	}
-	else if (validateToken(TokenValue::KEYWORD_bool))
-	{
-		DeclType = Ctx.Bool;
-	}
-	else if (validateToken(TokenValue::IDENTIFIER, false))
-	{
-		// ÓÃ»§×Ô¶¨ÒåÀàÐÍÐÎ²Î
-		// Type checking.
-		DeclType = Actions.ActOnParmDeclUserDefinedType(scan.getToken());
-		// DeclType->setConst(isConst);
-		// consume user defined type(identifier).
-		scan.getNextToken();
-	}
-	else if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false))
-	{
-		// ÄäÃûÀàÐÍÐÎ²Î
-		DeclType = ParseAnony();
-		scan.getNextToken();
-	}
-	else
-	{
-		errorReport("variable declaration error.");
-	}
+  std::shared_ptr<Type> DeclType = nullptr;
+  // Handle decl type.
+  if (validateToken(TokenValue::KEYWORD_int)) {
+    DeclType = Ctx.Int;
+  } else if (validateToken(TokenValue::KEYWORD_bool)) {
+    DeclType = Ctx.Bool;
+  } else if (validateToken(TokenValue::IDENTIFIER, false)) {
+    // ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î²ï¿½
+    // Type checking.
+    DeclType = Actions.ActOnParmDeclUserDefinedType(scan.getToken());
+    // DeclType->setConst(isConst);
+    // consume user defined type(identifier).
+    scan.getNextToken();
+  } else if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false)) {
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î²ï¿½
+    DeclType = ParseAnony();
+    scan.getNextToken();
+  } else {
+    errorReport("variable declaration error.");
+  }
 
-	auto parm = std::make_shared<ParameterDecl>(locStart, scan.getToken().getTokenLoc(), name, isConst, DeclType);
-	// simple semantic analysis.
-	Actions.ActOnParmDecl(name, parm);
+  auto parm = std::make_shared<ParameterDecl>(
+      locStart, scan.getToken().getTokenLoc(), name, isConst, DeclType);
+  // simple semantic analysis.
+  Actions.ActOnParmDecl(name, parm);
 
-	return parm;
+  return parm;
 }
 
 /// \brief ParseClassDecl - Parse class declaration.
@@ -1451,245 +1323,224 @@ ParmDeclPtr Parser::ParseParmDecl()
 /// class decl's Grammar as below.
 /// class-declaration -> class identifier class-body;
 /// class-body -> { class-member }
-/// class-member -> declaration-statement class-member | 
+/// class-member -> declaration-statement class-member |
 ///			function-definition class-member | EPSILON
 /// ---------------------------------------------------------
-DeclASTPtr Parser::ParseClassDecl()
-{
-	auto locStart = scan.getToken().getTokenLoc();
-	if (!expectToken(TokenValue::KEYWORD_class, "class", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::Statement);
-	}
+DeclASTPtr Parser::ParseClassDecl() {
+  auto locStart = scan.getToken().getTokenLoc();
+  if (!expectToken(TokenValue::KEYWORD_class, "class", true)) {
+    syntaxErrorRecovery(ParseContext::context::Statement);
+  }
 
-	std::string className = scan.getToken().getLexem();
-	if (!expectToken(TokenValue::IDENTIFIER, "identifier", true))
-	{
-		// class identifier '{' }
-		// ×¢ÒâÕâ¸öºÍ func identifier() '{' }ÏàÍ¬
-		syntaxErrorRecovery(ParseContext::context::ParmList);
-	}
+  std::string className = scan.getToken().getLexem();
+  if (!expectToken(TokenValue::IDENTIFIER, "identifier", true)) {
+    // class identifier '{' }
+    // ×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ func identifier() '{' }ï¿½ï¿½Í¬
+    syntaxErrorRecovery(ParseContext::context::ParmList);
+  }
 
-	// Set Current Context Kind.
-	CurrentContext = ContextKind::Class;
+  // Set Current Context Kind.
+  CurrentContext = ContextKind::Class;
 
-	// Simple semantic analysis.
-	// Check Type Redefinition and Create New Scope.
-	Actions.ActOnClassDeclStart(className);
+  // Simple semantic analysis.
+  // Check Type Redefinition and Create New Scope.
+  Actions.ActOnClassDeclStart(className);
 
-	std::vector<StmtASTPtr> classBody;
-	auto classBodyStart = scan.getToken().getTokenLoc();
-	// ´ËÊ±²»ÐèÒª´íÎó»Ö¸´£¬Ö±½ÓÊ¹ÓÃ¼òµ¥µÄ²ßÂÔ¼´¿É£¬¼´¼Ù×°ÕâÀïÓÐ'{'token
-	expectToken(TokenValue::PUNCTUATOR_Left_Brace, "{", true);
+  std::vector<StmtASTPtr> classBody;
+  auto classBodyStart = scan.getToken().getTokenLoc();
+  // ï¿½ï¿½Ê±ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½Ö±ï¿½ï¿½Ê¹ï¿½Ã¼òµ¥µÄ²ï¿½ï¿½Ô¼ï¿½ï¿½É£ï¿½ï¿½ï¿½ï¿½ï¿½×°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½'{'token
+  expectToken(TokenValue::PUNCTUATOR_Left_Brace, "{", true);
 
-	for (;;)
-	{
-		// parse class member
-		switch (scan.getToken().getKind())
-		{
-		case TokenValue::KEYWORD_const:
-		case TokenValue::KEYWORD_class:
-		case TokenValue::KEYWORD_var:
-			classBody.push_back(ParseDeclStmt());
-			break;
-			/// Note: ÔÚmosesÖÐ£¬classÔÝÊ±²»Ö§³Ö³ÉÔ±·½·¨¶¨Òå
-			/*case TokenValue::KEYWORD_func:
-				classBody.push_back(ParseFunctionDefinition());
-				break;*/
-			/// Note: class bodyÄÚ²¿²»»áÓÐ'{'
-			/*case TokenValue::PUNCTUATOR_Left_Brace:
-				break;*/
-		case TokenValue::PUNCTUATOR_Semicolon:
-			scan.getNextToken();
-			break;
-		default:
-			// ´íÎó»Ö¸´¼òÖ±fuck 
-			syntaxErrorRecovery(ParseContext::context::Statement);
-			// ÎÒÃÇÓöµ½';'£¬»áÍ£ÏÂ´íÎó»Ö¸´Íê³É
-			scan.getNextToken();
-			break;
-		}
-		// To Do: ´úÂë½á¹¹»ìÂÒ
-		if (validateToken(TokenValue::PUNCTUATOR_Right_Brace, false))
-		{
-			break;
-		}
-	}
+  for (;;) {
+    // parse class member
+    switch (scan.getToken().getKind()) {
+    case TokenValue::KEYWORD_const:
+    case TokenValue::KEYWORD_class:
+    case TokenValue::KEYWORD_var:
+      classBody.push_back(ParseDeclStmt());
+      break;
+      /// Note: ï¿½ï¿½mosesï¿½Ð£ï¿½classï¿½ï¿½Ê±ï¿½ï¿½Ö§ï¿½Ö³ï¿½Ô±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+      /*case TokenValue::KEYWORD_func:
+              classBody.push_back(ParseFunctionDefinition());
+              break;*/
+      /// Note: class bodyï¿½Ú²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½'{'
+      /*case TokenValue::PUNCTUATOR_Left_Brace:
+              break;*/
+    case TokenValue::PUNCTUATOR_Semicolon:
+      scan.getNextToken();
+      break;
+    default:
+      // ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½Ö±fuck
+      syntaxErrorRecovery(ParseContext::context::Statement);
+      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½';'ï¿½ï¿½ï¿½ï¿½Í£ï¿½Â´ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½
+      scan.getNextToken();
+      break;
+    }
+    // To Do: ï¿½ï¿½ï¿½ï¿½á¹¹ï¿½ï¿½ï¿½ï¿½
+    if (validateToken(TokenValue::PUNCTUATOR_Right_Brace, false)) {
+      break;
+    }
+  }
 
-	if (!expectToken(TokenValue::PUNCTUATOR_Right_Brace, "}", true))
-	{
-		syntaxErrorRecovery(ParseContext::context::ClassBody);
-	}
+  if (!expectToken(TokenValue::PUNCTUATOR_Right_Brace, "}", true)) {
+    syntaxErrorRecovery(ParseContext::context::ClassBody);
+  }
 
-	// (1) get Class Stack Top.
-	auto ClassSym = Actions.getClassStackTop();
+  // (1) get Class Stack Top.
+  auto ClassSym = Actions.getClassStackTop();
 
-	// (2) Pop Class Stack.
-	Actions.PopClassStack();
+  // (2) Pop Class Stack.
+  Actions.PopClassStack();
 
-	// Pop class scope.
-	Actions.PopScope();
-	CurrentContext = ContextKind::TopLevel;
-	auto ClassD = std::make_shared<ClassDecl>(locStart, scan.getToken().getTokenLoc(), className,
-		std::make_shared<CompoundStmt>(classBodyStart, scan.getToken().getTokenLoc(), classBody));
-	Ctx.UDTypes.insert(std::dynamic_pointer_cast<UserDefinedType>(ClassSym->getType()));
-	return ClassD;
+  // Pop class scope.
+  Actions.PopScope();
+  CurrentContext = ContextKind::TopLevel;
+  auto ClassD = std::make_shared<ClassDecl>(
+      locStart, scan.getToken().getTokenLoc(), className,
+      std::make_shared<CompoundStmt>(classBodyStart,
+                                     scan.getToken().getTokenLoc(), classBody));
+  Ctx.UDTypes.insert(
+      std::dynamic_pointer_cast<UserDefinedType>(ClassSym->getType()));
+  return ClassD;
 }
 
-/// \brief ½âÎöÄäÃûÀàÐÍ
-/// anonymous -> ¡°{¡± anonymous-internal ¡°}¡±
-/// anonymous-interal -> anonymous-type(¡°, ¡±  anonymous-type)*
+/// \brief ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+/// anonymous -> ï¿½ï¿½{ï¿½ï¿½ anonymous-internal ï¿½ï¿½}ï¿½ï¿½
+/// anonymous-interal -> anonymous-type(ï¿½ï¿½, ï¿½ï¿½  anonymous-type)*
 /// anonymous-type -> int | bool | anonymous
 /// {int, {flag, bool}, int}
-std::shared_ptr<AnonymousType> Parser::ParseAnony()
-{
-	std::vector<std::shared_ptr<Type>> types;
-	auto startloc = scan.getToken().getTokenLoc();
-	scan.getNextToken();
-	while (1)
-	{
-		switch (scan.getToken().getKind())
-		{
-		case TokenValue::KEYWORD_int:
-			types.push_back(Ctx.Int);
-			break;
-		case TokenValue::KEYWORD_bool:
-			types.push_back(Ctx.Bool);
-			break;
-		case TokenValue::PUNCTUATOR_Left_Brace:
-			types.push_back(ParseAnony());
-			break;
-		default:
-			errorReport("Parameter declaration anonymous type error.");
-		}
-		scan.getNextToken();
-		if (validateToken(TokenValue::PUNCTUATOR_Right_Brace, false))
-		{
-			break;
-		}
+std::shared_ptr<AnonymousType> Parser::ParseAnony() {
+  std::vector<std::shared_ptr<Type>> types;
+  auto startloc = scan.getToken().getTokenLoc();
+  scan.getNextToken();
+  while (1) {
+    switch (scan.getToken().getKind()) {
+    case TokenValue::KEYWORD_int:
+      types.push_back(Ctx.Int);
+      break;
+    case TokenValue::KEYWORD_bool:
+      types.push_back(Ctx.Bool);
+      break;
+    case TokenValue::PUNCTUATOR_Left_Brace:
+      types.push_back(ParseAnony());
+      break;
+    default:
+      errorReport("Parameter declaration anonymous type error.");
+    }
+    scan.getNextToken();
+    if (validateToken(TokenValue::PUNCTUATOR_Right_Brace, false)) {
+      break;
+    }
 
-		if (!(validateToken(TokenValue::PUNCTUATOR_Comma)))
-		{
-			errorReport("Expected ','.");
-		}
-	}
-	auto anony = std::make_shared<AnonymousType>(types);
-	Ctx.AnonTypes.insert(anony);
-	return anony;
+    if (!(validateToken(TokenValue::PUNCTUATOR_Comma))) {
+      errorReport("Expected ','.");
+    }
+  }
+  auto anony = std::make_shared<AnonymousType>(types);
+  Ctx.AnonTypes.insert(anony);
+  return anony;
 }
-
 
 // Helper Functions.
-bool Parser::expectToken(TokenValue value, const std::string& tokenName,
-	bool advanceToNextToken) const
-{
-	if (scan.getToken().getValue() != value)
-	{
-		errorReport("Expected ' " + tokenName + " ', but find " + scan.getToken().getLexem());
-		return false;
-	}
+bool Parser::expectToken(TokenValue value, const std::string &tokenName,
+                         bool advanceToNextToken) const {
+  if (scan.getToken().getValue() != value) {
+    errorReport("Expected ' " + tokenName + " ', but find " +
+                scan.getToken().getLexem());
+    return false;
+  }
 
-	if (advanceToNextToken)
-	{
-		scan.getNextToken();
-	}
+  if (advanceToNextToken) {
+    scan.getNextToken();
+  }
 
-	return true;
+  return true;
 }
 
-bool Parser::validateToken(TokenValue value) const
-{
-	if (scan.getToken().getValue() != value)
-	{
-		return false;
-	}
-	scan.getNextToken();
-	return true;
+bool Parser::validateToken(TokenValue value) const {
+  if (scan.getToken().getValue() != value) {
+    return false;
+  }
+  scan.getNextToken();
+  return true;
 }
 
-bool Parser::validateToken(TokenValue value, bool advanceToNextToken) const
-{
-	if (scan.getToken().getValue() != value)
-	{
-		return false;
-	}
-	if (advanceToNextToken)
-	{
-		scan.getNextToken();
-	}
-	return true;
+bool Parser::validateToken(TokenValue value, bool advanceToNextToken) const {
+  if (scan.getToken().getValue() != value) {
+    return false;
+  }
+  if (advanceToNextToken) {
+    scan.getNextToken();
+  }
+  return true;
 }
 
-void Parser::errorReport(const std::string& msg) const
-{
-	Ctx.isParseOrSemaSuccess = false;
-	errorParser(scan.getLastToken().getTokenLoc().toString() + " --- " + msg);
+void Parser::errorReport(const std::string &msg) const {
+  Ctx.isParseOrSemaSuccess = false;
+  errorParser(scan.getLastToken().getTokenLoc().toString() + " --- " + msg);
 }
 
 /// \brief syntaxErrorRecovery - achieve syntax error recovery.
-void Parser::syntaxErrorRecovery(ParseContext::context context)
-{
-	std::vector<TokenValue> curSafeSymbols;
-	// ¸ù¾Ýµ±Ç°µÄ½âÎö»·¾³ÉèÖÃ°²È«·ûºÅsafe symbol
-	switch (context)
-	{
-	case ParseContext::context::CompoundStatement:
-		curSafeSymbols = ParseContext::StmtSafeSymbols;
-		break;
-	case ParseContext::context::Statement:
-		// statement, if-statement, while-statement, break-statement, continue-statement
-		// return-statement, expression-statement, declaration-statement, variable-statement,
-		// class-declaration, constant-declaration
-		// To Do: Éè¼ÆÓÐÎÊÌâ£¬Ìá¸ßÐ§ÂÊ
-		curSafeSymbols = ParseContext::StmtSafeSymbols;
-		break;
-	case ParseContext::context::Expression:
-		// expression, assignmen-expression, condition-or-expression
-		curSafeSymbols = ParseContext::ExprSafeSymbols;
-		break;
-	case ParseContext::context::UnaryExpression:
-	case ParseContext::context::PostExpression:
-		curSafeSymbols = ParseContext::UnaryAndPostExprSafeSymbols;
-		break;
-	case ParseContext::context::ArgListExpression:
-	case ParseContext::context::PrimaryExpression:
-		curSafeSymbols = ParseContext::PrimaryAndArgListExprSafeSymbols;
-		break;
-	case ParseContext::context::ParmList:
-		curSafeSymbols = ParseContext::ParaListSafeSymbols;
-		break;
-	case ParseContext::context::ParmDecl:
-		curSafeSymbols = ParseContext::ParaDeclSafeSymbols;
-		break;
-	case ParseContext::context::ArgExpression:
-		curSafeSymbols = ParseContext::ArgSafeSymbols;
-		break;
-	case ParseContext::context::FunctionDefinition:
-		curSafeSymbols = ParseContext::FuncDefSafeSymbols;
-		break;
-	case ParseContext::context::ClassBody:
-		curSafeSymbols = ParseContext::ClassBodySafeSymbols;
-		break;
-	default:
-		break;
-	}
-	auto initial = scan.getToken().getKind();
-	if (initial == TokenValue::FILE_EOF)
-	{
-		return;
-	}
+void Parser::syntaxErrorRecovery(ParseContext::context context) {
+  std::vector<TokenValue> curSafeSymbols;
+  // ï¿½ï¿½ï¿½Ýµï¿½Ç°ï¿½Ä½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã°ï¿½È«ï¿½ï¿½ï¿½ï¿½safe symbol
+  switch (context) {
+  case ParseContext::context::CompoundStatement:
+    curSafeSymbols = ParseContext::StmtSafeSymbols;
+    break;
+  case ParseContext::context::Statement:
+    // statement, if-statement, while-statement, break-statement,
+    // continue-statement return-statement, expression-statement,
+    // declaration-statement, variable-statement, class-declaration,
+    // constant-declaration To Do: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â£¬ï¿½ï¿½ï¿½Ð§ï¿½ï¿½
+    curSafeSymbols = ParseContext::StmtSafeSymbols;
+    break;
+  case ParseContext::context::Expression:
+    // expression, assignmen-expression, condition-or-expression
+    curSafeSymbols = ParseContext::ExprSafeSymbols;
+    break;
+  case ParseContext::context::UnaryExpression:
+  case ParseContext::context::PostExpression:
+    curSafeSymbols = ParseContext::UnaryAndPostExprSafeSymbols;
+    break;
+  case ParseContext::context::ArgListExpression:
+  case ParseContext::context::PrimaryExpression:
+    curSafeSymbols = ParseContext::PrimaryAndArgListExprSafeSymbols;
+    break;
+  case ParseContext::context::ParmList:
+    curSafeSymbols = ParseContext::ParaListSafeSymbols;
+    break;
+  case ParseContext::context::ParmDecl:
+    curSafeSymbols = ParseContext::ParaDeclSafeSymbols;
+    break;
+  case ParseContext::context::ArgExpression:
+    curSafeSymbols = ParseContext::ArgSafeSymbols;
+    break;
+  case ParseContext::context::FunctionDefinition:
+    curSafeSymbols = ParseContext::FuncDefSafeSymbols;
+    break;
+  case ParseContext::context::ClassBody:
+    curSafeSymbols = ParseContext::ClassBodySafeSymbols;
+    break;
+  default:
+    break;
+  }
+  auto initial = scan.getToken().getKind();
+  if (initial == TokenValue::FILE_EOF) {
+    return;
+  }
 
-iterate:	auto curKind = initial;
-	// Èç¹ûÕÒµ½SafeSymbol£¬ÔòÍ£Ö¹²¢·µ»Ø
-	while (find(curSafeSymbols.begin(), curSafeSymbols.end(), curKind) == curSafeSymbols.end())
-	{
-		scan.getNextToken();
-		curKind = scan.getToken().getKind();
-	}
-	// Note: Èç¹ûSyntaxZErrorRecovery()Ã»ÓÐÈÎºÎ½øÕ¹£¬ÔòÇ¿ÐÐÇ°½øÒ»²½
-	if (initial == scan.getToken().getKind())
-	{
-		scan.getNextToken();
-		goto iterate;
-	}
+iterate:
+  auto curKind = initial;
+  // ï¿½ï¿½ï¿½ï¿½Òµï¿½SafeSymbolï¿½ï¿½ï¿½ï¿½Í£Ö¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  while (find(curSafeSymbols.begin(), curSafeSymbols.end(), curKind) ==
+         curSafeSymbols.end()) {
+    scan.getNextToken();
+    curKind = scan.getToken().getKind();
+  }
+  // Note: ï¿½ï¿½ï¿½SyntaxZErrorRecovery()Ã»ï¿½ï¿½ï¿½ÎºÎ½ï¿½Õ¹ï¿½ï¿½ï¿½ï¿½Ç¿ï¿½ï¿½Ç°ï¿½ï¿½Ò»ï¿½ï¿½
+  if (initial == scan.getToken().getKind()) {
+    scan.getNextToken();
+    goto iterate;
+  }
 }

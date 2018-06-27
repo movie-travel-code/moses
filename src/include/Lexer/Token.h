@@ -1,257 +1,217 @@
 #ifndef TOKEN_INCLUDE
 #define TOKEN_INCLUDE
-#include <string>
 #include "TokenKinds.h"
-
-namespace compiler
-{
-	namespace lex
-	{
-		class TokenLocation
-		{
-			unsigned LineNumber;
-			unsigned ColNumber;
-			std::string FileName;
-
-		public:
-			// Ö´ÐÐÄ¬ÈÏµÄ¿½±´ÐÐÎª¼´¿É
-			// ¿½±´stringÊý¾Ý³ÉÔ±Ê±£¬»áÖ´ÐÐstringµÄ¸´ÖÆÔËËã·û
-			TokenLocation() : LineNumber(0), ColNumber(0), FileName(""){}
-
-			TokenLocation(const TokenLocation& TL)
-			{
-				LineNumber = TL.LineNumber;
-				ColNumber = TL.ColNumber;
-				FileName = TL.FileName;
-			}
-
-			// Ä¬ÈÏinline
-			bool operator==(const TokenLocation& tokenLoc) const
-			{
-				if (LineNumber == tokenLoc.LineNumber && ColNumber == tokenLoc.ColNumber && FileName == tokenLoc.FileName)
-					return true;
-				return false;
-			}
-
-			// ÕâÀï±àÒëÆ÷»á½«ÆäinlineµôµÄ£¬²»ÓÃ¿¼ÂÇº¯Êýµ÷ÓÃµÄ¿ªÏú
-			bool operator!=(const TokenLocation& tokenLoc) const
-			{
-				return !operator==(tokenLoc);
-			}
-
-			TokenLocation(unsigned lineNumber, unsigned colNumber, std::string fileName) :
-				LineNumber(lineNumber), ColNumber(colNumber), FileName(fileName) {}
-
-			void setTokenLineNumber(unsigned lineNumber) { LineNumber = lineNumber; }
-
-			void setTokenColNumber(unsigned colNumber) { ColNumber = colNumber; }
-
-			void setTokenFileName(unsigned fileName) { FileName = fileName; }
-
-			unsigned getTokenLineNumber() const { return LineNumber; }
-
-			unsigned getTokenColNumber() const { return ColNumber; }
-
-			std::string getTokenFileName() const{ return FileName; }
-
-			std::string toString()
-			{
-				std::string LineStr = std::to_string(LineNumber);
-				std::string ColStr = std::to_string(ColNumber);
-				return FileName + ": Line: " + LineStr + ", ColumnNumber: " + ColStr;
-			}
-		};
-
-		/// @brief TokenÓÃÀ´±íÊ¾Ò»¸ö¾­¹ý´Ê·¨·ÖÎöµÄÒ»¸ö´Ê·¨µ¥Ôª
-		/// ÓÉÓÚÒ»Ð©Token·½·¨¶¼ÊÇ±È½Ï¶ÌµÄ£¬ËùÒÔÉèÖÃinlineº¯Êý
-		class Token
-		{
-			typedef tok::TokenValue TokenValue;
-
-			TokenValue value;
-			TokenLocation loc;
-
-			std::string lexem;
-
-			// ¹ØÓÚÒ»Ð©tokenµÄ³£Á¿Öµ
-			long  intValue;
-			double realValue;
-			std::string strValue;
-		public:
-			Token();
-
-			// ¿½±´¹¹Ôìº¯Êý
-			// ±àÒëÆ÷»áºÏ³ÉÄ¬ÈÏµÄ¿½±´¹¹Ôìº¯Êý
-			// Token(const Token& token);
-			// ÏÂÃæÊÇÒ»ÏµÁÐµÄ¹¹Ôìº¯Êý
-
-			// Á½¸ö²ÎÊýµÄTokenÖ»ÓÃÓÚ¹Ø¼ü×ÖºÍÔ¤¶¨ÒåµÄÒ»Ð©²Ù×÷·ûµÈ
-			Token(TokenValue tv, std::string lexem);
-
-			// ±êÊ¶·û
-			Token(TokenValue tv, const TokenLocation& location, std::string lexem);
-
-			// ×Ö·û´®
-			// Token(TokenValue tv, const TokenLocation& location, const std::string& strValue, std::string lexem);
-			// ÕûÐÍ
-			Token(TokenValue tv, const TokenLocation& location, long intvalue, std::string lexem);
-			// Ð¡Êý
-			Token(TokenValue tv, const TokenLocation& location, double realvalue, std::string lexem);
-			enum class TokenFlags
-			{
-				StatrtOfLine,
-				LeadingSpace
-			};
-
-			// helpº¯ÊýÓÃÀ´ÉèÖÃTokenµÄvalue
-			void setKind(compiler::tok::TokenValue K) { value = K; }
-			TokenValue getKind() const { return value; }
-
-			bool is(TokenValue K) const { return K == value; }
-			bool isNot(TokenValue K) const { return K != value; }
-
-			TokenLocation& getTokenLoc() { return loc; }
-			void setTokenLoc(const TokenLocation& loc) { this->loc = loc; }
-
-			// help method
-			bool isIdentifier() { return value == TokenValue::IDENTIFIER; }
-
-			bool isAssign()
-			{
-				return (value >= TokenValue::BO_Assign) && (value <= TokenValue::BO_OrAssign);
-			}
-
-			// LHS and RHS must be int type.
-			bool isIntOperator()
-			{
-				if (value == TokenValue::BO_Add ||
-					value == TokenValue::BO_AddAssign ||
-					value == TokenValue::BO_Sub ||
-					value == TokenValue::BO_SubAssign ||
-					value == TokenValue::BO_Mul ||
-					value == TokenValue::BO_MulAssign ||
-					value == TokenValue::BO_Div ||
-					value == TokenValue::BO_DivAssign)
-					return true;
-				return false;
-			}
-
-			// Operands must be bool type.
-			bool isBoolOperator()
-			{
-				if (value == TokenValue::BO_And ||
-					value == TokenValue::BO_Or ||
-					value == TokenValue::UO_Exclamatory ||
-					value == TokenValue::BO_AndAssign ||
-					value == TokenValue::BO_OrAssign)
-					return true;
-				return false;
-			}
-
-			bool isCmpOperator()
-			{
-				if (value == TokenValue::BO_EQ ||
-					value == TokenValue::BO_GE ||
-					value == TokenValue::BO_GT ||
-					value == TokenValue::BO_LE ||
-					value == TokenValue::BO_LT ||
-					value == TokenValue::BO_NE)
-					return true;
-				return false;
-			}
-
-			bool isArithmeticOperator()
-			{
-				if (value == TokenValue::BO_Add ||
-					value == TokenValue::BO_AddAssign ||
-					value == TokenValue::BO_Sub ||
-					value == TokenValue::BO_SubAssign ||
-					value == TokenValue::BO_Mul ||
-					value == TokenValue::BO_MulAssign ||
-					value == TokenValue::BO_Div ||
-					value == TokenValue::BO_DivAssign)
-				{
-					return true;
-				}
-				return false;
-			}
-
-			// Note: ÔÚmosesÖÐ£¬intºÍboolÀàÐÍÎÞ·¨×ª»»
-			bool isLogicalOperator()
-			{
-				if (value == TokenValue::BO_EQ ||
-					value == TokenValue::BO_GE ||
-					value == TokenValue::BO_GT ||
-					value == TokenValue::BO_LE ||
-					value == TokenValue::BO_LT ||
-					value == TokenValue::BO_NE ||
-					value == TokenValue::BO_And ||
-					value == TokenValue::BO_Or ||
-					value == TokenValue::UO_Exclamatory ||
-					value == TokenValue::BO_AndAssign ||
-					value == TokenValue::BO_OrAssign)
-				{
-					return true;
-				}
-				return false;
-			}
-
-			bool isKeyword()
-			{
-				return (value >= TokenValue::KEYWORD_var) && (value <= TokenValue::KEYWORD_return);
-			}
-
-			bool isPunctuator()
-			{
-				return (value >= TokenValue::PUNCTUATOR_Left_Paren) &&
-					(value <= TokenValue::PUNCTUATOR_Comma);
-			}
-
-			bool isBinaryOp()
-			{
-				return (value >= TokenValue::BO_Mul) &&
-					(value <= TokenValue::BO_OrAssign) &&
-					(value != TokenValue::UO_Inc || value != TokenValue::UO_Dec || value != TokenValue::UO_Exclamatory);
-			}
-
-			bool isUnaryOp()
-			{
-				return (value == TokenValue::UO_Dec) ||
-					(value == TokenValue::UO_Inc) ||
-					(value == TokenValue::UO_Exclamatory);
-			}
-
-			bool isCharConstant() { return value == TokenValue::CHAR_LITERAL; }
-			bool isNumericConstant()
-			{
-				return value == TokenValue::REAL_LITERAL || value == TokenValue::INTEGER_LITERAL;
-			}
-			bool isStringLiteral() { return value == TokenValue::STRING_LITERAL; }
-
-			// »ñÈ¡TokenµÄTokenÖµ
-			tok::TokenValue getValue() const { return value; }
+#include <string>
 
 
-			// »ñÈ¡TokenµÄ³£Á¿Öµ
-			long getIntValue() const { return intValue; }
-			double getRealValue() const { return realValue; }
-			std::string getStringValue() const { return strValue; }
-			std::string getLexem() { return lexem; }
+namespace compiler {
+namespace lex {
+class TokenLocation {
+  unsigned LineNumber;
+  unsigned ColNumber;
+  std::string FileName;
 
-			// Á½¸ötokenÊÇ·ñÏàµÈ
-			bool operator==(const Token& token) const
-			{
-				if (value == token.value && loc == token.loc)
-				{
-					return true;
-				}
-				return false;
-			}
-			bool operator!=(const Token& token) const
-			{
-				return !operator==(token);
-			}
-		};
-	}
-}
+public:
+  // Ö´ï¿½ï¿½Ä¬ï¿½ÏµÄ¿ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½
+  // ï¿½ï¿½ï¿½ï¿½stringï¿½ï¿½ï¿½Ý³ï¿½Ô±Ê±ï¿½ï¿½ï¿½ï¿½Ö´ï¿½ï¿½stringï¿½Ä¸ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  TokenLocation() : LineNumber(0), ColNumber(0), FileName("") {}
+
+  TokenLocation(const TokenLocation &TL) {
+    LineNumber = TL.LineNumber;
+    ColNumber = TL.ColNumber;
+    FileName = TL.FileName;
+  }
+
+  // Ä¬ï¿½ï¿½inline
+  bool operator==(const TokenLocation &tokenLoc) const {
+    if (LineNumber == tokenLoc.LineNumber && ColNumber == tokenLoc.ColNumber &&
+        FileName == tokenLoc.FileName)
+      return true;
+    return false;
+  }
+
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½á½«ï¿½ï¿½inlineï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½Çºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÃµÄ¿ï¿½ï¿½ï¿½
+  bool operator!=(const TokenLocation &tokenLoc) const {
+    return !operator==(tokenLoc);
+  }
+
+  TokenLocation(unsigned lineNumber, unsigned colNumber, std::string fileName)
+      : LineNumber(lineNumber), ColNumber(colNumber), FileName(fileName) {}
+
+  void setTokenLineNumber(unsigned lineNumber) { LineNumber = lineNumber; }
+
+  void setTokenColNumber(unsigned colNumber) { ColNumber = colNumber; }
+
+  void setTokenFileName(unsigned fileName) { FileName = fileName; }
+
+  unsigned getTokenLineNumber() const { return LineNumber; }
+
+  unsigned getTokenColNumber() const { return ColNumber; }
+
+  std::string getTokenFileName() const { return FileName; }
+
+  std::string toString() {
+    std::string LineStr = std::to_string(LineNumber);
+    std::string ColStr = std::to_string(ColNumber);
+    return FileName + ": Line: " + LineStr + ", ColumnNumber: " + ColStr;
+  }
+};
+
+/// @brief
+/// Tokenï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ê·ï¿½ï¿½ï¿½Ôª
+/// ï¿½ï¿½ï¿½ï¿½Ò»Ð©Tokenï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç±È½Ï¶ÌµÄ£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½inlineï¿½ï¿½ï¿½ï¿½
+class Token {
+  typedef tok::TokenValue TokenValue;
+
+  TokenValue value;
+  TokenLocation loc;
+
+  std::string lexem;
+
+  // ï¿½ï¿½ï¿½ï¿½Ò»Ð©tokenï¿½Ä³ï¿½ï¿½ï¿½Öµ
+  long intValue;
+  double realValue;
+  std::string strValue;
+
+public:
+  Token();
+
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ìº¯ï¿½ï¿½
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï³ï¿½Ä¬ï¿½ÏµÄ¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ìº¯ï¿½ï¿½
+  // Token(const Token& token);
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»Ïµï¿½ÐµÄ¹ï¿½ï¿½ìº¯ï¿½ï¿½
+
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½TokenÖ»ï¿½ï¿½ï¿½Ú¹Ø¼ï¿½ï¿½Öºï¿½Ô¤ï¿½ï¿½ï¿½ï¿½ï¿½Ò»Ð©ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  Token(TokenValue tv, std::string lexem);
+
+  // ï¿½ï¿½Ê¶ï¿½ï¿½
+  Token(TokenValue tv, const TokenLocation &location, std::string lexem);
+
+  // ï¿½Ö·ï¿½ï¿½ï¿½
+  // Token(TokenValue tv, const TokenLocation& location, const std::string&
+  // strValue, std::string lexem); ï¿½ï¿½ï¿½ï¿½
+  Token(TokenValue tv, const TokenLocation &location, long intvalue,
+        std::string lexem);
+  // Ð¡ï¿½ï¿½
+  Token(TokenValue tv, const TokenLocation &location, double realvalue,
+        std::string lexem);
+  enum class TokenFlags { StatrtOfLine, LeadingSpace };
+
+  // helpï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Tokenï¿½ï¿½value
+  void setKind(compiler::tok::TokenValue K) { value = K; }
+  TokenValue getKind() const { return value; }
+
+  bool is(TokenValue K) const { return K == value; }
+  bool isNot(TokenValue K) const { return K != value; }
+
+  TokenLocation &getTokenLoc() { return loc; }
+  void setTokenLoc(const TokenLocation &loc) { this->loc = loc; }
+
+  // help method
+  bool isIdentifier() { return value == TokenValue::IDENTIFIER; }
+
+  bool isAssign() {
+    return (value >= TokenValue::BO_Assign) &&
+           (value <= TokenValue::BO_OrAssign);
+  }
+
+  // LHS and RHS must be int type.
+  bool isIntOperator() {
+    if (value == TokenValue::BO_Add || value == TokenValue::BO_AddAssign ||
+        value == TokenValue::BO_Sub || value == TokenValue::BO_SubAssign ||
+        value == TokenValue::BO_Mul || value == TokenValue::BO_MulAssign ||
+        value == TokenValue::BO_Div || value == TokenValue::BO_DivAssign)
+      return true;
+    return false;
+  }
+
+  // Operands must be bool type.
+  bool isBoolOperator() {
+    if (value == TokenValue::BO_And || value == TokenValue::BO_Or ||
+        value == TokenValue::UO_Exclamatory ||
+        value == TokenValue::BO_AndAssign || value == TokenValue::BO_OrAssign)
+      return true;
+    return false;
+  }
+
+  bool isCmpOperator() {
+    if (value == TokenValue::BO_EQ || value == TokenValue::BO_GE ||
+        value == TokenValue::BO_GT || value == TokenValue::BO_LE ||
+        value == TokenValue::BO_LT || value == TokenValue::BO_NE)
+      return true;
+    return false;
+  }
+
+  bool isArithmeticOperator() {
+    if (value == TokenValue::BO_Add || value == TokenValue::BO_AddAssign ||
+        value == TokenValue::BO_Sub || value == TokenValue::BO_SubAssign ||
+        value == TokenValue::BO_Mul || value == TokenValue::BO_MulAssign ||
+        value == TokenValue::BO_Div || value == TokenValue::BO_DivAssign) {
+      return true;
+    }
+    return false;
+  }
+
+  // Note: ï¿½ï¿½mosesï¿½Ð£ï¿½intï¿½ï¿½boolï¿½ï¿½ï¿½ï¿½ï¿½Þ·ï¿½×ªï¿½ï¿½
+  bool isLogicalOperator() {
+    if (value == TokenValue::BO_EQ || value == TokenValue::BO_GE ||
+        value == TokenValue::BO_GT || value == TokenValue::BO_LE ||
+        value == TokenValue::BO_LT || value == TokenValue::BO_NE ||
+        value == TokenValue::BO_And || value == TokenValue::BO_Or ||
+        value == TokenValue::UO_Exclamatory ||
+        value == TokenValue::BO_AndAssign || value == TokenValue::BO_OrAssign) {
+      return true;
+    }
+    return false;
+  }
+
+  bool isKeyword() {
+    return (value >= TokenValue::KEYWORD_var) &&
+           (value <= TokenValue::KEYWORD_return);
+  }
+
+  bool isPunctuator() {
+    return (value >= TokenValue::PUNCTUATOR_Left_Paren) &&
+           (value <= TokenValue::PUNCTUATOR_Comma);
+  }
+
+  bool isBinaryOp() {
+    return (value >= TokenValue::BO_Mul) &&
+           (value <= TokenValue::BO_OrAssign) &&
+           (value != TokenValue::UO_Inc || value != TokenValue::UO_Dec ||
+            value != TokenValue::UO_Exclamatory);
+  }
+
+  bool isUnaryOp() {
+    return (value == TokenValue::UO_Dec) || (value == TokenValue::UO_Inc) ||
+           (value == TokenValue::UO_Exclamatory);
+  }
+
+  bool isCharConstant() { return value == TokenValue::CHAR_LITERAL; }
+  bool isNumericConstant() {
+    return value == TokenValue::REAL_LITERAL ||
+           value == TokenValue::INTEGER_LITERAL;
+  }
+  bool isStringLiteral() { return value == TokenValue::STRING_LITERAL; }
+
+  // ï¿½ï¿½È¡Tokenï¿½ï¿½TokenÖµ
+  tok::TokenValue getValue() const { return value; }
+
+  // ï¿½ï¿½È¡Tokenï¿½Ä³ï¿½ï¿½ï¿½Öµ
+  long getIntValue() const { return intValue; }
+  double getRealValue() const { return realValue; }
+  std::string getStringValue() const { return strValue; }
+  std::string getLexem() { return lexem; }
+
+  // ï¿½ï¿½ï¿½ï¿½tokenï¿½Ç·ï¿½ï¿½ï¿½ï¿½
+  bool operator==(const Token &token) const {
+    if (value == token.value && loc == token.loc) {
+      return true;
+    }
+    return false;
+  }
+  bool operator!=(const Token &token) const { return !operator==(token); }
+};
+} // namespace lex
+} // namespace compiler
 #endif

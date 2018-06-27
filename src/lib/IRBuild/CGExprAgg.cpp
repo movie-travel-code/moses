@@ -8,85 +8,80 @@ using namespace compiler::IR;
 using namespace compiler::IRBuild;
 using namespace compiler::CodeGen;
 extern void print(std::shared_ptr<compiler::IR::Value> V);
-/// \brief EmitAggExpr -  Emit the computation of the specified expression of aggregate type
-/// 2016-7-28 Aggregate Ö±½Ó²ÎÓëµÄ±í´ïÊ½Ò²¾ÍÖ»ÓÐ return stmtºÍ¸³Öµ£¬²ÎÊý´«µÝ
-/// Aggregate ²»²ÎÓëËãÊýÔËËã£¨ÔÝÊ±²»Ö§³Ö£¬Èç¹ûÖØÔØÔËËã·ûµÄ»°£©¡£
-void ModuleBuilder::EmitAggExpr(const Expr* E, ValPtr DestPtr)
-{
-	if (const DeclRefExpr* DRE = dynamic_cast<const DeclRefExpr*>(E))
-	{
-		EmitAggLoadOfLValue(DRE, DestPtr);
-	}
+/// \brief EmitAggExpr -  Emit the computation of the specified expression of
+/// aggregate type 2016-7-28 Aggregate Ö±ï¿½Ó²ï¿½ï¿½ï¿½Ä±ï¿½ï¿½Ê½Ò²ï¿½ï¿½Ö»ï¿½ï¿½ return
+/// stmtï¿½Í¸ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Aggregate
+/// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ã£¨ï¿½ï¿½Ê±ï¿½ï¿½Ö§ï¿½Ö£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä»ï¿½ï¿½ï¿½ï¿½ï¿½
+void ModuleBuilder::EmitAggExpr(const Expr *E, ValPtr DestPtr) {
+  if (const DeclRefExpr *DRE = dynamic_cast<const DeclRefExpr *>(E)) {
+    EmitAggLoadOfLValue(DRE, DestPtr);
+  }
 
-	if (const MemberExpr* ME = dynamic_cast<const MemberExpr*>(E))
-	{
-		EmitMemberExprAgg(ME, DestPtr);
-	}
+  if (const MemberExpr *ME = dynamic_cast<const MemberExpr *>(E)) {
+    EmitMemberExprAgg(ME, DestPtr);
+  }
 
-	if (const CallExpr* CE = dynamic_cast<const CallExpr*>(E))
-	{
-		EmitCallExprAgg(CE, DestPtr);
-	}
+  if (const CallExpr *CE = dynamic_cast<const CallExpr *>(E)) {
+    EmitCallExprAgg(CE, DestPtr);
+  }
 }
 
-void ModuleBuilder::EmitDeclRefExprAgg(const DeclRefExpr *DRE, ValPtr DestPtr)
-{
-	EmitAggLoadOfLValue(DRE, DestPtr);
+void ModuleBuilder::EmitDeclRefExprAgg(const DeclRefExpr *DRE, ValPtr DestPtr) {
+  EmitAggLoadOfLValue(DRE, DestPtr);
 }
 
-void ModuleBuilder::EmitMemberExprAgg(const MemberExpr *ME, ValPtr DestPtr)
-{
-	EmitAggLoadOfLValue(ME, DestPtr);
+void ModuleBuilder::EmitMemberExprAgg(const MemberExpr *ME, ValPtr DestPtr) {
+  EmitAggLoadOfLValue(ME, DestPtr);
 }
 
-void ModuleBuilder::EmitCallExprAgg(const CallExpr* CE, ValPtr DestPtr)
-{
-	// EmitCallExpr()·µ»ØµÄValPtr£¬ÓÐÈýÖÖÇé¿ö
-	// (1) EmitCallExpr() ÎªBuiltinÀàÐÍ£¬ÄÇÃ´·µ»ØµÄ¾ÍÊÇCallExprµÄµ½Öµ
-	//     ÕâÒ»ÖÖÆÕÍ¨µÄEmitCallExpr()¾Í¿ÉÒÔ´¦Àí
-	// (2) EmitCallExpr() ÎªAggregateType£¬µ«ÊÇCoerceµ½Ä³¸öBuiltinType£¬ÄÇÃ´·µ»ØµÄÊÇÆäÖÐµÄÖµ
-	//     ÕâÒ»ÖÖ±È½ÏÂé·³£¬ÒòÎªÃæÁÙµÄ×´¿öÊÇ£ºÁ½ÕßµÄÀàÐÍ²»Í¬£¬Íâ²¿ÓÃÓÚ½ÓÊÕ·µ»ØÖµµÃÀàÐÍÊÇAggregateType
-	//     ¶ø·µ»ØµÄÀàÐÍÊÇcoerceµÃµ½µÄÀàÐÍ£¬Á½ÕßÀàÐÍ²»Í¬¡£
-	// (3) EmitCallExpr() ÎªAggregateType£¬Ê¹ÓÃµÄÊÇsret£¬ÄÇÃ´·µ»ØµÄÊÇTempAllocaÖ¸Áî
-	auto rvalue = EmitCallExpr(CE);
-	EmitFinalDestCopy(CE, rvalue, DestPtr);
+void ModuleBuilder::EmitCallExprAgg(const CallExpr *CE, ValPtr DestPtr) {
+  // EmitCallExpr()ï¿½ï¿½ï¿½Øµï¿½ValPtrï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  // (1) EmitCallExpr() ÎªBuiltinï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½ØµÄ¾ï¿½ï¿½ï¿½CallExprï¿½Äµï¿½Öµ
+  //     ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½EmitCallExpr()ï¿½Í¿ï¿½ï¿½Ô´ï¿½ï¿½ï¿½
+  // (2) EmitCallExpr()
+  // ÎªAggregateTypeï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Coerceï¿½ï¿½Ä³ï¿½ï¿½BuiltinTypeï¿½ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½Öµ
+  //     ï¿½ï¿½Ò»ï¿½Ö±È½ï¿½ï¿½é·³ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½Ùµï¿½×´ï¿½ï¿½ï¿½Ç£ï¿½ï¿½ï¿½ï¿½ßµï¿½ï¿½ï¿½ï¿½Í²ï¿½Í¬ï¿½ï¿½ï¿½â²¿ï¿½ï¿½ï¿½Ú½ï¿½ï¿½Õ·ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½AggregateType
+  //     ï¿½ï¿½ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½coerceï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í²ï¿½Í¬ï¿½ï¿½
+  // (3) EmitCallExpr() ÎªAggregateTypeï¿½ï¿½Ê¹ï¿½Ãµï¿½ï¿½ï¿½sretï¿½ï¿½ï¿½ï¿½Ã´ï¿½ï¿½ï¿½Øµï¿½ï¿½ï¿½TempAllocaÖ¸ï¿½ï¿½
+  auto rvalue = EmitCallExpr(CE);
+  EmitFinalDestCopy(CE, rvalue, DestPtr);
 }
 
-void ModuleBuilder::EmitAggregateCopy(ValPtr DestPtr, ValPtr SrcPtr, ASTTyPtr Ty)
-{
-	assert(Types.ConvertType(Ty)->isAggregateType() && "The Object must have aggregate type.");
-	// Aggregate assignment turns into Intrinsic::ir.memcpy.
-	// Get the memcpy intrinsic function.
-	auto IRMemcpy = Context.getMemcpy();
-	std::vector<ValPtr> Args = {DestPtr, SrcPtr};
-	auto call = CreateIntrinsic(IRMemcpy, Args);
-	print(call);
+void ModuleBuilder::EmitAggregateCopy(ValPtr DestPtr, ValPtr SrcPtr,
+                                      ASTTyPtr Ty) {
+  assert(Types.ConvertType(Ty)->isAggregateType() &&
+         "The Object must have aggregate type.");
+  // Aggregate assignment turns into Intrinsic::ir.memcpy.
+  // Get the memcpy intrinsic function.
+  auto IRMemcpy = Context.getMemcpy();
+  std::vector<ValPtr> Args = {DestPtr, SrcPtr};
+  auto call = CreateIntrinsic(IRMemcpy, Args);
+  print(call);
 }
 
 /// ?
-ValPtr ModuleBuilder::EmitAggLoadOfLValue(const Expr* E, ValPtr DestPtr)
-{
-	// Ignore the value.
-	if (DestPtr)
-	{
-		// Get LValue of the 'E', for example DeclRefExpr.
-		LValue LV = EmitLValue(E);
-		EmitFinalDestCopy(E, LV, DestPtr);
-	}	
-	return DestPtr;
+ValPtr ModuleBuilder::EmitAggLoadOfLValue(const Expr *E, ValPtr DestPtr) {
+  // Ignore the value.
+  if (DestPtr) {
+    // Get LValue of the 'E', for example DeclRefExpr.
+    LValue LV = EmitLValue(E);
+    EmitFinalDestCopy(E, LV, DestPtr);
+  }
+  return DestPtr;
 }
 
-/// EmitFinalDestCopy - Perform the final copy to DestPtr( RValue ----> DestPtr ).
-void ModuleBuilder::EmitFinalDestCopy(const Expr *E, RValue Src, ValPtr DestPtr)
-{
-	assert(Src.isAggregate() && "value must be aggregate value!");
-	if (!DestPtr)
-		return;
-	EmitAggregateCopy(DestPtr, Src.getAggregateAddr(), E->getType());
+/// EmitFinalDestCopy - Perform the final copy to DestPtr( RValue ----> DestPtr
+/// ).
+void ModuleBuilder::EmitFinalDestCopy(const Expr *E, RValue Src,
+                                      ValPtr DestPtr) {
+  assert(Src.isAggregate() && "value must be aggregate value!");
+  if (!DestPtr)
+    return;
+  EmitAggregateCopy(DestPtr, Src.getAggregateAddr(), E->getType());
 }
 
 /// EmitFinalDestCopy - Perform the final copy to DestPtr( Expr ----> DestPtr ).
-void ModuleBuilder::EmitFinalDestCopy(const Expr *E, LValue Src, ValPtr DestPtr)
-{
-	EmitFinalDestCopy(E, RValue::getAggregate(Src.getAddress()), DestPtr);
+void ModuleBuilder::EmitFinalDestCopy(const Expr *E, LValue Src,
+                                      ValPtr DestPtr) {
+  EmitFinalDestCopy(E, RValue::getAggregate(Src.getAddress()), DestPtr);
 }

@@ -2,143 +2,123 @@
 //
 // This file is used to implement class stmt, decl.
 // To Do: The semantic analyzer use syntax-directed pattern.
-// 
+//
 //===---------------------------------------------------------------------===//
 #include "../../include/Parser/ast.h"
 using namespace compiler::ast;
 
 //===----------------------CompoundStmt-------------------------===//
 //
-void CompoundStmt::addSubStmt(StmtASTPtr stmt)
-{
-	if (!stmt)
-		SubStmts.push_back(std::move(stmt));
+void CompoundStmt::addSubStmt(StmtASTPtr stmt) {
+  if (!stmt)
+    SubStmts.push_back(std::move(stmt));
 }
 
-StmtASTPtr CompoundStmt::getSubStmt(unsigned index) const
-{
-	return SubStmts[index];
+StmtASTPtr CompoundStmt::getSubStmt(unsigned index) const {
+  return SubStmts[index];
 }
 
-StmtASTPtr CompoundStmt::operator[](unsigned index) const
-{
-	assert(index < SubStmts.size() && "Index out of range!");
-	return SubStmts[index];
+StmtASTPtr CompoundStmt::operator[](unsigned index) const {
+  assert(index < SubStmts.size() && "Index out of range!");
+  return SubStmts[index];
 }
 
 //===---------------------------UnpackDecl-----------------------------===//
 //
-/// \brief Ö÷Òª½øÐÐÀàÐÍµÄ¼ì²éºÍÉèÖÃ
-/// ÀýÈç£º var {num, {lhs, rhs}} ºÍ type
-/// To Do: ´úÂëÉè¼ÆÓÐÎÊÌâ£¬Ö¸Õë±©Â¶
-bool UnpackDecl::TypeCheckingAndTypeSetting(AnonTyPtr type)
-{
-	unsigned size = decls.size();
-	// (1) ¼ì²éunpack declµÄsizeÓëAnonymous typeµÄ×ÓtypeÊÇ·ñÏàÍ¬
-	if (type->getSubTypesNum() != size)
-	{
-		return false;
-	}
+/// \brief ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÍµÄ¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+/// ï¿½ï¿½ï¿½ç£º var {num, {lhs, rhs}} ï¿½ï¿½ type
+/// To Do: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â£¬Ö¸ï¿½ë±©Â¶
+bool UnpackDecl::TypeCheckingAndTypeSetting(AnonTyPtr type) {
+  unsigned size = decls.size();
+  // (1) ï¿½ï¿½ï¿½unpack declï¿½ï¿½sizeï¿½ï¿½Anonymous typeï¿½ï¿½ï¿½ï¿½typeï¿½Ç·ï¿½ï¿½ï¿½Í¬
+  if (type->getSubTypesNum() != size) {
+    return false;
+  }
 
-	// (2) µÝ¹é¼ì²éÆäÖÐÃ¿¸öelement.
-	// Note: ÓÉÓÚÕâ¸öº¯Êý´«µÝ½øÀ´µÄÊÇtype£¬ËùÒÔ²»ÄÜÒÔtype¹¹½¨ÖÇÄÜÖ¸Õë
-	// Ê¹ÓÃÍ¬Ò»¸öÔ­ÉúÖ¸Õë³õÊ¼»¯Á½¸öÖÇÄÜÖ¸Õë£¬ÓÐ¿ÉÄÜ»á³öÏÖÐü¿ÕÖ¸Õë¡£
-	for (unsigned index = 0; index < size; index++)
-	{
-		if (UnpackDeclPtr unpackd = std::dynamic_pointer_cast<UnpackDecl>(decls[index]))
-		{
-			if (AnonTyPtr anonyt = std::dynamic_pointer_cast<AnonymousType>(type->getSubType(index)))
-			{
-				return unpackd->TypeCheckingAndTypeSetting(anonyt);
-			}
-			else
-			{
-				return false;
-			}
-		}
-		else
-		{
-			if (AnonTyPtr anonyt = std::dynamic_pointer_cast<AnonymousType>(type->getSubType(index)))
-			{
-				return false;
-			}
-		}
-	}
-	return true;
+  // (2) ï¿½Ý¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¿ï¿½ï¿½element.
+  // Note: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½typeï¿½ï¿½ï¿½ï¿½ï¿½Ô²ï¿½ï¿½ï¿½ï¿½ï¿½typeï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½
+  // Ê¹ï¿½ï¿½Í¬Ò»ï¿½ï¿½Ô­ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ë£¬ï¿½Ð¿ï¿½ï¿½Ü»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ë¡£
+  for (unsigned index = 0; index < size; index++) {
+    if (UnpackDeclPtr unpackd =
+            std::dynamic_pointer_cast<UnpackDecl>(decls[index])) {
+      if (AnonTyPtr anonyt = std::dynamic_pointer_cast<AnonymousType>(
+              type->getSubType(index))) {
+        return unpackd->TypeCheckingAndTypeSetting(anonyt);
+      } else {
+        return false;
+      }
+    } else {
+      if (AnonTyPtr anonyt = std::dynamic_pointer_cast<AnonymousType>(
+              type->getSubType(index))) {
+        return false;
+      }
+    }
+  }
+  return true;
 }
 
-/// \brief »ñÈ¡decl name
-std::vector<VarDeclPtr> UnpackDecl::operator[](unsigned index) const
-{
-	std::vector<VarDeclPtr> SubDecls;
-	if (UnpackDeclPtr unpackd = std::dynamic_pointer_cast<UnpackDecl>(decls[index]))
-	{
-		unpackd->getDecls(SubDecls);
-	}
+/// \brief ï¿½ï¿½È¡decl name
+std::vector<VarDeclPtr> UnpackDecl::operator[](unsigned index) const {
+  std::vector<VarDeclPtr> SubDecls;
+  if (UnpackDeclPtr unpackd =
+          std::dynamic_pointer_cast<UnpackDecl>(decls[index])) {
+    unpackd->getDecls(SubDecls);
+  }
 
-	if (VarDeclPtr var = std::dynamic_pointer_cast<VarDecl>(decls[index]))
-	{
-		SubDecls.push_back(var);
-	}
-	return SubDecls;
+  if (VarDeclPtr var = std::dynamic_pointer_cast<VarDecl>(decls[index])) {
+    SubDecls.push_back(var);
+  }
+  return SubDecls;
 }
 
-/// \brief »ñÈ¡decl names
-void UnpackDecl::getDecls(std::vector<VarDeclPtr>& SubDecls) const
-{
-	unsigned size = decls.size();
-	for (unsigned index = 0; index < size; index++)
-	{
-		if (UnpackDeclPtr unpackd = std::dynamic_pointer_cast<UnpackDecl>(decls[index]))
-		{
-			unpackd->getDecls(SubDecls);
-		}
+/// \brief ï¿½ï¿½È¡decl names
+void UnpackDecl::getDecls(std::vector<VarDeclPtr> &SubDecls) const {
+  unsigned size = decls.size();
+  for (unsigned index = 0; index < size; index++) {
+    if (UnpackDeclPtr unpackd =
+            std::dynamic_pointer_cast<UnpackDecl>(decls[index])) {
+      unpackd->getDecls(SubDecls);
+    }
 
-		if (VarDeclPtr var = std::dynamic_pointer_cast<VarDecl>(decls[index]))
-		{
-			SubDecls.push_back(var);
-		}
-	}
+    if (VarDeclPtr var = std::dynamic_pointer_cast<VarDecl>(decls[index])) {
+      SubDecls.push_back(var);
+    }
+  }
 }
 
-void UnpackDecl::setCorrespondingType(std::shared_ptr<Type> type)
-{
-	declType = type;
+void UnpackDecl::setCorrespondingType(std::shared_ptr<Type> type) {
+  declType = type;
 }
 
 //===--------------------------FunctionDecl--------------------------===//
 //
-ReturnStmtPtr FunctionDecl::isEvalCandiateAndGetReturnStmt() const
-{
-	if (returnType->getKind() != TypeKind::INT &&
-		returnType->getKind() != TypeKind::BOOL)
-	{
-		return nullptr;
-	}
-	// (1) º¯ÊýÌåÊÇ·ñÖ»ÓÐÒ»Ìõ return stmt
-	if (CompoundStmtPtr body = std::dynamic_pointer_cast<CompoundStmt>(funcBody))
-	{
-		if (body->getSize() != 1)
-			return false;
-		if (ReturnStmtPtr returnStmt =
-			std::dynamic_pointer_cast<ReturnStatement>(body->getSubStmt(0)))
-		{
-			return returnStmt;
-		}
-		return nullptr;
-	}
-	return nullptr;
+ReturnStmtPtr FunctionDecl::isEvalCandiateAndGetReturnStmt() const {
+  if (returnType->getKind() != TypeKind::INT &&
+      returnType->getKind() != TypeKind::BOOL) {
+    return nullptr;
+  }
+  // (1) ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½Ö»ï¿½ï¿½Ò»ï¿½ï¿½ return stmt
+  if (CompoundStmtPtr body =
+          std::dynamic_pointer_cast<CompoundStmt>(funcBody)) {
+    if (body->getSize() != 1)
+      return false;
+    if (ReturnStmtPtr returnStmt =
+            std::dynamic_pointer_cast<ReturnStatement>(body->getSubStmt(0))) {
+      return returnStmt;
+    }
+    return nullptr;
+  }
+  return nullptr;
 }
 
-bool FunctionDecl::endsWithReturn() const
-{
-	if (CompoundStmtPtr body = std::dynamic_pointer_cast<CompoundStmt>(funcBody))
-	{
-		// ends with return stmt.
-		if (ReturnStmtPtr ret = std::dynamic_pointer_cast<ReturnStatement>((*body)[body->getSize() - 1]))
-		{
-			return true;
-		}
-	}
-	return false;
+bool FunctionDecl::endsWithReturn() const {
+  if (CompoundStmtPtr body =
+          std::dynamic_pointer_cast<CompoundStmt>(funcBody)) {
+    // ends with return stmt.
+    if (ReturnStmtPtr ret = std::dynamic_pointer_cast<ReturnStatement>(
+            (*body)[body->getSize() - 1])) {
+      return true;
+    }
+  }
+  return false;
 }

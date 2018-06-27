@@ -1,126 +1,128 @@
 //===-----------------------constant-evaluator.h--------------------------===//
-// 
-// This file implements the Expr constant evaluator. 
+//
+// This file implements the Expr constant evaluator.
 //
 // Constant expression evaluation produces four main results:
 // * A success/failure flag indicating whether constant folding was successful.
-//	 This is the 'bool' return value used by most of the code in this file. A
-//	 'false' return value indicates that constant folding has failed.
-//	
+//	 This is the 'bool' return value used by most of the code in this file.
+//A 	 'false' return value indicates that constant folding has failed.
+//
 // * An evaluated result, valid only if constant folding has not faild.
 //
 //==----------------------------------------------------------------------===//
 #ifndef CONSTANT_EVALUATOR_H
 #define CONSTANT_EVALUATOR_H
 //---------------------------------------------------------------------------//
-// 
-// mosesµÄconstant foldingÖ÷ÒªÊÇÓÃÓÚºó¶ËµÄÓÅ»¯£¬²¢²»ÊÇÇ¿ÖÆÐÔµÄ£¬Ò²¾ÍÊÇËµÈç¹û
-// expression²»ÄÜ½øÐÐconstant folding²¢²»»á±¨´í¡£mosesµÄconstant foldingÓëClang
-// ÖÐµÄ potential constant expression±È½ÏÏàËÆ¡£
-// 
-// mosesµÄconstant foldingÖ÷Òª·ÖÎªÁ½²¿·Ö£º
-// (1) BinaryExpressionµÄcons tant-folding
-//	ÀýÈç£º
-//		ÓÃÀý£¨Ò»£©
+//
+// mosesï¿½ï¿½constant foldingï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½Úºï¿½Ëµï¿½ï¿½Å»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¿ï¿½ï¿½ï¿½ÔµÄ£ï¿½Ò²ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½
+// expressionï¿½ï¿½ï¿½Ü½ï¿½ï¿½ï¿½constant foldingï¿½ï¿½ï¿½ï¿½ï¿½á±¨ï¿½ï¿½mosesï¿½ï¿½constant foldingï¿½ï¿½Clang
+// ï¿½Ðµï¿½ potential constant expressionï¿½È½ï¿½ï¿½ï¿½ï¿½Æ¡ï¿½
+//
+// mosesï¿½ï¿½constant foldingï¿½ï¿½Òªï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½ï¿½Ö£ï¿½
+// (1) BinaryExpressionï¿½ï¿½cons tant-folding
+//	ï¿½ï¿½ï¿½ç£º
+//		ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
 //		var num = 10;
 //		...
-//		// start can't folding£¬ÒòÎª²»ÖªµÀÖÐ¼äÊÇ·ñ¶Ônum½øÐÐ¸³Öµ²Ù×÷£¬ÐèÒªÑØÍ¾ÊÕ¼¯¶ÔnumµÄ¸³ÖµÐÅÏ¢
-//		// ¹ýÓÚ¸´ÔÓ
-//		var start = num * 13 + 12; 
-//		
-//		ÓÃÀý£¨¶þ£©
+//		// start can't
+//foldingï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Öªï¿½ï¿½ï¿½Ð¼ï¿½ï¿½Ç·ï¿½ï¿½numï¿½ï¿½ï¿½Ð¸ï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Í¾ï¿½Õ¼ï¿½ï¿½ï¿½numï¿½Ä¸ï¿½Öµï¿½ï¿½Ï¢
+//		// ï¿½ï¿½ï¿½Ú¸ï¿½ï¿½ï¿½
+//		var start = num * 13 + 12;
+//
+//		ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
 //		const num = 10;
 //		...
-//		// ²»Í¬ÓÚÓÃÀý£¨Ò»£©£¬ÕâÀïµÄnumÊÇconstÀàÐÍ£¬¿ÉÒÔÈ·±£ÖÐ¼äÃ»ÓÐ¶ÔÆä½øÐÐµÄ¸³ÖµÐÞ¸Ä£¬ËùÒÔ¿ÉÒÔ
-//		// ½«start constant-fold³É142
+//		//
+//ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½numï¿½ï¿½constï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½È·ï¿½ï¿½ï¿½Ð¼ï¿½Ã»ï¿½Ð¶ï¿½ï¿½ï¿½ï¿½ï¿½ÐµÄ¸ï¿½Öµï¿½Þ¸Ä£ï¿½ï¿½ï¿½ï¿½Ô¿ï¿½ï¿½ï¿½
+//		// ï¿½ï¿½start constant-foldï¿½ï¿½142
 //		var start = num * 13 + 12
-//		
-//		ÓÃÀý£¨Èý£©
-//		// Í¬Àíflag ²»ÊÇconst£¬¼òµ¥ÆÚ¼ä£¬²»»á½« flag && isGreater() ÕÛµþ³Éfalse£¬ÁíÍâÈç¹û
-//		// isGreater()º¯ÊýÓÐ¸±×÷ÓÃµÄ»°£¬Ò²²»»á½øÐÐconstant-folding.
+//
+//		ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//		// Í¬ï¿½ï¿½flag ï¿½ï¿½ï¿½ï¿½constï¿½ï¿½ï¿½ï¿½ï¿½Ú¼ä£¬ï¿½ï¿½ï¿½á½« flag && isGreater()
+//ï¿½Ûµï¿½ï¿½ï¿½falseï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//		// isGreater()ï¿½ï¿½ï¿½ï¿½ï¿½Ð¸ï¿½ï¿½ï¿½ï¿½ÃµÄ»ï¿½ï¿½ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½constant-folding.
 //		var flag = false;
 //		if (flag && isGreater()) {} else {}
 //
-//		ÓÃÀý£¨ËÄ£©
-//		// ÔÚisGreater()º¯ÊýÃ»ÓÐ¸±×÷ÓÃµÄÇé¿öÏÂ£¬¿ÉÒÔ½« flag&&isGreater() ÕÛµþ³Éfalse.
-//		constant flag = false;
-//		if (flag && isGreater()) {} else {}
-//		
-// (2) UnaryExpressionµÄconstant-folding
-// ÀýÈç£º
-//		ÓÃÀý£¨Îå£©
-//		const num = 10;
-//		var start = ++num;	// start constant-folding³ÉÎª11
+//		ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä£ï¿½
+//		// ï¿½ï¿½isGreater()ï¿½ï¿½ï¿½ï¿½Ã»ï¿½Ð¸ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½Â£ï¿½ï¿½ï¿½ï¿½Ô½ï¿½ flag&&isGreater()
+//ï¿½Ûµï¿½ï¿½ï¿½false. 		constant flag = false; 		if (flag && isGreater()) {} else {}
 //
-//		ÓÃÀý£¨Áù£©
+// (2) UnaryExpressionï¿½ï¿½constant-folding
+// ï¿½ï¿½ï¿½ç£º
+//		ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å£©
 //		const num = 10;
-//		var start = num--;	// start constant-folding³ÉÎª10
+//		var start = ++num;	// start constant-foldingï¿½ï¿½Îª11
 //
-//		ÓÃÀý£¨Æß£©
+//		ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+//		const num = 10;
+//		var start = num--;	// start constant-foldingï¿½ï¿½Îª10
+//
+//		ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß£ï¿½
 //		var flag = false;
 //		if !flag {} else {}
 //
-// (3) CallExprµÄconstant-folding
-//	ÀýÈç£º
-//		ÓÃÀý£¨°Ë£©
+// (3) CallExprï¿½ï¿½constant-folding
+//	ï¿½ï¿½ï¿½ç£º
+//		ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë£ï¿½
 //		const parm1 = 10;
 //		const parm2 = 11;
 //		func add(lhs : int, rhs : int) -> int { return lhs + rhs; }
 //		if add(parm1, parm2) < 10 {} else {}
-//		ÆäÖÐ add(parm1, parm2) < 10 ¿ÉÒÔconstant-foldingµ½false£¬Ò²¾ÍÊÇÕâÊÇÒ»¸ö
-//		µ¥else blockµÄÖ´ÐÐ£¬´øÀ´¸üÐ¡µÄcode size£¬¸üÉÙµÄbranch£¬¸üÐ¡µÄÖ´ÐÐ´ÎÊý
+//		ï¿½ï¿½ï¿½ï¿½ add(parm1, parm2) < 10
+//ï¿½ï¿½ï¿½ï¿½constant-foldingï¿½ï¿½falseï¿½ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ 		ï¿½ï¿½else blockï¿½ï¿½Ö´ï¿½Ð£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½code
+//sizeï¿½ï¿½ï¿½ï¿½ï¿½Ùµï¿½branchï¿½ï¿½ï¿½ï¿½Ð¡ï¿½ï¿½Ö´ï¿½Ð´ï¿½ï¿½ï¿½
 //
-//	Note: ¶ÔÓÚCallExprµÄconstant-foldingÊ¹ÓÃÓÐÈçÏÂÏÞÖÆ£º
-//		£¨1£© º¯Êý±ØÐëÊÇ¿ÉÍÆµ¼µÄ
-//		£¨2£© Ö»ÓÐµ¥ return Óï¾ä
-//		
+//	Note: ï¿½ï¿½ï¿½ï¿½CallExprï¿½ï¿½constant-foldingÊ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Æ£ï¿½
+//		ï¿½ï¿½1ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¿ï¿½ï¿½Æµï¿½ï¿½ï¿½
+//		ï¿½ï¿½2ï¿½ï¿½ Ö»ï¿½Ðµï¿½ return ï¿½ï¿½ï¿½
+//
 //---------------------------------------------------------------------------//
-#include "ast.h"
 #include "EvaluatedExprVisitor.h"
+#include "ast.h"
 
-namespace compiler
-{
-	namespace ast
-	{
-		/// ÔÝÊ±ÊµÏÖÁËÈçÏÂµÄconstant-evaluator
-		/// func add(lhs : int, rhs : int) -> int
-		/// {
-		///		return lhs + rhs * 2 - 40 + lhs * (rhs - rhs / 10);
-		/// }
-		/// const global = 10;
-		/// var num = add(global, 20) + 23;
-		/// moses¿ÉÒÔ½«num evaluateµÃµ½213.
-		class ConstantEvaluator
-		{
-			/// https://akrzemi1.wordpress.com/2011/05/06/compile-time-computations/ 
-			/// http://clang.llvm.org/docs/InternalsManual.html#constant-folding-in-the-clang-ast
-			/// ÕâÀïÔÝÊ±Ð´Ò»¸öÀ±¼¦µÄevaluate»úÖÆ
-		public:
-			typedef EvalStatus::ValueKind ValueKind;
-			typedef EvalStatus::Result Result;
 
-			typedef EvalInfo::EvaluationMode EvaluationMode;
-		public:
-			/// To Do:ÊµÏÖExprÔÚcompile-timeµÄevaluate
-			///----------------------------nonsense for coding---------------------
-			/// ÕâÀïÓ¦¸Ã·ÂÕÕClangÊµÏÖEvaluateAsRValue()º¯Êý£¬¸Ãº¯Êý·Ç³£Ç¿´ó
-			///--------------------------------------------------------------------
-			// To Do: Ã»ÓÐÊµÏÖ
-			bool EvaluateAsRValue(ExprASTPtr Exp, EvalInfo &Result) const;
+namespace compiler {
+namespace ast {
+/// ï¿½ï¿½Ê±Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Âµï¿½constant-evaluator
+/// func add(lhs : int, rhs : int) -> int
+/// {
+///		return lhs + rhs * 2 - 40 + lhs * (rhs - rhs / 10);
+/// }
+/// const global = 10;
+/// var num = add(global, 20) + 23;
+/// mosesï¿½ï¿½ï¿½Ô½ï¿½num evaluateï¿½Ãµï¿½213.
+class ConstantEvaluator {
+  /// https://akrzemi1.wordpress.com/2011/05/06/compile-time-computations/
+  /// http://clang.llvm.org/docs/InternalsManual.html#constant-folding-in-the-clang-ast
+  /// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±Ð´Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½evaluateï¿½ï¿½ï¿½ï¿½
+public:
+  typedef EvalStatus::ValueKind ValueKind;
+  typedef EvalStatus::Result Result;
 
-			bool EvaluateAsInt(ExprASTPtr Exp, int &Result) const;
+  typedef EvalInfo::EvaluationMode EvaluationMode;
 
-			/// EvaluateAsBooleanCondition - Return true if this is a boolean constant 
-			/// which we can fold. 
-			bool EvaluateAsBooleanCondition(ExprASTPtr Exp, bool &Result) const;
+public:
+  /// To Do:Êµï¿½ï¿½Exprï¿½ï¿½compile-timeï¿½ï¿½evaluate
+  ///----------------------------nonsense for coding---------------------
+  /// ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½Ã·ï¿½ï¿½ï¿½ClangÊµï¿½ï¿½EvaluateAsRValue()ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãºï¿½ï¿½ï¿½ï¿½Ç³ï¿½Ç¿ï¿½ï¿½
+  ///--------------------------------------------------------------------
+  // To Do: Ã»ï¿½ï¿½Êµï¿½ï¿½
+  bool EvaluateAsRValue(ExprASTPtr Exp, EvalInfo &Result) const;
 
-			static bool FastEvaluateAsRValue(ExprASTPtr Exp, EvalInfo &Result);
+  bool EvaluateAsInt(ExprASTPtr Exp, int &Result) const;
 
-			static bool Evaluate(ExprASTPtr Exp, EvalInfo &Result);
+  /// EvaluateAsBooleanCondition - Return true if this is a boolean constant
+  /// which we can fold.
+  bool EvaluateAsBooleanCondition(ExprASTPtr Exp, bool &Result) const;
 
-			/// \brief ÅÐ¶Ïµ±Ç°±í´ïÊ½ÊÇ·ñÓÐsideeffects.
-			bool HasSideEffects(const Expr* Exp) const;
-		};
-	}
-}
+  static bool FastEvaluateAsRValue(ExprASTPtr Exp, EvalInfo &Result);
+
+  static bool Evaluate(ExprASTPtr Exp, EvalInfo &Result);
+
+  /// \brief ï¿½Ð¶Ïµï¿½Ç°ï¿½ï¿½ï¿½Ê½ï¿½Ç·ï¿½ï¿½ï¿½sideeffects.
+  bool HasSideEffects(const Expr *Exp) const;
+};
+} // namespace ast
+} // namespace compiler
 #endif

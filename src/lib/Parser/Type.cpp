@@ -1,7 +1,7 @@
 //===--------------------------------Type.cpp-----------------------------===//
-// 
+//
 // This file is used to implement class Type.
-// 
+//
 //===---------------------------------------------------------------------===//
 #include "../../include/Parser/Type.h"
 using namespace compiler::ast;
@@ -10,178 +10,148 @@ typedef std::shared_ptr<Type> TyPtr;
 
 //===---------------------------------------------------------------------===//
 // Implements Type class.
-TypeKind Type::checkTypeKind(TokenValue kind)
-{
-	switch (kind)
-	{
-	case TokenValue::KEYWORD_int:
-		return TypeKind::INT;
-	case TokenValue::KEYWORD_bool:
-		return TypeKind::BOOL;
-	default:
-		return TypeKind::USERDEFIED;
-	}
+TypeKind Type::checkTypeKind(TokenValue kind) {
+  switch (kind) {
+  case TokenValue::KEYWORD_int:
+    return TypeKind::INT;
+  case TokenValue::KEYWORD_bool:
+    return TypeKind::BOOL;
+  default:
+    return TypeKind::USERDEFIED;
+  }
 }
 
-std::string Type::getTypeName() const 
-{
-	switch (Kind)
-	{
-	case TypeKind::INT:
-		return "int";
-	case TypeKind::BOOL:
-		return "bool";
-	case TypeKind::VOID:
-		return "void";
-	case TypeKind::ANONYMOUS:
-		return "";
-	}
+std::string Type::getTypeName() const {
+  switch (Kind) {
+  case TypeKind::INT:
+    return "int";
+  case TypeKind::BOOL:
+    return "bool";
+  case TypeKind::VOID:
+    return "void";
+  case TypeKind::ANONYMOUS:
+    return "";
+  }
 }
 
 // remove const attribute.
-TyPtr Type::const_remove() const 
-{
-	return std::make_shared<Type>(Kind);
-}
+TyPtr Type::const_remove() const { return std::make_shared<Type>(Kind); }
 
-bool Type::operator == (const Type& rhs) const
-{
-	if (Kind == rhs.getKind())
-	{
-		return true;
-	}
-	return false;
+bool Type::operator==(const Type &rhs) const {
+  if (Kind == rhs.getKind()) {
+    return true;
+  }
+  return false;
 }
 
 //===---------------------------------------------------------------------===//
 // Implement class UserDefinedType.
 
-/// \brief ¸ù¾ÝMember Name»ñÈ¡¶ÔÏó×ÓÀàÐÍÐÅÏ¢
-std::shared_ptr<Type> UserDefinedType::getMemberType(std::string name) const
-{
-	auto getType = [&]() -> TyPtr
-	{
-		for (auto item : subTypes)
-		{
-			if (name == item.second)
-			{
-				return item.first;
-			}
-		}
-		return nullptr;
-	};
-	return getType();
+/// \brief ï¿½ï¿½ï¿½ï¿½Member Nameï¿½ï¿½È¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ï¢
+std::shared_ptr<Type> UserDefinedType::getMemberType(std::string name) const {
+  auto getType = [&]() -> TyPtr {
+    for (auto item : subTypes) {
+      if (name == item.second) {
+        return item.first;
+      }
+    }
+    return nullptr;
+  };
+  return getType();
 }
 
-bool UserDefinedType::HaveMember(std::string name) const
-{
-	for (auto item : subTypes)
-	{
-		if (item.second == name)
-			return true;
-	}
-	return false;
+bool UserDefinedType::HaveMember(std::string name) const {
+  for (auto item : subTypes) {
+    if (item.second == name)
+      return true;
+  }
+  return false;
 }
 
-int UserDefinedType::getIdx(std::string name) const
-{
-	for (unsigned i = 0; i < subTypes.size(); i++)
-	{
-		if (subTypes[i].second == name)
-			return i;
-	}
-	return -1;
+int UserDefinedType::getIdx(std::string name) const {
+  for (unsigned i = 0; i < subTypes.size(); i++) {
+    if (subTypes[i].second == name)
+      return i;
+  }
+  return -1;
 }
 
-unsigned long UserDefinedType::size() const
-{
-	unsigned long size = 0;
+unsigned long UserDefinedType::size() const {
+  unsigned long size = 0;
 
-	for (auto item : subTypes)
-	{
-		auto type = item.first;
-		type->size();
+  for (auto item : subTypes) {
+    auto type = item.first;
+    type->size();
 
-		size += item.first->size();
-	}
-	return size;
+    size += item.first->size();
+  }
+  return size;
 }
 
-/// \brief StripOfShell - Èç¹ûclassÀàÐÍ£¬Ö»ÊÇÒ»ÖÖÀàÐÍµÄ¼òµ¥°ü¹ü£¬ÔòÈ¥µô±í²ã¡£×¢Òâ
-/// ¸Ãº¯ÊýÖ»ÔÚCodeGenÎªUserDefinedTypeÉú³ÉArgInfoµÄÊ±ºò£¬µ÷ÓÃ¡£
-TyPtr UserDefinedType::StripOffShell() const
-{
-	if (size() > 32)
-		return nullptr;
-	// To Do: ÓÉÓÚmosesÔÝÊ±Ö»ÔÊÐíintºÍbool£¬ÇÒ¶¼ÊÇ4 bytes±íÊ¾¡£
-	// ËùÒÔµ±size <= 32Ê±£¬±íÊ¾sub
-	if (auto UDTy = std::dynamic_pointer_cast<UserDefinedType>(subTypes[0].first))
-		return UDTy->StripOffShell();
-	else
-		return subTypes[0].first;
+/// \brief StripOfShell -
+/// ï¿½ï¿½ï¿½classï¿½ï¿½ï¿½Í£ï¿½Ö»ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ÍµÄ¼òµ¥°ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½È¥ï¿½ï¿½ï¿½ã¡£×¢ï¿½ï¿½
+/// ï¿½Ãºï¿½ï¿½ï¿½Ö»ï¿½ï¿½CodeGenÎªUserDefinedTypeï¿½ï¿½ï¿½ï¿½ArgInfoï¿½ï¿½Ê±ï¿½ò£¬µï¿½ï¿½Ã¡ï¿½
+TyPtr UserDefinedType::StripOffShell() const {
+  if (size() > 32)
+    return nullptr;
+  // To Do: ï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½Ê±Ö»ï¿½ï¿½ï¿½ï¿½intï¿½ï¿½boolï¿½ï¿½ï¿½Ò¶ï¿½ï¿½ï¿½4 bytesï¿½ï¿½Ê¾ï¿½ï¿½
+  // ï¿½ï¿½ï¿½Ôµï¿½size <= 32Ê±ï¿½ï¿½ï¿½ï¿½Ê¾sub
+  if (auto UDTy = std::dynamic_pointer_cast<UserDefinedType>(subTypes[0].first))
+    return UDTy->StripOffShell();
+  else
+    return subTypes[0].first;
 }
 
-bool UserDefinedType::operator==(const Type& rhs) const
-{
-	unsigned subTypeNum = subTypes.size();
-	// Ê¹ÓÃdynamic_cast<>¶ÔÒýÓÃ½øÐÐdown_cast£¬×ª»»Ê§°Ü»áÅ×³öbad_castÒì³£
-	try
-	{
-		const UserDefinedType& rhsUserDef = dynamic_cast<const UserDefinedType&>(rhs);
-		for (unsigned i = 0; i < subTypeNum; i++)
-		{
-			if (*(subTypes[i].first) == *(rhsUserDef[i].first) &&
-				subTypes[i].second == rhsUserDef[i].second)
-			{
-				return true;
-			}
-		}
-	}
-	catch (std::bad_cast b)
-	{
-		errorSema("Type incompatibility");
-		return false;
-	}
-	return false;
+bool UserDefinedType::operator==(const Type &rhs) const {
+  unsigned subTypeNum = subTypes.size();
+  // Ê¹ï¿½ï¿½dynamic_cast<>ï¿½ï¿½ï¿½ï¿½ï¿½Ã½ï¿½ï¿½ï¿½down_castï¿½ï¿½×ªï¿½ï¿½Ê§ï¿½Ü»ï¿½ï¿½×³ï¿½bad_castï¿½ì³£
+  try {
+    const UserDefinedType &rhsUserDef =
+        dynamic_cast<const UserDefinedType &>(rhs);
+    for (unsigned i = 0; i < subTypeNum; i++) {
+      if (*(subTypes[i].first) == *(rhsUserDef[i].first) &&
+          subTypes[i].second == rhsUserDef[i].second) {
+        return true;
+      }
+    }
+  } catch (std::bad_cast b) {
+    errorSema("Type incompatibility");
+    return false;
+  }
+  return false;
 }
 
 //===---------------------------------------------------------------------===//
 // Implement class AnonymousType.
 
-/// Note: ¶ÔÓÚÄäÃûÀàÐÍÀ´Ëµ£¬{int, {int, int}} ºÍ {int, int, int}
-/// ÊÇ²»Í¬µÄ£¬ÐèÒªÇø±ð¶Ô´ý£¬ËùÒÔ¼ÇÂ¼½á¹¹ÐÅÏ¢
-void AnonymousType::getTypes(std::vector<std::shared_ptr<Type>>& types) const
-{
-	unsigned size = subTypes.size();
-	for (unsigned index = 0; index < size; index++)
-	{
-		if (std::shared_ptr<AnonymousType> type = std::dynamic_pointer_cast<AnonymousType>(subTypes[index]))
-		{
-			type->getTypes(types);
-		}
-		else
-		{
-			types.push_back(subTypes[index]);
-		}
-	}
+/// Note: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½{int, {int, int}} ï¿½ï¿½ {int, int, int}
+/// ï¿½Ç²ï¿½Í¬ï¿½Ä£ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ô´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¼ï¿½Â¼ï¿½á¹¹ï¿½ï¿½Ï¢
+void AnonymousType::getTypes(std::vector<std::shared_ptr<Type>> &types) const {
+  unsigned size = subTypes.size();
+  for (unsigned index = 0; index < size; index++) {
+    if (std::shared_ptr<AnonymousType> type =
+            std::dynamic_pointer_cast<AnonymousType>(subTypes[index])) {
+      type->getTypes(types);
+    } else {
+      types.push_back(subTypes[index]);
+    }
+  }
 }
 
-TyPtr AnonymousType::StripOffShell() const
-{
-	if (size() > 32)
-		return nullptr;
-	// To Do: ÓÉÓÚmosesÔÝÊ±Ö»ÔÊÐíintºÍbool£¬ÇÒ¶¼ÊÇ4 bytes±íÊ¾¡£
-	// ËùÒÔµ±size <= 32Ê±£¬±íÊ¾sub
-	if (auto UDTy = std::dynamic_pointer_cast<AnonymousType>(subTypes[0]))
-		return UDTy->StripOffShell();
-	else
-		return subTypes[0];
+TyPtr AnonymousType::StripOffShell() const {
+  if (size() > 32)
+    return nullptr;
+  // To Do: ï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½Ê±Ö»ï¿½ï¿½ï¿½ï¿½intï¿½ï¿½boolï¿½ï¿½ï¿½Ò¶ï¿½ï¿½ï¿½4 bytesï¿½ï¿½Ê¾ï¿½ï¿½
+  // ï¿½ï¿½ï¿½Ôµï¿½size <= 32Ê±ï¿½ï¿½ï¿½ï¿½Ê¾sub
+  if (auto UDTy = std::dynamic_pointer_cast<AnonymousType>(subTypes[0]))
+    return UDTy->StripOffShell();
+  else
+    return subTypes[0];
 }
 
-unsigned long AnonymousType::size() const 
-{
-	unsigned long size = 0;
-	std::for_each(subTypes.begin(), subTypes.end(), 
-		[&size](const TyPtr& ty){ size += ty->size(); });
-	return size;
+unsigned long AnonymousType::size() const {
+  unsigned long size = 0;
+  std::for_each(subTypes.begin(), subTypes.end(),
+                [&size](const TyPtr &ty) { size += ty->size(); });
+  return size;
 }

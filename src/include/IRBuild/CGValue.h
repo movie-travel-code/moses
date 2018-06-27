@@ -6,68 +6,61 @@
 //===---------------------------------------------------------------------===//
 #ifndef CG_VALUE_H
 #define CG_VALUE_H
-#include <cassert>
-#include "../Parser/Type.h"
-#include "../IR/Value.h"
 #include "../IR/IRType.h"
-namespace compiler
-{
-	namespace CodeGen
-	{
-		/// RValue - This trivial value class is used to represent the result of an
-		/// expression that is evaluated.
-		/// Èç¹ûÊÇscalarÄÇÃ´V1¾ÍÊÇ¼òµ¥µÄvalue£¬Èç¹ûÊÇaggregateÄÇÃ´V1¾ÍÊÇagg.tempµÄµØÖ·
-		class RValue
-		{
-			enum { Scalar, Aggregate } Flavor;
-			IR::ValPtr V1, V2;
-		public:
-			bool isScalar() const { return Flavor == Scalar; }
-			bool isAggregate() const { return Flavor == Aggregate; }
+#include "../IR/Value.h"
+#include "../Parser/Type.h"
+#include <cassert>
 
-			IR::ValPtr getScalarVal() const { return V1; }
+namespace compiler {
+namespace CodeGen {
+/// RValue - This trivial value class is used to represent the result of an
+/// expression that is evaluated.
+/// ï¿½ï¿½ï¿½ï¿½ï¿½scalarï¿½ï¿½Ã´V1ï¿½ï¿½ï¿½Ç¼òµ¥µï¿½valueï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½aggregateï¿½ï¿½Ã´V1ï¿½ï¿½ï¿½ï¿½agg.tempï¿½Äµï¿½Ö·
+class RValue {
+  enum { Scalar, Aggregate } Flavor;
+  IR::ValPtr V1, V2;
 
-			/// getAggregateAddr() - Return the value of the address of the aggregate.
-			IR::ValPtr getAggregateAddr() const
-			{
-				return V1;
-			}
+public:
+  bool isScalar() const { return Flavor == Scalar; }
+  bool isAggregate() const { return Flavor == Aggregate; }
 
-			static RValue get(IR::ValPtr V)
-			{
-				RValue ER;
-				ER.V1 = V;
-				ER.Flavor = Scalar;
-				return ER;
-			}
+  IR::ValPtr getScalarVal() const { return V1; }
 
-			static RValue getAggregate(IR::ValPtr V)
-			{
-				RValue ER;
-				ER.V1 = V;
-				ER.Flavor = Aggregate;
-				return ER;
-			}
-		};
+  /// getAggregateAddr() - Return the value of the address of the aggregate.
+  IR::ValPtr getAggregateAddr() const { return V1; }
 
-		class LValue
-		{
-			IR::ValPtr V;
-			//address space.
-			unsigned AddressSpace;
-		public:
-			unsigned getAddressSpace() const { return AddressSpace; }
-			IR::ValPtr getAddress() const { return V; }
+  static RValue get(IR::ValPtr V) {
+    RValue ER;
+    ER.V1 = V;
+    ER.Flavor = Scalar;
+    return ER;
+  }
 
-			static LValue MakeAddr(IR::ValPtr Alloca, unsigned AddressSpace = 0)
-			{
-				LValue R;
-				R.V = Alloca;
-				R.AddressSpace = AddressSpace;
-				return R;
-			}
-		};
-	}
-}
+  static RValue getAggregate(IR::ValPtr V) {
+    RValue ER;
+    ER.V1 = V;
+    ER.Flavor = Aggregate;
+    return ER;
+  }
+};
+
+class LValue {
+  IR::ValPtr V;
+  // address space.
+  unsigned AddressSpace;
+
+public:
+  unsigned getAddressSpace() const { return AddressSpace; }
+  IR::ValPtr getAddress() const { return V; }
+
+  static LValue MakeAddr(IR::ValPtr Alloca, unsigned AddressSpace = 0) {
+    LValue R;
+    R.V = Alloca;
+    R.AddressSpace = AddressSpace;
+    return R;
+  }
+};
+} // namespace CodeGen
+} // namespace compiler
 
 #endif

@@ -6,54 +6,47 @@
 #ifndef TYPE_SET_H
 #define TYPE_SET_H
 #include <vector>
-namespace compiler
-{
-	namespace SupportStructure
-	{
-		template<typename ValueT, typename ValueInfoT>
-		class TypeSet
-		{
-			std::vector<ValueT> Buckets;
-		public:
-			typedef ValueT key_type;
-			typedef ValueT value_type;
-			typedef unsigned size_type;
+namespace compiler {
+namespace SupportStructure {
+template <typename ValueT, typename ValueInfoT> class TypeSet {
+  std::vector<ValueT> Buckets;
 
-			explicit TypeSet(unsigned NumInit = 0) {}
+public:
+  typedef ValueT key_type;
+  typedef ValueT value_type;
+  typedef unsigned size_type;
 
-			bool empty() const { return Buckets.empty(); }
+  explicit TypeSet(unsigned NumInit = 0) {}
 
-			size_type size() const { return Buckets.size(); }
+  bool empty() const { return Buckets.empty(); }
 
-			bool isIn(const ValueT &V) const 
-			{
-				if (lookup(V))
-					return true;
-				return false;
-			}
+  size_type size() const { return Buckets.size(); }
 
-			std::vector<ValueT> getBuckets() const { return Buckets; }
+  bool isIn(const ValueT &V) const {
+    if (lookup(V))
+      return true;
+    return false;
+  }
 
-			ValueT lookup(const ValueT &V) const
-			{
-				for (auto item : Buckets)
-				{
-					// auto item_hash = ValueInfoT::getHashValue(item);
-					// auto v_hash = ValueInfoT::getHashValue(item);
-					if (ValueInfoT::getHashValue(item) == ValueInfoT::getHashValue(item))
-						return item;
-				}
-				return nullptr;
-			}
+  std::vector<ValueT> getBuckets() const { return Buckets; }
 
-			/// Note: ²åÈëÖ®Ç°ÏÈÍ¨¹ýValueInfoT¼ÆËãHashValue£¬²¢²éÕÒÊÇ·ñ´æÔÚ¡£
-			void insert(ValueT V) 
-			{
-				if (lookup(V))
-					return;
-				Buckets.push_back(V); 
-			}
-		};
-	}
-}
+  ValueT lookup(const ValueT &V) const {
+    for (auto item : Buckets) {
+      // auto item_hash = ValueInfoT::getHashValue(item);
+      // auto v_hash = ValueInfoT::getHashValue(item);
+      if (ValueInfoT::getHashValue(item) == ValueInfoT::getHashValue(item))
+        return item;
+    }
+    return nullptr;
+  }
+
+  /// Note: ï¿½ï¿½ï¿½ï¿½Ö®Ç°ï¿½ï¿½Í¨ï¿½ï¿½ValueInfoTï¿½ï¿½ï¿½ï¿½HashValueï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½Ú¡ï¿½
+  void insert(ValueT V) {
+    if (lookup(V))
+      return;
+    Buckets.push_back(V);
+  }
+};
+} // namespace SupportStructure
+} // namespace compiler
 #endif

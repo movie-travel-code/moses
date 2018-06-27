@@ -1,322 +1,277 @@
 //===------------------------EvaluatedExprVisitor.h-----------------------===//
 //
 // This file defines the EvaluateExprVisitor class.
-// 
+//
 //===---------------------------------------------------------------------===//
 #include "../../include/Parser/EvaluatedExprVisitor.h"
 using namespace compiler::ast;
 
 //===-----------------------------------------------------------------------------------===//
 // EvaluatedExprVisitorBase's Impletation
-bool EvaluatedExprVisitorBase::Evaluate(ExprASTPtr expr, EvalInfo& info)
-{
-	if (BinaryPtr B = std::dynamic_pointer_cast<BinaryExpr>(expr))
-	{
-		EvalInfo LhsVal(ValueKind::IntKind, EvaluationMode::EM_ConstantFold);
-		EvalInfo RhsVal(ValueKind::IntKind, EvaluationMode::EM_ConstantFold);
+bool EvaluatedExprVisitorBase::Evaluate(ExprASTPtr expr, EvalInfo &info) {
+  if (BinaryPtr B = std::dynamic_pointer_cast<BinaryExpr>(expr)) {
+    EvalInfo LhsVal(ValueKind::IntKind, EvaluationMode::EM_ConstantFold);
+    EvalInfo RhsVal(ValueKind::IntKind, EvaluationMode::EM_ConstantFold);
 
-		if (!Evaluate(B->getLHS(), LhsVal))
-			return false;
-		if (!Evaluate(B->getRHS(), RhsVal))
-			return false;
-		return EvalBinaryExpr(B, info, LhsVal, RhsVal);
-	}
+    if (!Evaluate(B->getLHS(), LhsVal))
+      return false;
+    if (!Evaluate(B->getRHS(), RhsVal))
+      return false;
+    return EvalBinaryExpr(B, info, LhsVal, RhsVal);
+  }
 
-	if (UnaryPtr U = std::dynamic_pointer_cast<UnaryExpr>(expr))
-	{
-		EvalInfo subVal(ValueKind::IntKind, EvaluationMode::EM_ConstantFold);
+  if (UnaryPtr U = std::dynamic_pointer_cast<UnaryExpr>(expr)) {
+    EvalInfo subVal(ValueKind::IntKind, EvaluationMode::EM_ConstantFold);
 
-		if (!Evaluate(U->getSubExpr(), subVal))
-			return false;
-		return EvalUnaryExpr(U, info, subVal);
-	}
+    if (!Evaluate(U->getSubExpr(), subVal))
+      return false;
+    return EvalUnaryExpr(U, info, subVal);
+  }
 
-	if (MemberExprPtr M = std::dynamic_pointer_cast<MemberExpr>(expr))
-	{
-		return EvalMemberExpr(M, info);
-	}
+  if (MemberExprPtr M = std::dynamic_pointer_cast<MemberExpr>(expr)) {
+    return EvalMemberExpr(M, info);
+  }
 
-	if (DeclRefExprPtr DRE = std::dynamic_pointer_cast<DeclRefExpr>(expr))
-	{
-		return EvalDeclRefExpr(DRE, info);
-	}
+  if (DeclRefExprPtr DRE = std::dynamic_pointer_cast<DeclRefExpr>(expr)) {
+    return EvalDeclRefExpr(DRE, info);
+  }
 
-	if (CallExprPtr CE = std::dynamic_pointer_cast<CallExpr>(expr))
-	{
-		return EvalCallExpr(CE, info);
-	}
+  if (CallExprPtr CE = std::dynamic_pointer_cast<CallExpr>(expr)) {
+    return EvalCallExpr(CE, info);
+  }
 
-	if (BoolLiteralPtr BL = std::dynamic_pointer_cast<BoolLiteral>(expr))
-	{
-		info.evalstatus.kind = ValueKind::BoolKind;
-		info.evalstatus.boolVal = BL->getVal();
-		return true;
-	}
+  if (BoolLiteralPtr BL = std::dynamic_pointer_cast<BoolLiteral>(expr)) {
+    info.evalstatus.kind = ValueKind::BoolKind;
+    info.evalstatus.boolVal = BL->getVal();
+    return true;
+  }
 
-	if (NumberExprPtr Num = std::dynamic_pointer_cast<NumberExpr>(expr))
-	{
-		info.evalstatus.kind = ValueKind::IntKind;
-		info.evalstatus.intVal = Num->getVal();
-		return true;
-	}
-	return false;
+  if (NumberExprPtr Num = std::dynamic_pointer_cast<NumberExpr>(expr)) {
+    info.evalstatus.kind = ValueKind::IntKind;
+    info.evalstatus.intVal = Num->getVal();
+    return true;
+  }
+  return false;
 }
 
-void EvaluatedExprVisitorBase::handleEvalCallTail()
-{
-	std::pair<int, unsigned> bookeepingInfo = ActiveBookingInfo[ActiveBookingInfo.size() - 1];
-	ActiveBookingInfo.pop_back();
-	for (unsigned i = 0; i < bookeepingInfo.second; i++)
-	{
-		ActiveStack.pop_back();
-	}
+void EvaluatedExprVisitorBase::handleEvalCallTail() {
+  std::pair<int, unsigned> bookeepingInfo =
+      ActiveBookingInfo[ActiveBookingInfo.size() - 1];
+  ActiveBookingInfo.pop_back();
+  for (unsigned i = 0; i < bookeepingInfo.second; i++) {
+    ActiveStack.pop_back();
+  }
 }
 
-/// \brief ÅÐ¶ÏFunctionDeclÄÜ·ñevaluate£¬²¢¼ì²éÊÇ·ñ³¬³öeval callµÄ²ãÊý£¨µ±Ç°Ò»²ã£©¡£
-ReturnStmtPtr EvaluatedExprVisitorBase::handleEvalCallStart(CallExprPtr CE)
-{
-	ReturnStmtPtr returnStmt = CE->getFuncDecl()->isEvalCandiateAndGetReturnStmt();
+/// \brief ï¿½Ð¶ï¿½FunctionDeclï¿½Ü·ï¿½evaluateï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ñ³¬³ï¿½eval
+/// callï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°Ò»ï¿½ã£©ï¿½ï¿½
+ReturnStmtPtr EvaluatedExprVisitorBase::handleEvalCallStart(CallExprPtr CE) {
+  ReturnStmtPtr returnStmt =
+      CE->getFuncDecl()->isEvalCandiateAndGetReturnStmt();
 
-	if (ActiveBookingInfo.size() >= 1)
-	{
-		return nullptr;
-	}
-	return returnStmt;
+  if (ActiveBookingInfo.size() >= 1) {
+    return nullptr;
+  }
+  return returnStmt;
 }
 
-/// \brief ÕâÀï¶ÔCallExpr()½øÐÐevaluation.
-/// ÀýÈç£º
+/// \brief ï¿½ï¿½ï¿½ï¿½ï¿½CallExpr()ï¿½ï¿½ï¿½ï¿½evaluation.
+/// ï¿½ï¿½ï¿½ç£º
 /// func add(parm1 : int, parm2 : int) -> int { return parm1 + parm2; }
 /// var num = add(10, 20);
-/// ÉÏÃæÎÒÃÇ»á½« add(10, 20) evaluate³ÉÎª30.
-/// £¨1£© Ê×ÏÈÎÒÃÇ»á¶ÔÊµ²ÎÖµ½øÐÐeval£¬¼ÇÂ¼ÏÂ (name, value) pair£¬È»ºóÓ¦ÓÃµ½º¯ÊýÌåÖÐ
-/// £¨2£© ÎÒÃÇÒªÇóº¯ÊýÖ»ÄÜÓÐÒ»ÌõreturnÓï¾ä¡£½«£¨name, value£©pairÓ¦ÓÃµ½returnÓï¾äÖÐ£¬½øÐÐÔËËã
-/// £¨3£© ×îÖÕ£¬½«µÃµ½µÄ½á¹ûÖµ×÷ÎªCallExprµÄevaluateµÃµ½µÄconstant.
-bool EvaluatedExprVisitorBase::EvalCallExpr(CallExprPtr CE, EvalInfo &info)
-{
-	// (0) Ê×ÏÈÅÐ¶ÏFunctionDeclÄÜ·ñevaluate£¬¼ì²éÊÇ·ñ³¬³öeval callµÄ²ãÊý£¨µ±Ç°Ò»²ã£©¡£
-	ReturnStmtPtr returnStmt = handleEvalCallStart(CE);
-	if (!returnStmt)
-	{
-		return false;
-	}
+/// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç»á½« add(10, 20) evaluateï¿½ï¿½Îª30.
+/// ï¿½ï¿½1ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç»ï¿½ï¿½Êµï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½evalï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½ (name, value) pairï¿½ï¿½È»ï¿½ï¿½Ó¦ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+/// ï¿½ï¿½2ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½returnï¿½ï¿½ä¡£ï¿½ï¿½ï¿½ï¿½name,
+/// valueï¿½ï¿½pairÓ¦ï¿½Ãµï¿½returnï¿½ï¿½ï¿½ï¿½Ð£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½3ï¿½ï¿½
+/// ï¿½ï¿½ï¿½Õ£ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½Ä½ï¿½ï¿½Öµï¿½ï¿½ÎªCallExprï¿½ï¿½evaluateï¿½Ãµï¿½ï¿½ï¿½constant.
+bool EvaluatedExprVisitorBase::EvalCallExpr(CallExprPtr CE, EvalInfo &info) {
+  // (0) ï¿½ï¿½ï¿½ï¿½ï¿½Ð¶ï¿½FunctionDeclï¿½Ü·ï¿½evaluateï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç·ñ³¬³ï¿½eval
+  // callï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç°Ò»ï¿½ã£©ï¿½ï¿½
+  ReturnStmtPtr returnStmt = handleEvalCallStart(CE);
+  if (!returnStmt) {
+    return false;
+  }
 
-	ValueKind vk;
-	// (1) ¶ÔÊµ²ÎÖµ½øÐÐevaluate
-	unsigned num = CE->getArgsNum();
-	for (unsigned i = 0; i < num; i++)
-	{
-		ExprASTPtr Arg = CE->getArg(i);
-		if (Arg->getType()->getKind() == TypeKind::INT)
-		{
-			vk = ValueKind::IntKind;
-		}
-		else if (Arg->getType()->getKind() == TypeKind::BOOL)
-		{
-			vk = ValueKind::BoolKind;
-		}
-		else
-		{
-			return false;
-		}
+  ValueKind vk;
+  // (1) ï¿½ï¿½Êµï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½evaluate
+  unsigned num = CE->getArgsNum();
+  for (unsigned i = 0; i < num; i++) {
+    ExprASTPtr Arg = CE->getArg(i);
+    if (Arg->getType()->getKind() == TypeKind::INT) {
+      vk = ValueKind::IntKind;
+    } else if (Arg->getType()->getKind() == TypeKind::BOOL) {
+      vk = ValueKind::BoolKind;
+    } else {
+      return false;
+    }
 
-		// ¶ÔArg½øÐÐevaluate
-		EvalInfo info(vk, EvaluationMode::EM_ConstantFold);
-		Evaluate(Arg, info);
+    // ï¿½ï¿½Argï¿½ï¿½ï¿½ï¿½evaluate
+    EvalInfo info(vk, EvaluationMode::EM_ConstantFold);
+    Evaluate(Arg, info);
 
-		// ×é³É <name, value> pair´æ´¢ÆðÀ´£¬¼ÇÂ¼ÕâÒ»²ãµÄÊµ²Îinfo
-		ActiveStack.push_back(std::make_pair(CE->getFuncDecl()->getParmName(i), info));
-	}
+    // ï¿½ï¿½ï¿½ <name, value> pairï¿½æ´¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Êµï¿½ï¿½info
+    ActiveStack.push_back(
+        std::make_pair(CE->getFuncDecl()->getParmName(i), info));
+  }
 
-	// ¼ÇÂ¼´Ë´ÎµÄbookkeeping info
-	ActiveBookingInfo.push_back(std::make_pair(ActiveBookingInfo.size(), num));
+  // ï¿½ï¿½Â¼ï¿½Ë´Îµï¿½bookkeeping info
+  ActiveBookingInfo.push_back(std::make_pair(ActiveBookingInfo.size(), num));
 
-	// (2) »ñÈ¡CallExpr¶ÔÓ¦º¯ÊýÌåÖÐµÄReturnStmt£¬È»ºóÖ´ÐÐÔËËã£¬µÃµ½constantÖµ£¬È»ºó·µ»Ø.
-	EvalInfo returnInfo(vk, EvaluationMode::EM_ConstantFold);
-	ExprASTPtr rexpr = returnStmt->getSubExpr();
-	Evaluate(rexpr, returnInfo);
+  // (2) ï¿½ï¿½È¡CallExprï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½ReturnStmtï¿½ï¿½È»ï¿½ï¿½Ö´ï¿½ï¿½ï¿½ï¿½ï¿½ã£¬ï¿½Ãµï¿½constantÖµï¿½ï¿½È»ï¿½ó·µ»ï¿½.
+  EvalInfo returnInfo(vk, EvaluationMode::EM_ConstantFold);
+  ExprASTPtr rexpr = returnStmt->getSubExpr();
+  Evaluate(rexpr, returnInfo);
 
-	// (3) ¶ÔEvalCall½øÐÐÊÕÎ²´¦Àí
-	handleEvalCallTail();
+  // (3) ï¿½ï¿½EvalCallï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Î²ï¿½ï¿½ï¿½ï¿½
+  handleEvalCallTail();
 
-	// (4) ¶ÔµÃµ½µÄ½á¹û½øÐÐ×ÛºÏ´¦Àí
-	info = returnInfo;
-	return true;
+  // (4) ï¿½ÔµÃµï¿½ï¿½Ä½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÛºÏ´ï¿½ï¿½ï¿½
+  info = returnInfo;
+  return true;
 }
 
-/// \brief ÓÃÓÚ¶ÔDeclRefExpr½øÐÐevaluate.
-bool EvaluatedExprVisitorBase::EvalDeclRefExpr(DeclRefExprPtr DRE, EvalInfo &info)
-{
-	auto decl = DRE->getDecl();
-	// ¼ì²éDeclRefExprÒýÓÃµÄ±äÁ¿ÊÇ·ñÊÇconst£¬²»ÊÇconst·µ»Ø²»½øÐÐconstant-evaluator.
-	if (VarDeclPtr VD = std::dynamic_pointer_cast<VarDecl>(decl))
-	{
-		if (!VD->isConst())
-			return false;
-		EvalInfo declInfo(info.evalstatus.kind, EvaluationMode::EM_ConstantFold);
-		if (!Evaluate(VD->getInitExpr(), declInfo))
-		{
-			return false;
-		}
-		info = declInfo;
-		return true;
-	}
-	// Èç¹ûÊÇParmDecl£¬Ôò¼ì²éParmDeclÊÇ·ñÊÇÒÑ¾­±»ÍÆµ¼³öÀ´ÁË
-	else if (ParmDeclPtr PD = std::dynamic_pointer_cast<ParameterDecl>(decl))
-	{
-		// ¼ì²éµ±Ç°µÄparmdecl¶ÔÓ¦µÄÊµ²Î£¬ÊÇ·ñÒÑ¾­evaluate³öÀ´
-		// ÀýÈç£º
-		// func add(lhs : int, rhs : int) -> int 
-		// {
-		//		return lhs + rhs;
-		// }
-		// add(10, 20);      <----------------evaluated
-		// ÎÒÃÇÒÑ¾­µÃµ½ÁË <lhs, 10> <rhs, 20>£¬ËùÒÔevaluate "return lhs + rhs;"
-		auto bookkeeping = ActiveBookingInfo.back();
-		auto num = bookkeeping.second;
-		auto stackSize = ActiveStack.size();
-		// ActiveStack Î²²¿¿ªÊ¼¼ì²éÊÇ·ñ´æÔÚparm£¬²»´æÔÚ£¬ÔòÖ±½Ó·µ»Ø¡£
-		// <start, Evalinfo> <lhs, EvalInfo> <rhs, EvalInfo>
-		for (unsigned i = stackSize - 1; i >= 0; i--)
-		{
-			if (ActiveStack[i].first == PD->getParmName())
-			{
-				info = ActiveStack[i].second;
-				return true;
-			}
-		}
-	}	
-	return false;;
+/// \brief ï¿½ï¿½ï¿½Ú¶ï¿½DeclRefExprï¿½ï¿½ï¿½ï¿½evaluate.
+bool EvaluatedExprVisitorBase::EvalDeclRefExpr(DeclRefExprPtr DRE,
+                                               EvalInfo &info) {
+  auto decl = DRE->getDecl();
+  // ï¿½ï¿½ï¿½DeclRefExprï¿½ï¿½ï¿½ÃµÄ±ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½constï¿½ï¿½ï¿½ï¿½ï¿½ï¿½constï¿½ï¿½ï¿½Ø²ï¿½ï¿½ï¿½ï¿½ï¿½constant-evaluator.
+  if (VarDeclPtr VD = std::dynamic_pointer_cast<VarDecl>(decl)) {
+    if (!VD->isConst())
+      return false;
+    EvalInfo declInfo(info.evalstatus.kind, EvaluationMode::EM_ConstantFold);
+    if (!Evaluate(VD->getInitExpr(), declInfo)) {
+      return false;
+    }
+    info = declInfo;
+    return true;
+  }
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ParmDeclï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ParmDeclï¿½Ç·ï¿½ï¿½ï¿½ï¿½Ñ¾ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  else if (ParmDeclPtr PD = std::dynamic_pointer_cast<ParameterDecl>(decl)) {
+    // ï¿½ï¿½éµ±Ç°ï¿½ï¿½parmdeclï¿½ï¿½Ó¦ï¿½ï¿½Êµï¿½Î£ï¿½ï¿½Ç·ï¿½ï¿½Ñ¾ï¿½evaluateï¿½ï¿½ï¿½ï¿½
+    // ï¿½ï¿½ï¿½ç£º
+    // func add(lhs : int, rhs : int) -> int
+    // {
+    //		return lhs + rhs;
+    // }
+    // add(10, 20);      <----------------evaluated
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ñ¾ï¿½ï¿½Ãµï¿½ï¿½ï¿½ <lhs, 10> <rhs, 20>ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½evaluate "return lhs + rhs;"
+    auto bookkeeping = ActiveBookingInfo.back();
+    auto num = bookkeeping.second;
+    auto stackSize = ActiveStack.size();
+    // ActiveStack Î²ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½Ç·ï¿½ï¿½ï¿½ï¿½parmï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú£ï¿½ï¿½ï¿½Ö±ï¿½Ó·ï¿½ï¿½Ø¡ï¿½
+    // <start, Evalinfo> <lhs, EvalInfo> <rhs, EvalInfo>
+    for (unsigned i = stackSize - 1; i >= 0; i--) {
+      if (ActiveStack[i].first == PD->getParmName()) {
+        info = ActiveStack[i].second;
+        return true;
+      }
+    }
+  }
+  return false;
+  ;
 }
 
 //===-----------------------------------------------------------------------------------===//
 // IntExprEvaluator's Impletation
 bool IntExprEvaluator::EvalBinaryExpr(BinaryPtr B, EvalInfo &info,
-	EvalInfo &lhs, EvalInfo &rhs)
-{
-	std::string OpName = B->getOpcode();
-	if (OpName == "+")
-	{
-		info.evalstatus.intVal = lhs.evalstatus.intVal + rhs.evalstatus.intVal;
-	}
-	else if (OpName == "-")
-	{
-		info.evalstatus.intVal = lhs.evalstatus.intVal - rhs.evalstatus.intVal;
-	}
-	else if (OpName == "*")
-	{
-		info.evalstatus.intVal = lhs.evalstatus.intVal * rhs.evalstatus.intVal;
-	}
-	else if (OpName == "/")
-	{
-		info.evalstatus.intVal = lhs.evalstatus.intVal / rhs.evalstatus.intVal;
-	}
-	else if (OpName == "%")
-	{
-		info.evalstatus.intVal = lhs.evalstatus.intVal % rhs.evalstatus.intVal;
-	}
-	else
-	{
-		return false;
-	}
-	return true;
+                                      EvalInfo &lhs, EvalInfo &rhs) {
+  std::string OpName = B->getOpcode();
+  if (OpName == "+") {
+    info.evalstatus.intVal = lhs.evalstatus.intVal + rhs.evalstatus.intVal;
+  } else if (OpName == "-") {
+    info.evalstatus.intVal = lhs.evalstatus.intVal - rhs.evalstatus.intVal;
+  } else if (OpName == "*") {
+    info.evalstatus.intVal = lhs.evalstatus.intVal * rhs.evalstatus.intVal;
+  } else if (OpName == "/") {
+    info.evalstatus.intVal = lhs.evalstatus.intVal / rhs.evalstatus.intVal;
+  } else if (OpName == "%") {
+    info.evalstatus.intVal = lhs.evalstatus.intVal % rhs.evalstatus.intVal;
+  } else {
+    return false;
+  }
+  return true;
 }
 
-/// \brief ¶ÔÓÚÕûÐÍµÄµ¥Ä¿ÔËËã·û²»´æÔÚ
-bool IntExprEvaluator::EvalUnaryExpr(UnaryPtr U, EvalInfo &info, EvalInfo &subVal)
-{
-	std::string OpName = U->getOpcode();
-	if (OpName == "-")
-	{
-		info.evalstatus.intVal = 0 - subVal.evalstatus.intVal;
-		return true;
-	}
-	return false;
+/// \brief ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÍµÄµï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+bool IntExprEvaluator::EvalUnaryExpr(UnaryPtr U, EvalInfo &info,
+                                     EvalInfo &subVal) {
+  std::string OpName = U->getOpcode();
+  if (OpName == "-") {
+    info.evalstatus.intVal = 0 - subVal.evalstatus.intVal;
+    return true;
+  }
+  return false;
 }
 
-// To Do: µÈ´ýÊµÏÖ
-bool IntExprEvaluator::EvalMemberExpr(MemberExprPtr ME, EvalInfo &info)
-{
-	return false;
-	if (UDTyPtr UDT = std::dynamic_pointer_cast<UserDefinedType>(ME->getBase()->getType()))
-	{
-		// UserDefinedTypeµÄMemberÊÇ·ñÊÇconstÀàÐÍ¡£
-		// if (!UDT->getMemberType(ME->getMemberName())->isConst())
-			return false;
-		// »ñÈ¡const³ÉÔ±µÄ³õÊ¼»¯±í´ïÊ½
-		// ÀýÈç£º
-		// class A
-		// {
-		//		var num : int;
-		//		const length : int;
-		// }
-		// A a;
-		// a.num = 10;
-		// a.length = 11;	/* const member³ÉÔ±³õÊ¼»¯*/
-		// ±ØÐëÄÜ¹»»ñÈ¡µ½11Õâ¸ö³õÊ¼»¯±í´ïÊ½£¬¸Ã±í´ïÊ½±ØÐë´æ´¢ÔÚa¶ÔÓ¦³ÉÔ±µÄ³õÊ¼»¯±í´ïÊ½ÖÐ¡£
-	}
-	return false;
+// To Do: ï¿½È´ï¿½Êµï¿½ï¿½
+bool IntExprEvaluator::EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) {
+  return false;
+  if (UDTyPtr UDT = std::dynamic_pointer_cast<UserDefinedType>(
+          ME->getBase()->getType())) {
+    // UserDefinedTypeï¿½ï¿½Memberï¿½Ç·ï¿½ï¿½ï¿½constï¿½ï¿½ï¿½Í¡ï¿½
+    // if (!UDT->getMemberType(ME->getMemberName())->isConst())
+    return false;
+    // ï¿½ï¿½È¡constï¿½ï¿½Ô±ï¿½Ä³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½Ê½
+    // ï¿½ï¿½ï¿½ç£º
+    // class A
+    // {
+    //		var num : int;
+    //		const length : int;
+    // }
+    // A a;
+    // a.num = 10;
+    // a.length = 11;	/* const memberï¿½ï¿½Ô±ï¿½ï¿½Ê¼ï¿½ï¿½*/
+    // ï¿½ï¿½ï¿½ï¿½ï¿½Ü¹ï¿½ï¿½ï¿½È¡ï¿½ï¿½11ï¿½ï¿½ï¿½ï¿½ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½ï¿½Ã±ï¿½ï¿½Ê½ï¿½ï¿½ï¿½ï¿½æ´¢ï¿½ï¿½aï¿½ï¿½Ó¦ï¿½ï¿½Ô±ï¿½Ä³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½Ð¡ï¿½
+  }
+  return false;
 }
 
 //===-----------------------------------------------------------------------------------===//
 // BoolExprEvaluator's Impletation
 bool BoolExprEvaluator::EvalBinaryExpr(BinaryPtr B, EvalInfo &info,
-	EvalInfo &lhs, EvalInfo &rhs)
-{
-	std::string OpName = B->getOpcode();
-	if (OpName == "||")
-	{
-		info.evalstatus.boolVal = lhs.evalstatus.boolVal || rhs.evalstatus.boolVal;
-		return true;
-	}
-	else if (OpName == "&&")
-	{
-		info.evalstatus.boolVal = lhs.evalstatus.boolVal && rhs.evalstatus.boolVal;
-		return true;
-	}
-	else if (OpName == "==")
-	{
-		/// \brief lhsÊÇboolÀàÐÍ(ÓÉÓÚ½øÐÐ¹ýÓïÒå·ÖÎö£¬ËùÒÔÓÒ²à¿Ï¶¨Ò²ÊÇboolÀàÐÍ)
-		if (lhs.evalstatus.kind == ValueKind::BoolKind)
-		{
-			info.evalstatus.boolVal = lhs.evalstatus.boolVal == rhs.evalstatus.boolVal;
-		}
+                                       EvalInfo &lhs, EvalInfo &rhs) {
+  std::string OpName = B->getOpcode();
+  if (OpName == "||") {
+    info.evalstatus.boolVal = lhs.evalstatus.boolVal || rhs.evalstatus.boolVal;
+    return true;
+  } else if (OpName == "&&") {
+    info.evalstatus.boolVal = lhs.evalstatus.boolVal && rhs.evalstatus.boolVal;
+    return true;
+  } else if (OpName == "==") {
+    /// \brief lhsï¿½ï¿½boolï¿½ï¿½ï¿½ï¿½(ï¿½ï¿½ï¿½Ú½ï¿½ï¿½Ð¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò²ï¿½Ï¶ï¿½Ò²ï¿½ï¿½boolï¿½ï¿½ï¿½ï¿½)
+    if (lhs.evalstatus.kind == ValueKind::BoolKind) {
+      info.evalstatus.boolVal =
+          lhs.evalstatus.boolVal == rhs.evalstatus.boolVal;
+    }
 
-		if (lhs.evalstatus.kind == ValueKind::IntKind)
-		{
-			info.evalstatus.boolVal = lhs.evalstatus.intVal == rhs.evalstatus.intVal;
-		}
-		return true;
-	}
-	else if (OpName == "!=")
-	{
-		/// \brief lhsÊÇboolÀàÐÍ£¨ÓÉÓÚ½øÐÐ¹ýÓïÒå·ÖÎö£¬ËùÒÔÓÒ²à¿Ï¶¨Ò²ÊÇboolÀàÐÍ£©
-		if (lhs.evalstatus.kind == ValueKind::BoolKind)
-		{
-			info.evalstatus.boolVal = lhs.evalstatus.boolVal != rhs.evalstatus.boolVal;
-		}
+    if (lhs.evalstatus.kind == ValueKind::IntKind) {
+      info.evalstatus.boolVal = lhs.evalstatus.intVal == rhs.evalstatus.intVal;
+    }
+    return true;
+  } else if (OpName == "!=") {
+    /// \brief lhsï¿½ï¿½boolï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½Ú½ï¿½ï¿½Ð¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò²ï¿½Ï¶ï¿½Ò²ï¿½ï¿½boolï¿½ï¿½ï¿½Í£ï¿½
+    if (lhs.evalstatus.kind == ValueKind::BoolKind) {
+      info.evalstatus.boolVal =
+          lhs.evalstatus.boolVal != rhs.evalstatus.boolVal;
+    }
 
-		if (lhs.evalstatus.kind == ValueKind::IntKind)
-		{
-			info.evalstatus.boolVal = lhs.evalstatus.intVal != rhs.evalstatus.intVal;
-		}
-	}
-	else
-	{
-		return false;
-	}
-	return true;
+    if (lhs.evalstatus.kind == ValueKind::IntKind) {
+      info.evalstatus.boolVal = lhs.evalstatus.intVal != rhs.evalstatus.intVal;
+    }
+  } else {
+    return false;
+  }
+  return true;
 }
 
-/// \brief ¶ÔÓÚboolÀàÐÍÀ´Ëµ£¬µ¥Ä¿ÔËËã·ûÖ»ÓÐ!
-bool BoolExprEvaluator::EvalUnaryExpr(UnaryPtr U, EvalInfo &info, EvalInfo &subVal)
-{
-	info.evalstatus.boolVal = !subVal.evalstatus.boolVal;
-	return false;
+/// \brief ï¿½ï¿½ï¿½ï¿½boolï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½Ä¿ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½!
+bool BoolExprEvaluator::EvalUnaryExpr(UnaryPtr U, EvalInfo &info,
+                                      EvalInfo &subVal) {
+  info.evalstatus.boolVal = !subVal.evalstatus.boolVal;
+  return false;
 }
 
-// To Do: ¹ýÓÚ¸´ÔÓ£¬ÔÛ²»ÊµÏÖ
-bool BoolExprEvaluator::EvalMemberExpr(MemberExprPtr ME, EvalInfo &info)
-{
-	return false;
+// To Do: ï¿½ï¿½ï¿½Ú¸ï¿½ï¿½Ó£ï¿½ï¿½Û²ï¿½Êµï¿½ï¿½
+bool BoolExprEvaluator::EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) {
+  return false;
 }

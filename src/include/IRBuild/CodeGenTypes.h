@@ -5,68 +5,69 @@
 //===---------------------------------------------------------------===//
 #ifndef CODE_GEN_TYPES_H
 #define CODE_GEN_TYPES_H
+#include "../IR/IRType.h"
+#include "../IR/MosesIRContext.h"
+#include "../Parser/Type.h"
+#include "../Parser/ast.h"
+#include "CGCall.h"
+#include <cassert>
 #include <map>
 #include <set>
 #include <utility>
-#include <cassert>
-#include "../IR/MosesIRContext.h"
-#include "CGCall.h"
-#include "../IR/IRType.h"
-#include "../Parser/Type.h"
-#include "../Parser/ast.h"
-namespace compiler
-{
-	namespace IRBuild
-	{
-		using namespace compiler::IR;
-		class ModuleBuilder;
 
-		using IRType = compiler::IR::Type;
-		using IRStructTy = compiler::IR::StructType;
-		using IRFuncTy = compiler::IR::FunctionType;
-		using IRTyPtr = std::shared_ptr<IRType>;
-		using IRFuncTyPtr = std::shared_ptr<IRFuncTy>;
-		using CGFuncInfoConstPtr = std::shared_ptr<CGFunctionInfo const>;
-		using GetFuncTypeRet = std::pair<IRFuncTyPtr, std::vector<std::string>>;
+namespace compiler {
+namespace IRBuild {
+using namespace compiler::IR;
+class ModuleBuilder;
 
-		/// This class orgasizes the cross-module state that is used while lowering
-		/// AST types to moses-IR types.
-		/// Note: ÔÚmoses IRÖÐÓÐÒ»¸öÎÄ¼þMosesIRContext.h, ´æ´¢ÁËGlobalµÄTypeºÍConstant
-		/// µÈÐÅÏ¢¡£ÓëÕâÀïµÄ²¢²»³åÍ»£¬ÕâÀïµÄCodeGenTypesÖ»ÊÇ×÷ÎªÒ»¸ö½Ó¿Ú£¬Ö»·þÎñÓÚ´úÂëÉú³É¡£
-		class CodeGenTypes
-		{
-			//   ----------------		<--- CodeGenModule
-			//  |				 |
-			//	 ----------------
-			//	|				 |
-			//	 ----------------
-			//	|				 |
-			//	 ----------------
-			//	|  CodeGenTypes	 |
-			//	|				 |
-			//	|	   &CGM		 |
-			//	 ----------------
-			MosesIRContext &IRCtx;;
+using IRType = compiler::IR::Type;
+using IRStructTy = compiler::IR::StructType;
+using IRFuncTy = compiler::IR::FunctionType;
+using IRTyPtr = std::shared_ptr<IRType>;
+using IRFuncTyPtr = std::shared_ptr<IRFuncTy>;
+using CGFuncInfoConstPtr = std::shared_ptr<CGFunctionInfo const>;
+using GetFuncTypeRet = std::pair<IRFuncTyPtr, std::vector<std::string>>;
 
-			// Contains the moses-IR type for any converted RecordDecl.
-			std::map<const ast::Type*, std::shared_ptr<StructType>> RecordDeclTypes;
+/// This class orgasizes the cross-module state that is used while lowering
+/// AST types to moses-IR types.
+/// Note: ï¿½ï¿½moses IRï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ä¼ï¿½MosesIRContext.h, ï¿½æ´¢ï¿½ï¿½Globalï¿½ï¿½Typeï¿½ï¿½Constant
+/// ï¿½ï¿½ï¿½ï¿½Ï¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä²ï¿½ï¿½ï¿½ï¿½ï¿½Í»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½CodeGenTypesÖ»ï¿½ï¿½ï¿½ï¿½ÎªÒ»ï¿½ï¿½ï¿½Ó¿Ú£ï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½Ú´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¡ï¿½
+class CodeGenTypes {
+  //   ----------------		<--- CodeGenModule
+  //  |				 |
+  //	 ----------------
+  //	|				 |
+  //	 ----------------
+  //	|				 |
+  //	 ----------------
+  //	|  CodeGenTypes	 |
+  //	|				 |
+  //	|	   &CGM		 |
+  //	 ----------------
+  MosesIRContext &IRCtx;
+  ;
 
-			// Hold CGFunctionInfo results.
-			std::map<const FunctionDecl*, CGFuncInfoConstPtr> FunctionInfos;
-			std::map<const FunctionDecl*, FuncTypePtr> FunctionTypes;
-			unsigned AnonyTypesCounter;
-			std::string TypeNamePrefix;
-		public:
-			CodeGenTypes(MosesIRContext& IRCtx) : 
-				IRCtx(IRCtx), AnonyTypesCounter(0), TypeNamePrefix("@") {}
-			/// ConvertType - Convert type T into a moses-IR type.
-			/// Note: Èç¹û·¢ÏÖµ±Ç°TypeÊÇStructType£¬Ôò¼ÇÂ¼µ½MapÖÐ¡£
-			IRTyPtr ConvertType(ASTTyPtr type);						
-			GetFuncTypeRet getFunctionType(const FunctionDecl* FD, 
-				std::shared_ptr<CGFunctionInfo const> Info);
-			std::shared_ptr<const CGFunctionInfo> arrangeFunctionInfo(const FunctionDecl* FD);			
-			std::string getAnonyName();
-		};
-	}
-}
+  // Contains the moses-IR type for any converted RecordDecl.
+  std::map<const ast::Type *, std::shared_ptr<StructType>> RecordDeclTypes;
+
+  // Hold CGFunctionInfo results.
+  std::map<const FunctionDecl *, CGFuncInfoConstPtr> FunctionInfos;
+  std::map<const FunctionDecl *, FuncTypePtr> FunctionTypes;
+  unsigned AnonyTypesCounter;
+  std::string TypeNamePrefix;
+
+public:
+  CodeGenTypes(MosesIRContext &IRCtx)
+      : IRCtx(IRCtx), AnonyTypesCounter(0), TypeNamePrefix("@") {}
+  /// ConvertType - Convert type T into a moses-IR type.
+  /// Note: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½Ç°Typeï¿½ï¿½StructTypeï¿½ï¿½ï¿½ï¿½ï¿½Â¼ï¿½ï¿½Mapï¿½Ð¡ï¿½
+  IRTyPtr ConvertType(ASTTyPtr type);
+  GetFuncTypeRet getFunctionType(const FunctionDecl *FD,
+                                 std::shared_ptr<CGFunctionInfo const> Info);
+  std::shared_ptr<const CGFunctionInfo>
+  arrangeFunctionInfo(const FunctionDecl *FD);
+  std::string getAnonyName();
+};
+} // namespace IRBuild
+} // namespace compiler
 #endif

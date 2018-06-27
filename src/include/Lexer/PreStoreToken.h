@@ -1,42 +1,41 @@
 //===---------------------------PreStoreToken.h--------------------------===//
 //
-// This file define class PreStoreToken, and this class used to save 
+// This file define class PreStoreToken, and this class used to save
 // keyword.
 //
 //===--------------------------------------------------------------------===//
 #ifndef PRESTORETOKEN_INCLUDE
 #define PRESTORETOKEN_INCLUDE
+#include "Token.h"
+#include <algorithm>
+#include <cassert>
 #include <string>
 #include <utility>
 #include <vector>
-#include <cassert>
-#include <algorithm>
-#include "Token.h"
 
-namespace compiler
-{
-	namespace lex
-	{
-		/// @brief Ô¤ÉèToken
-		/// (1) ¹Ø¼ü×Ö
-		/// (2) ÔËËã·û
-		class PreStoreToken
-		{
-			// ¸ÃvectorÖ»ÊÇÎªÁË´æ´¢Ô¤ÉèµÄ¹Ø¼ü×ÖºÍÔËËã·û
-			std::vector<Token> tokenTable;
-		public:
-			PreStoreToken();
 
-			// Ô¤ÏÈ½«¹Ø¼ü×Ö²åÈë£¬¸Ã·½·¨Ö®ºó±»µ÷ÓÃÒ»´Î£¬Ò²¾ÍÊÇÔ¤ÏÈ½«¹Ø¼ü×ÖºÍÔËËã·û×°Èë
-			void AddToken();
+namespace compiler {
+namespace lex {
+/// @brief Ô¤ï¿½ï¿½Token
+/// (1) ï¿½Ø¼ï¿½ï¿½ï¿½
+/// (2) ï¿½ï¿½ï¿½ï¿½ï¿½
+class PreStoreToken {
+  // ï¿½ï¿½vectorÖ»ï¿½ï¿½Îªï¿½Ë´æ´¢Ô¤ï¿½ï¿½Ä¹Ø¼ï¿½ï¿½Öºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  std::vector<Token> tokenTable;
 
-			// ¼ì²éTokenÊÇ·ñÊÇ¹Ø¼ü×Ö£¬ÓÉÓÚ¹Ø¼ü×ÖÍ¨¹ýname¾Í¿ÉÒÔ±êÊ¶
-			tok::TokenValue isKeyword(const std::string& lexem) const;
+public:
+  PreStoreToken();
 
-			// ¼ì²éTokenÊÇ·ñÊÇÔËËã·û£¬ÔËËã·ûÍ¨¹ýÃû×Ö¾Í¿ÉÒÔ±êÊ¶
-			tok::TokenValue isOperator(const std::string& lexem) const;
-		};
-	}
-}
+  // Ô¤ï¿½È½ï¿½ï¿½Ø¼ï¿½ï¿½Ö²ï¿½ï¿½ë£¬ï¿½Ã·ï¿½ï¿½ï¿½Ö®ï¿½ó±»µï¿½ï¿½ï¿½Ò»ï¿½Î£ï¿½Ò²ï¿½ï¿½ï¿½ï¿½Ô¤ï¿½È½ï¿½ï¿½Ø¼ï¿½ï¿½Öºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½×°ï¿½ï¿½
+  void AddToken();
+
+  // ï¿½ï¿½ï¿½Tokenï¿½Ç·ï¿½ï¿½Ç¹Ø¼ï¿½ï¿½Ö£ï¿½ï¿½ï¿½ï¿½Ú¹Ø¼ï¿½ï¿½ï¿½Í¨ï¿½ï¿½nameï¿½Í¿ï¿½ï¿½Ô±ï¿½Ê¶
+  tok::TokenValue isKeyword(const std::string &lexem) const;
+
+  // ï¿½ï¿½ï¿½Tokenï¿½Ç·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¨ï¿½ï¿½ï¿½ï¿½ï¿½Ö¾Í¿ï¿½ï¿½Ô±ï¿½Ê¶
+  tok::TokenValue isOperator(const std::string &lexem) const;
+};
+} // namespace lex
+} // namespace compiler
 
 #endif

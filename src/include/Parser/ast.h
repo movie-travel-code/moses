@@ -1,845 +1,752 @@
 //===---------------------------------ast.h---------------------------------===//
-// 
+//
 // This file contains the declaration of the statement, decl, expr class.
 // llvm source code farmatting:http://llvm.org/docs/CodingStandards.html
-// 
+//
 //===-----------------------------------------------------------------------===//
 
 #ifndef AST_INCLUDE
 #define AST_INCLUDE
-#include <string>
-#include <vector>
-#include <memory>
-#include <cassert>
 #include "../IR/Value.h"
 #include "../Support/SourceLocation.h"
 #include "Type.h"
-
-namespace compiler
-{
-	///---------------------------nonsense for coding------------------------------///
-	/// syntax treeÊÇÔÚparseÍê³ÉÖ®ºó¹¹½¨µÄ£¬ÆäÖÐmoses²¢²»´òËãÊµÏÖone-passµÄcompile
-	/// Ò²¾ÍÊÇËµÔÚ¹¹½¨syntax treeµÄÊ±ºò£¬Ö»ÊÇÖ´ÐÐÒ»Ð©¼òµ¥µÄÓïÒå·ÖÎö£¬²¢´æ´¢´íÎó¡£¹¹½¨Íê³É
-	/// syntax treeºó£¬ÔÙ±éÀúsyntax tree²¢Ö´ÐÐ´úÂëÉú³É²¿·Ö¡£
-	///---------------------------nonsense for coding------------------------------///
-
-	namespace ast
-	{
-		using namespace compiler::lex;
-
-		class Expr;
-		class NumberExpr;
-		class BinaryExpr;
-		class CallExpr;
-		class DeclStatement;
-		class StatementAST; 
-		class ParameterDecl;
-		class FunctionDecl;
-		class CompoundStmt;
-		class VarDecl;	
-		class UnpackDecl;
-		class ExprStatement; 
-		class IfStatement;
-		class WhileStatement;
-		class ClassDecl;
-		class ReturnStatement;
-		class UnaryExpr;
-		class MemberExpr;
-		class BoolLiteral;
-		class DeclRefExpr;
-		class BreakStatement;
-		class ContinueStatement;
-
-		using ASTPtr = std::vector<std::shared_ptr<StatementAST>>;
-		using StmtASTPtr = std::shared_ptr<StatementAST>;
-		using NumberExprPtr = std::shared_ptr<NumberExpr>;
-		using ExprASTPtr = std::shared_ptr<Expr>;
-		using CallExprPtr = std::shared_ptr<CallExpr>;
-		using DeclASTPtr = std::shared_ptr<DeclStatement>;
-		using CompoundStmtPtr = std::shared_ptr<CompoundStmt>;
-		using VarDeclPtr = std::shared_ptr<VarDecl>;
-		using ParmDeclPtr = std::shared_ptr<ParameterDecl>;
-		using UnpackDeclPtr = std::shared_ptr<UnpackDecl>;
-		using FunctionDeclPtr = std::shared_ptr<FunctionDecl>;
-		using BinaryPtr = std::shared_ptr<BinaryExpr>;
-		using UnaryPtr = std::shared_ptr<UnaryExpr>;
-		using DeclRefExprPtr = std::shared_ptr<DeclRefExpr>;
-		using AnonTyPtr = std::shared_ptr<AnonymousType>;
-		using UDTyPtr = std::shared_ptr<UserDefinedType>;
-		using ReturnStmtPtr = std::shared_ptr<ReturnStatement>;
-		using MemberExprPtr = std::shared_ptr<MemberExpr>;
-		using BoolLiteralPtr = std::shared_ptr<BoolLiteral>;
-		using BreakStmtPtr = std::shared_ptr<BreakStatement>;
-		using ContStmtPtr = std::shared_ptr<ContinueStatement>;
-
-		using IRValue = std::shared_ptr<IR::Value>;
-
-		/// \brief StatementAST - Base class for all statements.
-		//--------------------------nonsense for coding---------------------------
-		// ÕâÀïÊ¹ÓÃstd::shared_ptrÀ´°ü¹üASTÊ÷£¬ÓÐÐ©¼¦Àß£¬ÒòÎªIRÉú³ÉµÄÊ±ºò£¬Ö±½Ó½«
-		// ASTÎö¹¹µô£¨»¹²»ÈçÖ±½ÓÔÚASTÊ÷ÖÐÄÚÖÃ CodeGen() º¯Êý£¬Ò»±ß±éÀúÒ»±ßÉú³É´úÂë£©¡£
-		//--------------------------nonsense for coding---------------------------
-		class StatementAST
-		{
-		public:
-			// Visitor Pattern£¬Ê¹ÓÃoverride(Ðéº¯Êý) + overload(ÖØÔØ) À´×ödouble dispatch.
-			// ÆäÖÐ¹ØÓÚ±»·ÃÎÊÌå£¨Ò²¾ÍÊÇAST node£©²¿·Ö£¬Í¨¹ýoverrideµÄ Accept()µÄ·½·¨À´ÊµÏÖ
-			// µÚÒ»²ãdispatch£¬µÚÒ»²ãdispatchÍ¨¹ýoverrideµÄ·½Ê½ÄÃµ½¾ßÌåµÄ½ÚµãÀàÐÍ¡£
-			// µÚ¶þ²ãdispatchÊ¹ÓÃÖØÔØÊµÏÖ£¨¼ûIRbuilder£©¡£
-			// http://www.cs.wustl.edu/~cytron/cacweb/Tutorial/Visitor/
-			// And 
-			// http://programmers.stackexchange.com/questions/189476/implementing-the-visitor-pattern-for-an-abstract-syntax-tree
-			template<typename RetTy, typename... Additional>
-			class Visitor
-			{
-			public:
-				virtual RetTy visit(const StatementAST* S, Additional... addi) = 0;
-				virtual RetTy visit(const ExprStatement* ES, Additional... addi) = 0;
-				virtual RetTy visit(const CompoundStmt* CS, Additional... addi) = 0;
-				virtual RetTy visit(const IfStatement* IS, Additional... addi) = 0;
-				virtual RetTy visit(const WhileStatement* WS, Additional... addi) = 0;
-				virtual RetTy visit(const ReturnStatement* RS, Additional... addi) = 0;
-				virtual RetTy visit(const DeclStatement* DS, Additional... addi) = 0;
-				virtual RetTy visit(const BreakStatement* BS, Additional... addi) = 0;
-				virtual RetTy visit(const ContinueStatement* CS, Additional... addi) = 0;
-				virtual RetTy visit(const VarDecl* VD, Additional... addi) = 0;
-				virtual RetTy visit(const ParameterDecl*, Additional... addi) = 0;
-				virtual RetTy visit(const ClassDecl* CD, Additional... addi) = 0;
-				virtual RetTy visit(const FunctionDecl* FD, Additional... addi) = 0;
-				virtual RetTy visit(const UnpackDecl* UD, Additional... addi) = 0;
-				virtual RetTy visit(const Expr* E, Additional... addi) = 0;
-				virtual RetTy visit(const BinaryExpr* BE, Additional... addi) = 0;
-				virtual RetTy visit(const CallExpr* CE, Additional... addi) = 0;
-				virtual RetTy visit(const DeclRefExpr* DRE, Additional... addi) = 0;
-				virtual RetTy visit(const BoolLiteral* BL, Additional... addi) = 0;
-				virtual RetTy visit(const NumberExpr* NE, Additional... addi) = 0;
-				virtual RetTy visit(const UnaryExpr* UE, Additional... addi) = 0;
-				virtual RetTy visit(const MemberExpr* ME, Additional... addi) = 0;
-			};
-
-		protected:
-			SourceLocation LocStart;
-			SourceLocation LocEnd;
-		public:
-			StatementAST() {}
-
-			StatementAST(SourceLocation start, SourceLocation end) : LocStart(start), LocEnd(end)
-			{}
-
-			StatementAST(const StatementAST& stmt) : LocStart(stmt.LocStart),
-				LocEnd(stmt.LocEnd) {}
-
-			virtual ~StatementAST() {}
-
-			// We use visitor pattern for IR build(Note: Because we use ad-hoc translation
-			// , semantic analysis doesn't use vistor pattern).
-			// When a node accepts a visitor, actions are performed that are appropriate to
-			// both the visitor and the node at hand(double dispatch).
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-
-			SourceLocation getLocStart() const { return LocStart; }
-			SourceLocation getLocEnd() const { return LocEnd; }
-			void setLocStart(unsigned long line, unsigned long number) {}
-			void setLocEnd(unsigned long line, unsigned long number) {}
-			// virtual 
-		};
-
-		/// @brief ExprAST - Base class for all expression nodes.
-		/// Note that Expr's are subclass of Stmt. This allows an expression
-		/// to be transparently used any place a Stmt is required.
-		class Expr : public StatementAST
-		{
-		public:
-			/// \brief The categorization of expression values.
-			enum class ExprValueKind
-			{
-				/// \brief An r-value expression produces a temporary value.
-				/// Note: lvalue can convert to rvalue, so VK_LValue implication VK_RValue.
-				VK_RValue,
-				VK_LValue
-			};
-			
-		private:
-			// ------------------------nonsense for coding---------------------------
-			// Expr¶¼»áÓÐÏàÓ¦µÄType£¬Õâ¸öºÜÖØÒª£¬ÓÃÓÚ½øÐÐÀàÐÍ¼ì²é¡£
-			// ------------------------nonsense for coding---------------------------
-			std::shared_ptr<Type> ExprType;
-			ExprValueKind VK;
-			// ÓÃÓÚ±êÊ¶µ±Ç°ExprÊÇ·ñÊÇ¿ÉÍÆµ¼³öconstantµÄ
-			// ÀýÈç£º 
-			// a = num * 5; /* num * 5 ÊÇ¿ÉÍÆµ¼µÄ */
-			// var num = {10, num}; /* {10, num} ÊÇ¿ÉÍÆµ¼µÄ */
-			// ÔÚmosesÖÐÄ¬ÈÏÓÃ»§×Ô¶¨ÒåÀàÐÍÊÇ²»¿ÉÍÆµ¼µÄ¡£
-			bool CanBeEvaluated;
-		public:
-			Expr() : ExprType(nullptr), CanBeEvaluated(false) {}
-			Expr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-				ExprValueKind vk, bool canDoEvaluate) :
-				StatementAST(start, end), ExprType(type), VK(vk), 
-				CanBeEvaluated(canDoEvaluate) 
-			{}
-
-			Expr(const Expr& expr) : 
-				StatementAST(expr.LocStart, expr.LocEnd), ExprType(expr.ExprType), 
-				CanBeEvaluated(expr.CanBeEvaluated) {}
-
-			std::shared_ptr<Type> getType() const { return ExprType; }
-
-			void setType(std::shared_ptr<Type> type) { ExprType = type; }
-
-			/// isLvalue - True if this expression is an "l-value" according to
-			/// the rules of the current language. Like C/C++£¬moses give somewhat
-			/// different rules for this concept, but in general, the result of 
-			/// an l-value expression identifies a specific object whereas the
-			/// result of an r-value expression is a value detached from any 
-			/// specific storage.
-			bool isLValue() const { return VK == ExprValueKind::VK_LValue; }
-			bool isRValue() const { return VK == ExprValueKind::VK_RValue; }
-
-			void setCanBeEvaluated() { CanBeEvaluated = true; }
-			bool canBeEvaluated() const { return CanBeEvaluated; }			
-
-			void setExprValueKind(ExprValueKind valueKind) { VK = valueKind; }
-
-			virtual ~Expr() {}
-
-			// Silly!
-			// If we have other visitors, we will get a "Accept" list!
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// \brief NumberExpr - ÓÃÀ´±íÊ¾numeric literal, ÀýÈç"1".
-		class NumberExpr : public Expr
-		{
-			double Val;
-		public:
-			NumberExpr(SourceLocation start, SourceLocation end, double Val) :
-				Expr(start, end, nullptr, ExprValueKind::VK_RValue, true), Val(Val) {}
-			virtual ~NumberExpr() {}
-
-			void setIntType(std::shared_ptr<Type> type)
-			{
-				Expr::setType(type);
-			}
-
-			double getVal() const { return Val; }
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// \brief CharExpr - ÓÃÀ´±íÊ¾char literal, ÀýÈç"c"
-		class CharExpr : public Expr
-		{
-			std::string C;
-		public:
-			/// To Do: ´Ë´¦Ê¹ÓÃINTÀ´±íÊ¾CharExpr£¬Ò²¾ÍÊÇÁ½Õß¿ÉÒÔÏà¼Ó¼õ
-			CharExpr(SourceLocation start, SourceLocation end, std::string c) : 
-				Expr(start, end, nullptr, ExprValueKind::VK_RValue, true), C(c) 
-			{}
-
-			void setCharType(std::shared_ptr<Type> type) 
-			{
-				Expr::setType(type);
-			}
-
-			virtual ~CharExpr() {}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// \brief StringLiteral - ÓÃÀ´±íÊ¾string.
-		class StringLiteral : public Expr
-		{
-			std::string str;
-		public:
-			StringLiteral(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-						std::string str) : 
-				Expr(start, end, type, ExprValueKind::VK_RValue, true), str(str) {}
-			virtual ~StringLiteral() {}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// \brief BoolLiteral - ÓÃÀ´±íÊ¾bool×ÖÃæÖµ.
-		class BoolLiteral : public Expr
-		{		
-			bool value;
-		public:
-			BoolLiteral(SourceLocation start, SourceLocation end, bool value) :
-				Expr(start, end, std::make_shared<BuiltinType>(TypeKind::BOOL), 
-				ExprValueKind::VK_RValue, true), value(value) {}
-
-			void setBoolType(std::shared_ptr<Type> type)
-			{
-				Expr::setType(type);
-			}
-
-			bool getVal() const
-			{
-				return value;
-			}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// @brief DeclRefExprAST - A reference to a declared variable, function, enum, etc.
-		/// This encodes all the information about how a declaration is referenced within an 
-		/// expression.
-		///-------------------------------nonsense for coding-------------------------------
-		/// moses IRÓÐÒ»¸ö²»×ã£¨Ó¦¸ÃËµÊÇbug£©£¬ÔÚÓï·¨Ê÷ÖÐÃ»ÓÐÖ±½ÓÌåÏÖ³ö×ó²àµÄDeclRefExprÓëÓÒ²àµÄ
-		/// DeclRefExpr£¬ÀàËÆÓÚClang dump³öµÄÓï·¨Ê÷£¬×÷ÎªÓÒÖµ±í´ïÊ½µÄDeclRefExpr»á±»Ò»¸ö×óÖµ×ª
-		/// ÓÒÖµµÄÒþÊ½×ª»»ÀàÐÍ°ü¹ü¡£
-		///---------------------------------------------------------------------------------
-		class DeclRefExpr final : public Expr
-		{
-			std::string Name;
-			VarDeclPtr var;
-		public:
-			// Note: Ò»°ãÇé¿öÏÂ£¬DeclRefExpr¶¼ÊÇ×óÖµµÄ£¬µ«ÊÇÓÐÒ»ÖÖÇé¿öÀýÍâ£¬¾ÍÊÇº¯ÊýÃû×Öµ÷ÓÃ
-			// µ«ÊÇº¯Êýµ÷ÓÃ¶ÔÓ¦µÄexpressionÊÇCallExpr£¬²»ÊÇDeclRefExpr.
-			// To Do: ÓÐ¿ÉÄÜ»áÓÐÇ±ÔÚµÄbug
-			DeclRefExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-					std::string name, VarDeclPtr var) : 
-				Expr(start, end, type, ExprValueKind::VK_LValue, true), Name(name), var(var) 
-			{}
-
-			std::string getDeclName() const { return Name; }
-
-			VarDeclPtr getDecl() const { return var; }
-
-			virtual ~DeclRefExpr() {}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// @brief BinaryExpr - Expression class for a binary operator.
-		class BinaryExpr : public Expr
-		{
-			std::string OpName;
-			ExprASTPtr LHS, RHS;
-		public:
-			// Note: ÔÚmosesÖÐ²»´æÔÚÖ¸ÕëÀàÐÍ£¬ËùÒÔ²»´æÔÚbinaryÎªlvalueµÄÇé¿ö
-			// ÀýÈç: 'int* p = &num;'
-			// 'p + 1'¾Í¿ÉÒÔ×÷Îª×óÖµ
-			// Note: BinaryExpr¶¼ÊÇ¿ÉÒÔ½øÐÐevaluateµÄ
-			BinaryExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-						std::string Op, ExprASTPtr LHS, ExprASTPtr RHS) :
-				Expr(start, end, type, ExprValueKind::VK_RValue, true), OpName(Op), LHS(LHS), RHS(RHS) 
-			{}
-
-			ExprASTPtr getLHS() const { return LHS; }
-
-			ExprASTPtr getRHS() const { return RHS; }
-
-			std::string getOpcode() const { return OpName; }
-
-			virtual ~BinaryExpr() {}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// \brief UnaryExpr - Expression class for a unary operator.
-		class UnaryExpr final : public Expr
-		{
-			std::string OpName;
-			ExprASTPtr SubExpr;
-		public:
-			UnaryExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, std::string Op,
-				ExprASTPtr subExpr, ExprValueKind vk) :
-				Expr(start, end, type, vk, true), OpName(Op), SubExpr(subExpr) {}
-
-			ExprASTPtr getSubExpr() const { return SubExpr; }
-
-			std::string getOpcode() const { return OpName; }
-
-			void setOpcode(std::string name) { OpName = name; }
-
-			virtual ~UnaryExpr() {}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// @brief CallExprAST - Expression class for function calls.
-		class CallExpr final : public Expr
-		{
-			std::string CalleeName;
-			// To Do: FunctionDecl*
-			FunctionDeclPtr FuncDecl;
-			std::vector<std::shared_ptr<Expr> > Args;
-		public:
-			CallExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-					const std::string& Callee, std::vector<std::shared_ptr<Expr>> Args, 
-					ExprValueKind vk, FunctionDeclPtr FD, bool canDoEvaluate) :
-				Expr(start, end, type, vk, canDoEvaluate), CalleeName(Callee), Args(Args), 
-				FuncDecl(FD) 
-			{}
-
-			unsigned getArgsNum() const { return Args.size(); }
-
-			FunctionDeclPtr getFuncDecl() const { return FuncDecl; }
-
-			// Note: ÕâÀïÎÒÃÇÃ»ÓÐ¶Ô´«ÈëµÄindex½øÐÐ¼ì²é
-			ExprASTPtr getArg(unsigned index) const { return Args[index]; }
-
-			const std::vector<ExprASTPtr> getArgs() const { return Args; }
-
-			virtual ~CallExpr() {}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// \brief MemberExpr - Class members. X.F.
-		class MemberExpr final : public Expr
-		{
-			/// Base - the expression for the base pointer or structure references. In
-			/// X.F, this is "X". ¼´DeclRefExpr
-			ExprASTPtr Base;
-			std::string MemberName;
-			SourceLocation MemberLoc;
-			SourceLocation OperatorLoc;
-			// e.g.	class O{ var a:int; var b:int;}; var o:O;
-			// o.a; -----> idx = 0;
-			// o.b; -----> idx = 1;
-			int idx;
-		public:
-			MemberExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type, 
-				std::shared_ptr<Expr> base, SourceLocation operatorloc, std::string name, 
-				bool canDoEvaluate, int idx) :
-				Expr(start, end, type, ExprValueKind::VK_LValue, canDoEvaluate), Base(base), 
-				OperatorLoc(operatorloc), MemberName(name), idx(idx)
-			{}
-
-			void setBase(ExprASTPtr E) { Base = E; }
-			std::string getMemberName() const { return MemberName; }
-			ExprASTPtr getBase() const { return Base; }
-			int getIdx() const { return idx; }
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-
-		/// \brief ÄäÃûÀàÐÍ³õÊ¼»¯±í´ïÊ½¡£
-		///	var start = 0;
-		/// var end = 1;
-		/// ÀýÈç£º var num = {start, end};
-		/// 
-		/// ÁíÍâºóÃæ¹ØÓÚÓÃ»§×Ô¶¨ÒåÀàÐÍµÄ³õÊ¼»¯Äâ²ÉÓÃÕâÑùµÄ·½Ê½½øÐÐ¸³Öµ¡£
-		class AnonymousInitExpr final : public Expr
-		{
-			AnonymousInitExpr() = delete;
-			AnonymousInitExpr(const AnonymousInitExpr&) = delete;
-			std::vector<ExprASTPtr> InitExprs;
-		public:
-			AnonymousInitExpr(SourceLocation start, SourceLocation end, 
-					std::vector<ExprASTPtr> initExprs, std::shared_ptr<Type> type):
-				Expr(start, end, type, Expr::ExprValueKind::VK_RValue, true), InitExprs(initExprs) 
-			{}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// \brief CompoundStatement - This class represents a Compound Statement
-		/// ------------------------------------------
-		/// Compound Statement's Grammar as below.
-		/// compound-statement -> "{" statement* "}"
-		/// ------------------------------------------
-		class CompoundStmt final : public StatementAST
-		{
-			// The sub-statements of the compound statement.
-			std::vector<StmtASTPtr> SubStmts;
-		public:
-			CompoundStmt(SourceLocation start, SourceLocation end,
-				std::vector<StmtASTPtr> subStmts) : StatementAST(start, end), SubStmts(subStmts) {}
-
-			virtual ~CompoundStmt() {}
-
-			void addSubStmt(StmtASTPtr stmt);
-
-			StmtASTPtr getSubStmt(unsigned index) const;
-
-			StmtASTPtr operator[](unsigned index) const;
-
-			unsigned getSize() const 
-			{
-				return SubStmts.size();
-			}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// @brief IfStatementAST - This class represents a If Statement
-		/// ----------------------------------------------------------------------------
-		/// If Statement's Grammar as below.
-		/// if-statement -> "if" expression compound-statement "else" compound-statement
-		/// ----------------------------------------------------------------------------
-		class IfStatement final : public StatementAST
-		{
-			std::shared_ptr<Expr> Condition;
-			std::shared_ptr<StatementAST> Then;
-			std::shared_ptr<StatementAST> Else;
-		public:
-			IfStatement(SourceLocation start, SourceLocation end, ExprASTPtr Condition, StmtASTPtr Then,
-				StmtASTPtr Else) : 
-				StatementAST(start, end), Condition(Condition), Then(Then), Else(Else) {}
-
-			virtual ~IfStatement() {}
-
-			// To Do: ÕâÑù×öÊÇ²»ºÏÊÊµÄ£¬Ó¦¸ÃÊ±¿Ì¶¼Ê¹ÓÃunique_ptrÀ´´«µÝ¸÷¸ö½Úµã
-			// µ«ÊÇÕâÑù×öµÄ»°£¬Ì«¹ýÓÚ¸´ÔÓ
-			StmtASTPtr getThen() const
-			{
-				return Then;
-			}
-
-			StmtASTPtr getElse() const
-			{
-				return Else;
-			}
-
-			ExprASTPtr getCondition() const
-			{
-				return Condition;
-			}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// @brief WhileStatementAST - This class represents a While Statement
-		/// ---------------------------------------------------------
-		/// While Statement's Grammar as below.
-		/// while-statement -> "while" expression compound-statement
-		/// ---------------------------------------------------------
-		class WhileStatement final : public StatementAST
-		{
-			ExprASTPtr Condition;
-			StmtASTPtr LoopBody;
-		public:
-			WhileStatement(SourceLocation start, SourceLocation end, ExprASTPtr condition, 
-					StmtASTPtr body) : 
-					StatementAST(start, end), Condition(condition), LoopBody(body)
-			{}
-
-			ExprASTPtr getCondition() const { return Condition; }
-			StmtASTPtr getLoopBody() const { return LoopBody; }
-			virtual ~WhileStatement() {}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// @brief BreakStatementAST - This class represents a Break Statement
-		/// ---------------------------------------
-		/// Break Statement's Grammar as below.
-		/// break-statement -> "break" ";"
-		/// ---------------------------------------
-		class BreakStatement final : public StatementAST
-		{
-		public:
-			BreakStatement(SourceLocation start, SourceLocation end) : StatementAST(start, end) {}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// @brief ContinueStatementAST - This class represents a Continue Statement
-		/// ----------------------------------------
-		/// Continue Statement's Grammar as below.
-		/// continue-statement -> "continue" ";"
-		/// ----------------------------------------
-		class ContinueStatement final : public StatementAST
-		{
-		public:
-			ContinueStatement(SourceLocation start, SourceLocation end) :
-				StatementAST(start, end) {}
-			virtual ~ContinueStatement() {}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// @brief ReturnStatementAST - This class represents a Return Statement
-		/// ---------------------------------------------
-		/// Return Statement's Grammar as below.
-		/// return-statement -> "return" expression ";"
-		/// return-statement -> "return" ";"
-		/// return-statement -> "return" anonymous-initial ";"
-		/// ---------------------------------------------
-		class ReturnStatement final : public StatementAST
-		{
-			std::shared_ptr<Expr> ReturnExpr;
-		public:
-			ReturnStatement(SourceLocation start, SourceLocation end, ExprASTPtr returnExpr) : 
-				StatementAST(start, end), ReturnExpr(returnExpr) 
-			{}
-
-			virtual ~ReturnStatement() {}
-
-			ExprASTPtr getSubExpr() const { return ReturnExpr; }
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// @brief ExprStatementAST - This class represents a statement of expressions.
-		/// ----------------------------------------
-		/// ExprStatement's Grammar as below.
-		/// expression-statement -> expression? ";"
-		/// ----------------------------------------
-		class ExprStatement : public StatementAST
-		{
-			std::shared_ptr<Expr> expr;
-		public:
-			ExprStatement(SourceLocation start, SourceLocation end, ExprASTPtr expr) : 
-				StatementAST(start, end), expr(expr) {}
-
-			virtual ~ExprStatement() {}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// @brief DeclStatementAST - This class represents a Declaration Statement
-		/// -----------------------------------------------
-		/// Declaration Statement's Grammar as below.
-		/// declaration-statement -> function-declaration
-		///					| constant-declaration
-		///					| variable-declaration
-		///					| class-declaration
-		/// -----------------------------------------------
-		class DeclStatement : public StatementAST
-		{
-		protected:
-			std::shared_ptr<Type> declType;
-		public:
-			DeclStatement(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type) :
-				StatementAST(start, end), declType(type) {}
-
-			virtual ~DeclStatement() {}
-
-			std::shared_ptr<Type> getDeclType() const { return declType; }
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// @brief VarDecl - This class represents a Variable Declaration or a Const Variable 
-		/// Declaration
-		/// --------------------------------------------------------------
-		/// Variable Declaration's Grammar as below.
-		/// variable-declaration -> "var" identifier initializer ";"
-		///				| "var" identifier type-annotation ";"
-		/// and
-		/// constanr-declaration -> "const" identifier initializer ";"
-		///				| "const" identifier type-annotation ";"
-		/// --------------------------------------------------------------
-		class VarDecl : public DeclStatement
-		{
-			bool IsConst;
-			std::string name;
-			ExprASTPtr InitExpr;
-		public:
-			VarDecl(SourceLocation start, SourceLocation end, std::string name,
-				std::shared_ptr<Type> type, bool isConst, ExprASTPtr init) :
-				DeclStatement(start, end, type), name(name), IsConst(isConst),
-				InitExpr(init) {}
-			std::string getName() const { return name; }
-
-			std::shared_ptr<Type> getDeclType() const { return declType; }
-
-			void setInitExpr(ExprASTPtr B) { InitExpr = B; }
-
-			ExprASTPtr getInitExpr() const { return InitExpr; }
-
-			bool isClass() const { return declType->getKind() == TypeKind::USERDEFIED; }
-
-			bool isConst() const { return IsConst; }
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// @brief ParameterDecl - This class represents a ParameterDecl
-		/// Note: ÔÝÊ±»¹Ã»ÓÐÊµÏÖparamdecl - const ºÍ init expr
-		class ParameterDecl final : public VarDecl
-		{
-		public:
-			ParameterDecl(SourceLocation start, SourceLocation end, std::string name, bool isConst,
-				std::shared_ptr<Type> type) : 
-				VarDecl(start, end, name, type, isConst, nullptr) {}
-
-			std::string getParmName() const { return VarDecl::getName(); }
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// \brief UnpackDecl - This class represents a UnpackDecl.
-		/// ÓÉÓÚmosesÖ§³ÖÄäÃûÀàÐÍ£¬ÄäÃûÀàÐÍµÄ±äÁ¿¿ÉÒÔÀ´»Ø´«µÝ¡£¶ÔÓÚÄäÃûÀàÐÍµÄ±äÁ¿£¬Èç¹ûÏëÒª
-		/// »ñÈ¡ÆäÖÐµÄÖµ£¬¾ÍÐèÒª½øÐÐ½â°ü£¬×¢Òâ½â°üµÃµ½µÄ±äÁ¿Ä¬ÈÏ¶¼ÊÇconstµÄ£¬Ò²¾ÍÊÇËµÄäÃûÀàÐÍ
-		/// ±äÁ¿½ö½öÖ»ÓÃÓÚÊý¾Ý´«µÝ£¬ÀàËÆÓÚC++ÖÐµÄÁÙÊ±Öµ£¨»òÕßËµÊÇÓÒÖµ£©¡£
-		/// Note: UnpackDeclÖ»ÓÃÓÚ½â°ü£¬Ã»ÓÐÃû×Ö¡£
-		class UnpackDecl final : public DeclStatement
-		{
-		private:
-			std::vector<DeclASTPtr> decls;
-		public:
-			UnpackDecl(SourceLocation start, SourceLocation end, std::vector<DeclASTPtr> decls)
-				: DeclStatement(start, end, nullptr), decls(decls) {}
-
-			bool TypeCheckingAndTypeSetting(AnonTyPtr type);
-
-			// To Do: Shit code!
-			void setCorrespondingType(std::shared_ptr<Type> type);
-
-			unsigned getDeclNumber() const { return decls.size(); };
-
-			std::vector<VarDeclPtr> operator[](unsigned index) const;
-
-			void getDecls(std::vector<VarDeclPtr>& names) const;
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-
-		/// @brief FunctionDecl - This class represents a Function Declaration
-		/// which capture its name, and its argument names(thus implicitly the 
-		/// number of arguments the function takes).
-		/// Forward declarations are not supported.
-		/// ----------------------------------------------------------------
-		/// Function Declaration's Grammar as below.
-		/// function-declaration -> func identifier para-list compound-statement
-		/// ----------------------------------------------------------------
-		/// To Do: ÀàÉè¼Æ²»ÊÇºÜºÏÀí£¬ÀýÈçFunctionDecl²»Ó¦¸ÃÊÇDeclStatementµÄ×ÓÀà
-		class FunctionDecl : public DeclStatement
-		{
-			std::string FDName;
-			std::vector<ParmDeclPtr> parameters;
-			unsigned paraNum;
-			StmtASTPtr funcBody;
-			std::shared_ptr<Type> returnType;
-			
-		public:
-			FunctionDecl(SourceLocation start, SourceLocation end, const std::string& name,
-				std::vector<ParmDeclPtr> Args, StmtASTPtr body, std::shared_ptr<Type> returnType) :
-				DeclStatement(start, end, nullptr), FDName(name), parameters(Args), funcBody(body), 
-				paraNum(parameters.size()), returnType(returnType) 
-			{}
-
-			virtual ~FunctionDecl() {}
-			unsigned getParaNum() const { return paraNum; }
-			std::vector<ParmDeclPtr> getParms() const { return parameters; }
-			std::string getParmName(unsigned index) const { return parameters[index].get()->getParmName(); }
-			std::shared_ptr<Type> getReturnType() const { return returnType; }
-			std::string getFDName() const { return FDName; }
-			ParmDeclPtr getParmDecl(unsigned index) const { return (*this)[index]; }
-			ParmDeclPtr operator[](unsigned index) const 
-			{
-				assert(index <= paraNum - 1 && "Index out of range when we get specified ParmDecl.");
-				return parameters[index];
-			}
-			// ÓÃÓÚ±êÊ¶¸Ãº¯ÊýÄÜ·ñconstant-evaluator. 
-			// ¶ÔÓÚº¯ÊýÀ´Ëµ£¬ÄÜ½øÐÐconstant-evaluatorµÄ±ê×¼ÊÇÖ»ÄÜÓÐÒ»ÌõreturnÓï¾ä£¬ÇÒ·µ»ØÀàÐÍÊÇÄÚÖÃÀàÐÍ.
-			// ÀýÈç£º
-			//	func add() -> int  { return 10; }
-			// To Do: ÕâÀïÎÒÃÇÇ¿ÖÆÒªÇó£¬ÄÜ¹»½øÐÐconstant-evaluateµÄº¯ÊýÖ»ÄÜÓÐÒ»ÌõreturnÓï¾ä
-			// Èç¹ûºóÃæÐèÒª¼ÓÇ¿ÍÆµ¼ÄÜÁ¦£¬¾ÍÐèÒª·µ»ØÕâ¸öº¯ÊýÌåÁË¡£
-			ReturnStmtPtr isEvalCandiateAndGetReturnStmt() const;
-
-			/// Determine whether the function F ends with a return stmt.
-			bool endsWithReturn() const;
-
-			StmtASTPtr getCompoundBody() const { return funcBody; }
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};		
-
-		/// @brief ClassDecl - This class represents a Class Declaration
-		/// ---------------------------------------------------------
-		/// Class Declaration's Grammar as below.
-		/// class-declarartion -> "class" identifier class-body ";"
-		/// ----------------------------------------------------------
-		///
-		/// ----------------------------------------------------------
-		/// Class Body's Grammar as below.
-		/// class-body -> "{" variable-declaration* "}"
-		/// ----------------------------------------------------------
-		/// To Do: classÍ¨¹ýÊý¾Ý³ÉÔ±µÄÖØÅÅÒÔ³ä·ÖÀûÓÃÄÚ´æ¿Õ¼ä¡£
-		class ClassDecl final : public DeclStatement
-		{
-			// std::shared_ptr<UserDefinedType> classType;
-			std::string ClassName;
-			StmtASTPtr Body;
-		public:
-			ClassDecl(SourceLocation start, SourceLocation end, std::string name, StmtASTPtr body) :
-				DeclStatement(start, end, nullptr), ClassName(name), Body(body) {}
-
-			virtual IRValue Accept(Visitor<IRValue>* v) const
-			{
-				return v->visit(this);
-			}
-		};
-	}	
-}
+#include <cassert>
+#include <memory>
+#include <string>
+#include <vector>
+
+
+namespace compiler {
+///---------------------------nonsense for
+///coding------------------------------///
+/// syntax treeï¿½ï¿½ï¿½ï¿½parseï¿½ï¿½ï¿½Ö®ï¿½ó¹¹½ï¿½ï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½mosesï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½one-passï¿½ï¿½compile
+/// Ò²ï¿½ï¿½ï¿½ï¿½Ëµï¿½Ú¹ï¿½ï¿½ï¿½syntax
+/// treeï¿½ï¿½Ê±ï¿½ï¿½Ö»ï¿½ï¿½Ö´ï¿½ï¿½Ò»Ð©ï¿½òµ¥µï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½æ´¢ï¿½ï¿½ï¿½ó¡£¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+/// syntax treeï¿½ï¿½ï¿½Ù±ï¿½ï¿½ï¿½syntax treeï¿½ï¿½Ö´ï¿½Ð´ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É²ï¿½ï¿½Ö¡ï¿½
+///---------------------------nonsense for
+///coding------------------------------///
+
+namespace ast {
+using namespace compiler::lex;
+
+class Expr;
+class NumberExpr;
+class BinaryExpr;
+class CallExpr;
+class DeclStatement;
+class StatementAST;
+class ParameterDecl;
+class FunctionDecl;
+class CompoundStmt;
+class VarDecl;
+class UnpackDecl;
+class ExprStatement;
+class IfStatement;
+class WhileStatement;
+class ClassDecl;
+class ReturnStatement;
+class UnaryExpr;
+class MemberExpr;
+class BoolLiteral;
+class DeclRefExpr;
+class BreakStatement;
+class ContinueStatement;
+
+using ASTPtr = std::vector<std::shared_ptr<StatementAST>>;
+using StmtASTPtr = std::shared_ptr<StatementAST>;
+using NumberExprPtr = std::shared_ptr<NumberExpr>;
+using ExprASTPtr = std::shared_ptr<Expr>;
+using CallExprPtr = std::shared_ptr<CallExpr>;
+using DeclASTPtr = std::shared_ptr<DeclStatement>;
+using CompoundStmtPtr = std::shared_ptr<CompoundStmt>;
+using VarDeclPtr = std::shared_ptr<VarDecl>;
+using ParmDeclPtr = std::shared_ptr<ParameterDecl>;
+using UnpackDeclPtr = std::shared_ptr<UnpackDecl>;
+using FunctionDeclPtr = std::shared_ptr<FunctionDecl>;
+using BinaryPtr = std::shared_ptr<BinaryExpr>;
+using UnaryPtr = std::shared_ptr<UnaryExpr>;
+using DeclRefExprPtr = std::shared_ptr<DeclRefExpr>;
+using AnonTyPtr = std::shared_ptr<AnonymousType>;
+using UDTyPtr = std::shared_ptr<UserDefinedType>;
+using ReturnStmtPtr = std::shared_ptr<ReturnStatement>;
+using MemberExprPtr = std::shared_ptr<MemberExpr>;
+using BoolLiteralPtr = std::shared_ptr<BoolLiteral>;
+using BreakStmtPtr = std::shared_ptr<BreakStatement>;
+using ContStmtPtr = std::shared_ptr<ContinueStatement>;
+
+using IRValue = std::shared_ptr<IR::Value>;
+
+/// \brief StatementAST - Base class for all statements.
+//--------------------------nonsense for coding---------------------------
+// ï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½std::shared_ptrï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ASTï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð©ï¿½ï¿½ï¿½ß£ï¿½ï¿½ï¿½ÎªIRï¿½ï¿½ï¿½Éµï¿½Ê±ï¿½ï¿½Ö±ï¿½Ó½ï¿½
+// ASTï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ASTï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ CodeGen() ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ß±ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½É´ï¿½ï¿½ë£©ï¿½ï¿½
+//--------------------------nonsense for coding---------------------------
+class StatementAST {
+public:
+  // Visitor Patternï¿½ï¿½Ê¹ï¿½ï¿½override(ï¿½éº¯ï¿½ï¿½) + overload(ï¿½ï¿½ï¿½ï¿½) ï¿½ï¿½ï¿½ï¿½double dispatch.
+  // ï¿½ï¿½ï¿½Ð¹ï¿½ï¿½Ú±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½å£¨Ò²ï¿½ï¿½ï¿½ï¿½AST nodeï¿½ï¿½ï¿½ï¿½ï¿½Ö£ï¿½Í¨ï¿½ï¿½overrideï¿½ï¿½ Accept()ï¿½Ä·ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½ï¿½
+  // ï¿½ï¿½Ò»ï¿½ï¿½dispatchï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½dispatchÍ¨ï¿½ï¿½overrideï¿½Ä·ï¿½Ê½ï¿½Ãµï¿½ï¿½ï¿½ï¿½ï¿½Ä½Úµï¿½ï¿½ï¿½ï¿½Í¡ï¿½
+  // ï¿½Ú¶ï¿½ï¿½ï¿½dispatchÊ¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Êµï¿½Ö£ï¿½ï¿½ï¿½IRbuilderï¿½ï¿½ï¿½ï¿½
+  // http://www.cs.wustl.edu/~cytron/cacweb/Tutorial/Visitor/
+  // And
+  // http://programmers.stackexchange.com/questions/189476/implementing-the-visitor-pattern-for-an-abstract-syntax-tree
+  template <typename RetTy, typename... Additional> class Visitor {
+  public:
+    virtual RetTy visit(const StatementAST *S, Additional... addi) = 0;
+    virtual RetTy visit(const ExprStatement *ES, Additional... addi) = 0;
+    virtual RetTy visit(const CompoundStmt *CS, Additional... addi) = 0;
+    virtual RetTy visit(const IfStatement *IS, Additional... addi) = 0;
+    virtual RetTy visit(const WhileStatement *WS, Additional... addi) = 0;
+    virtual RetTy visit(const ReturnStatement *RS, Additional... addi) = 0;
+    virtual RetTy visit(const DeclStatement *DS, Additional... addi) = 0;
+    virtual RetTy visit(const BreakStatement *BS, Additional... addi) = 0;
+    virtual RetTy visit(const ContinueStatement *CS, Additional... addi) = 0;
+    virtual RetTy visit(const VarDecl *VD, Additional... addi) = 0;
+    virtual RetTy visit(const ParameterDecl *, Additional... addi) = 0;
+    virtual RetTy visit(const ClassDecl *CD, Additional... addi) = 0;
+    virtual RetTy visit(const FunctionDecl *FD, Additional... addi) = 0;
+    virtual RetTy visit(const UnpackDecl *UD, Additional... addi) = 0;
+    virtual RetTy visit(const Expr *E, Additional... addi) = 0;
+    virtual RetTy visit(const BinaryExpr *BE, Additional... addi) = 0;
+    virtual RetTy visit(const CallExpr *CE, Additional... addi) = 0;
+    virtual RetTy visit(const DeclRefExpr *DRE, Additional... addi) = 0;
+    virtual RetTy visit(const BoolLiteral *BL, Additional... addi) = 0;
+    virtual RetTy visit(const NumberExpr *NE, Additional... addi) = 0;
+    virtual RetTy visit(const UnaryExpr *UE, Additional... addi) = 0;
+    virtual RetTy visit(const MemberExpr *ME, Additional... addi) = 0;
+  };
+
+protected:
+  SourceLocation LocStart;
+  SourceLocation LocEnd;
+
+public:
+  StatementAST() {}
+
+  StatementAST(SourceLocation start, SourceLocation end)
+      : LocStart(start), LocEnd(end) {}
+
+  StatementAST(const StatementAST &stmt)
+      : LocStart(stmt.LocStart), LocEnd(stmt.LocEnd) {}
+
+  virtual ~StatementAST() {}
+
+  // We use visitor pattern for IR build(Note: Because we use ad-hoc translation
+  // , semantic analysis doesn't use vistor pattern).
+  // When a node accepts a visitor, actions are performed that are appropriate
+  // to both the visitor and the node at hand(double dispatch).
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+
+  SourceLocation getLocStart() const { return LocStart; }
+  SourceLocation getLocEnd() const { return LocEnd; }
+  void setLocStart(unsigned long line, unsigned long number) {}
+  void setLocEnd(unsigned long line, unsigned long number) {}
+  // virtual
+};
+
+/// @brief ExprAST - Base class for all expression nodes.
+/// Note that Expr's are subclass of Stmt. This allows an expression
+/// to be transparently used any place a Stmt is required.
+class Expr : public StatementAST {
+public:
+  /// \brief The categorization of expression values.
+  enum class ExprValueKind {
+    /// \brief An r-value expression produces a temporary value.
+    /// Note: lvalue can convert to rvalue, so VK_LValue implication VK_RValue.
+    VK_RValue,
+    VK_LValue
+  };
+
+private:
+  // ------------------------nonsense for coding---------------------------
+  // Exprï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ó¦ï¿½ï¿½Typeï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í¼ï¿½é¡£
+  // ------------------------nonsense for coding---------------------------
+  std::shared_ptr<Type> ExprType;
+  ExprValueKind VK;
+  // ï¿½ï¿½ï¿½Ú±ï¿½Ê¶ï¿½ï¿½Ç°Exprï¿½Ç·ï¿½ï¿½Ç¿ï¿½ï¿½Æµï¿½ï¿½ï¿½constantï¿½ï¿½
+  // ï¿½ï¿½ï¿½ç£º
+  // a = num * 5; /* num * 5 ï¿½Ç¿ï¿½ï¿½Æµï¿½ï¿½ï¿½ */
+  // var num = {10, num}; /* {10, num} ï¿½Ç¿ï¿½ï¿½Æµï¿½ï¿½ï¿½ */
+  // ï¿½ï¿½mosesï¿½ï¿½Ä¬ï¿½ï¿½ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç²ï¿½ï¿½ï¿½ï¿½Æµï¿½ï¿½Ä¡ï¿½
+  bool CanBeEvaluated;
+
+public:
+  Expr() : ExprType(nullptr), CanBeEvaluated(false) {}
+  Expr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type,
+       ExprValueKind vk, bool canDoEvaluate)
+      : StatementAST(start, end), ExprType(type), VK(vk),
+        CanBeEvaluated(canDoEvaluate) {}
+
+  Expr(const Expr &expr)
+      : StatementAST(expr.LocStart, expr.LocEnd), ExprType(expr.ExprType),
+        CanBeEvaluated(expr.CanBeEvaluated) {}
+
+  std::shared_ptr<Type> getType() const { return ExprType; }
+
+  void setType(std::shared_ptr<Type> type) { ExprType = type; }
+
+  /// isLvalue - True if this expression is an "l-value" according to
+  /// the rules of the current language. Like C/C++ï¿½ï¿½moses give somewhat
+  /// different rules for this concept, but in general, the result of
+  /// an l-value expression identifies a specific object whereas the
+  /// result of an r-value expression is a value detached from any
+  /// specific storage.
+  bool isLValue() const { return VK == ExprValueKind::VK_LValue; }
+  bool isRValue() const { return VK == ExprValueKind::VK_RValue; }
+
+  void setCanBeEvaluated() { CanBeEvaluated = true; }
+  bool canBeEvaluated() const { return CanBeEvaluated; }
+
+  void setExprValueKind(ExprValueKind valueKind) { VK = valueKind; }
+
+  virtual ~Expr() {}
+
+  // Silly!
+  // If we have other visitors, we will get a "Accept" list!
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// \brief NumberExpr - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾numeric literal, ï¿½ï¿½ï¿½ï¿½"1".
+class NumberExpr : public Expr {
+  double Val;
+
+public:
+  NumberExpr(SourceLocation start, SourceLocation end, double Val)
+      : Expr(start, end, nullptr, ExprValueKind::VK_RValue, true), Val(Val) {}
+  virtual ~NumberExpr() {}
+
+  void setIntType(std::shared_ptr<Type> type) { Expr::setType(type); }
+
+  double getVal() const { return Val; }
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// \brief CharExpr - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾char literal, ï¿½ï¿½ï¿½ï¿½"c"
+class CharExpr : public Expr {
+  std::string C;
+
+public:
+  /// To Do:
+  /// ï¿½Ë´ï¿½Ê¹ï¿½ï¿½INTï¿½ï¿½ï¿½ï¿½Ê¾CharExprï¿½ï¿½Ò²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ß¿ï¿½ï¿½ï¿½ï¿½ï¿½Ó¼ï¿½
+  CharExpr(SourceLocation start, SourceLocation end, std::string c)
+      : Expr(start, end, nullptr, ExprValueKind::VK_RValue, true), C(c) {}
+
+  void setCharType(std::shared_ptr<Type> type) { Expr::setType(type); }
+
+  virtual ~CharExpr() {}
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// \brief StringLiteral - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾string.
+class StringLiteral : public Expr {
+  std::string str;
+
+public:
+  StringLiteral(SourceLocation start, SourceLocation end,
+                std::shared_ptr<Type> type, std::string str)
+      : Expr(start, end, type, ExprValueKind::VK_RValue, true), str(str) {}
+  virtual ~StringLiteral() {}
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// \brief BoolLiteral - ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¾boolï¿½ï¿½ï¿½ï¿½Öµ.
+class BoolLiteral : public Expr {
+  bool value;
+
+public:
+  BoolLiteral(SourceLocation start, SourceLocation end, bool value)
+      : Expr(start, end, std::make_shared<BuiltinType>(TypeKind::BOOL),
+             ExprValueKind::VK_RValue, true),
+        value(value) {}
+
+  void setBoolType(std::shared_ptr<Type> type) { Expr::setType(type); }
+
+  bool getVal() const { return value; }
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// @brief DeclRefExprAST - A reference to a declared variable, function, enum,
+/// etc. This encodes all the information about how a declaration is referenced
+/// within an expression.
+///-------------------------------nonsense for
+///coding-------------------------------
+/// moses
+/// IRï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ã£¨Ó¦ï¿½ï¿½Ëµï¿½ï¿½bugï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½Ö±ï¿½ï¿½ï¿½ï¿½ï¿½Ö³ï¿½ï¿½ï¿½ï¿½ï¿½DeclRefExprï¿½ï¿½ï¿½Ò²ï¿½ï¿½
+/// DeclRefExprï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Clang
+/// dumpï¿½ï¿½ï¿½ï¿½ï¿½ï·¨ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Öµï¿½ï¿½ï¿½Ê½ï¿½ï¿½DeclRefExprï¿½á±»Ò»ï¿½ï¿½ï¿½ï¿½Öµ×ª
+/// ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½Ê½×ªï¿½ï¿½ï¿½ï¿½ï¿½Í°ï¿½ï¿½ï¿½ï¿½ï¿½
+///---------------------------------------------------------------------------------
+class DeclRefExpr final : public Expr {
+  std::string Name;
+  VarDeclPtr var;
+
+public:
+  // Note: Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Â£ï¿½DeclRefExprï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½Ä£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½â£¬ï¿½ï¿½ï¿½Çºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½
+  // ï¿½ï¿½ï¿½Çºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã¶ï¿½Ó¦ï¿½ï¿½expressionï¿½ï¿½CallExprï¿½ï¿½ï¿½ï¿½ï¿½ï¿½DeclRefExpr.
+  // To Do: ï¿½Ð¿ï¿½ï¿½Ü»ï¿½ï¿½ï¿½Ç±ï¿½Úµï¿½bug
+  DeclRefExpr(SourceLocation start, SourceLocation end,
+              std::shared_ptr<Type> type, std::string name, VarDeclPtr var)
+      : Expr(start, end, type, ExprValueKind::VK_LValue, true), Name(name),
+        var(var) {}
+
+  std::string getDeclName() const { return Name; }
+
+  VarDeclPtr getDecl() const { return var; }
+
+  virtual ~DeclRefExpr() {}
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// @brief BinaryExpr - Expression class for a binary operator.
+class BinaryExpr : public Expr {
+  std::string OpName;
+  ExprASTPtr LHS, RHS;
+
+public:
+  // Note: ï¿½ï¿½mosesï¿½Ð²ï¿½ï¿½ï¿½ï¿½ï¿½Ö¸ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½Ô²ï¿½ï¿½ï¿½ï¿½ï¿½binaryÎªlvalueï¿½ï¿½ï¿½ï¿½ï¿½
+  // ï¿½ï¿½ï¿½ï¿½: 'int* p = &num;'
+  // 'p + 1'ï¿½Í¿ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½Öµ
+  // Note: BinaryExprï¿½ï¿½ï¿½Ç¿ï¿½ï¿½Ô½ï¿½ï¿½ï¿½evaluateï¿½ï¿½
+  BinaryExpr(SourceLocation start, SourceLocation end,
+             std::shared_ptr<Type> type, std::string Op, ExprASTPtr LHS,
+             ExprASTPtr RHS)
+      : Expr(start, end, type, ExprValueKind::VK_RValue, true), OpName(Op),
+        LHS(LHS), RHS(RHS) {}
+
+  ExprASTPtr getLHS() const { return LHS; }
+
+  ExprASTPtr getRHS() const { return RHS; }
+
+  std::string getOpcode() const { return OpName; }
+
+  virtual ~BinaryExpr() {}
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// \brief UnaryExpr - Expression class for a unary operator.
+class UnaryExpr final : public Expr {
+  std::string OpName;
+  ExprASTPtr SubExpr;
+
+public:
+  UnaryExpr(SourceLocation start, SourceLocation end,
+            std::shared_ptr<Type> type, std::string Op, ExprASTPtr subExpr,
+            ExprValueKind vk)
+      : Expr(start, end, type, vk, true), OpName(Op), SubExpr(subExpr) {}
+
+  ExprASTPtr getSubExpr() const { return SubExpr; }
+
+  std::string getOpcode() const { return OpName; }
+
+  void setOpcode(std::string name) { OpName = name; }
+
+  virtual ~UnaryExpr() {}
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// @brief CallExprAST - Expression class for function calls.
+class CallExpr final : public Expr {
+  std::string CalleeName;
+  // To Do: FunctionDecl*
+  FunctionDeclPtr FuncDecl;
+  std::vector<std::shared_ptr<Expr>> Args;
+
+public:
+  CallExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type,
+           const std::string &Callee, std::vector<std::shared_ptr<Expr>> Args,
+           ExprValueKind vk, FunctionDeclPtr FD, bool canDoEvaluate)
+      : Expr(start, end, type, vk, canDoEvaluate), CalleeName(Callee),
+        Args(Args), FuncDecl(FD) {}
+
+  unsigned getArgsNum() const { return Args.size(); }
+
+  FunctionDeclPtr getFuncDecl() const { return FuncDecl; }
+
+  // Note: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½Ð¶Ô´ï¿½ï¿½ï¿½ï¿½indexï¿½ï¿½ï¿½Ð¼ï¿½ï¿½
+  ExprASTPtr getArg(unsigned index) const { return Args[index]; }
+
+  const std::vector<ExprASTPtr> getArgs() const { return Args; }
+
+  virtual ~CallExpr() {}
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// \brief MemberExpr - Class members. X.F.
+class MemberExpr final : public Expr {
+  /// Base - the expression for the base pointer or structure references. In
+  /// X.F, this is "X". ï¿½ï¿½DeclRefExpr
+  ExprASTPtr Base;
+  std::string MemberName;
+  SourceLocation MemberLoc;
+  SourceLocation OperatorLoc;
+  // e.g.	class O{ var a:int; var b:int;}; var o:O;
+  // o.a; -----> idx = 0;
+  // o.b; -----> idx = 1;
+  int idx;
+
+public:
+  MemberExpr(SourceLocation start, SourceLocation end,
+             std::shared_ptr<Type> type, std::shared_ptr<Expr> base,
+             SourceLocation operatorloc, std::string name, bool canDoEvaluate,
+             int idx)
+      : Expr(start, end, type, ExprValueKind::VK_LValue, canDoEvaluate),
+        Base(base), OperatorLoc(operatorloc), MemberName(name), idx(idx) {}
+
+  void setBase(ExprASTPtr E) { Base = E; }
+  std::string getMemberName() const { return MemberName; }
+  ExprASTPtr getBase() const { return Base; }
+  int getIdx() const { return idx; }
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// \brief ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½Ê½ï¿½ï¿½
+///	var start = 0;
+/// var end = 1;
+/// ï¿½ï¿½ï¿½ç£º var num = {start, end};
+///
+/// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÍµÄ³ï¿½Ê¼ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä·ï¿½Ê½ï¿½ï¿½ï¿½Ð¸ï¿½Öµï¿½ï¿½
+class AnonymousInitExpr final : public Expr {
+  AnonymousInitExpr() = delete;
+  AnonymousInitExpr(const AnonymousInitExpr &) = delete;
+  std::vector<ExprASTPtr> InitExprs;
+
+public:
+  AnonymousInitExpr(SourceLocation start, SourceLocation end,
+                    std::vector<ExprASTPtr> initExprs,
+                    std::shared_ptr<Type> type)
+      : Expr(start, end, type, Expr::ExprValueKind::VK_RValue, true),
+        InitExprs(initExprs) {}
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// \brief CompoundStatement - This class represents a Compound Statement
+/// ------------------------------------------
+/// Compound Statement's Grammar as below.
+/// compound-statement -> "{" statement* "}"
+/// ------------------------------------------
+class CompoundStmt final : public StatementAST {
+  // The sub-statements of the compound statement.
+  std::vector<StmtASTPtr> SubStmts;
+
+public:
+  CompoundStmt(SourceLocation start, SourceLocation end,
+               std::vector<StmtASTPtr> subStmts)
+      : StatementAST(start, end), SubStmts(subStmts) {}
+
+  virtual ~CompoundStmt() {}
+
+  void addSubStmt(StmtASTPtr stmt);
+
+  StmtASTPtr getSubStmt(unsigned index) const;
+
+  StmtASTPtr operator[](unsigned index) const;
+
+  unsigned getSize() const { return SubStmts.size(); }
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// @brief IfStatementAST - This class represents a If Statement
+/// ----------------------------------------------------------------------------
+/// If Statement's Grammar as below.
+/// if-statement -> "if" expression compound-statement "else" compound-statement
+/// ----------------------------------------------------------------------------
+class IfStatement final : public StatementAST {
+  std::shared_ptr<Expr> Condition;
+  std::shared_ptr<StatementAST> Then;
+  std::shared_ptr<StatementAST> Else;
+
+public:
+  IfStatement(SourceLocation start, SourceLocation end, ExprASTPtr Condition,
+              StmtASTPtr Then, StmtASTPtr Else)
+      : StatementAST(start, end), Condition(Condition), Then(Then), Else(Else) {
+  }
+
+  virtual ~IfStatement() {}
+
+  // To Do: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç²ï¿½ï¿½ï¿½ï¿½ÊµÄ£ï¿½Ó¦ï¿½ï¿½Ê±ï¿½Ì¶ï¿½Ê¹ï¿½ï¿½unique_ptrï¿½ï¿½ï¿½ï¿½ï¿½Ý¸ï¿½ï¿½ï¿½ï¿½Úµï¿½
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ä»ï¿½ï¿½ï¿½Ì«ï¿½ï¿½ï¿½Ú¸ï¿½ï¿½ï¿½
+  StmtASTPtr getThen() const { return Then; }
+
+  StmtASTPtr getElse() const { return Else; }
+
+  ExprASTPtr getCondition() const { return Condition; }
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// @brief WhileStatementAST - This class represents a While Statement
+/// ---------------------------------------------------------
+/// While Statement's Grammar as below.
+/// while-statement -> "while" expression compound-statement
+/// ---------------------------------------------------------
+class WhileStatement final : public StatementAST {
+  ExprASTPtr Condition;
+  StmtASTPtr LoopBody;
+
+public:
+  WhileStatement(SourceLocation start, SourceLocation end, ExprASTPtr condition,
+                 StmtASTPtr body)
+      : StatementAST(start, end), Condition(condition), LoopBody(body) {}
+
+  ExprASTPtr getCondition() const { return Condition; }
+  StmtASTPtr getLoopBody() const { return LoopBody; }
+  virtual ~WhileStatement() {}
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// @brief BreakStatementAST - This class represents a Break Statement
+/// ---------------------------------------
+/// Break Statement's Grammar as below.
+/// break-statement -> "break" ";"
+/// ---------------------------------------
+class BreakStatement final : public StatementAST {
+public:
+  BreakStatement(SourceLocation start, SourceLocation end)
+      : StatementAST(start, end) {}
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// @brief ContinueStatementAST - This class represents a Continue Statement
+/// ----------------------------------------
+/// Continue Statement's Grammar as below.
+/// continue-statement -> "continue" ";"
+/// ----------------------------------------
+class ContinueStatement final : public StatementAST {
+public:
+  ContinueStatement(SourceLocation start, SourceLocation end)
+      : StatementAST(start, end) {}
+  virtual ~ContinueStatement() {}
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// @brief ReturnStatementAST - This class represents a Return Statement
+/// ---------------------------------------------
+/// Return Statement's Grammar as below.
+/// return-statement -> "return" expression ";"
+/// return-statement -> "return" ";"
+/// return-statement -> "return" anonymous-initial ";"
+/// ---------------------------------------------
+class ReturnStatement final : public StatementAST {
+  std::shared_ptr<Expr> ReturnExpr;
+
+public:
+  ReturnStatement(SourceLocation start, SourceLocation end,
+                  ExprASTPtr returnExpr)
+      : StatementAST(start, end), ReturnExpr(returnExpr) {}
+
+  virtual ~ReturnStatement() {}
+
+  ExprASTPtr getSubExpr() const { return ReturnExpr; }
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// @brief ExprStatementAST - This class represents a statement of expressions.
+/// ----------------------------------------
+/// ExprStatement's Grammar as below.
+/// expression-statement -> expression? ";"
+/// ----------------------------------------
+class ExprStatement : public StatementAST {
+  std::shared_ptr<Expr> expr;
+
+public:
+  ExprStatement(SourceLocation start, SourceLocation end, ExprASTPtr expr)
+      : StatementAST(start, end), expr(expr) {}
+
+  virtual ~ExprStatement() {}
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// @brief DeclStatementAST - This class represents a Declaration Statement
+/// -----------------------------------------------
+/// Declaration Statement's Grammar as below.
+/// declaration-statement -> function-declaration
+///					| constant-declaration
+///					| variable-declaration
+///					| class-declaration
+/// -----------------------------------------------
+class DeclStatement : public StatementAST {
+protected:
+  std::shared_ptr<Type> declType;
+
+public:
+  DeclStatement(SourceLocation start, SourceLocation end,
+                std::shared_ptr<Type> type)
+      : StatementAST(start, end), declType(type) {}
+
+  virtual ~DeclStatement() {}
+
+  std::shared_ptr<Type> getDeclType() const { return declType; }
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// @brief VarDecl - This class represents a Variable Declaration or a Const
+/// Variable Declaration
+/// --------------------------------------------------------------
+/// Variable Declaration's Grammar as below.
+/// variable-declaration -> "var" identifier initializer ";"
+///				| "var" identifier type-annotation ";"
+/// and
+/// constanr-declaration -> "const" identifier initializer ";"
+///				| "const" identifier type-annotation ";"
+/// --------------------------------------------------------------
+class VarDecl : public DeclStatement {
+  bool IsConst;
+  std::string name;
+  ExprASTPtr InitExpr;
+
+public:
+  VarDecl(SourceLocation start, SourceLocation end, std::string name,
+          std::shared_ptr<Type> type, bool isConst, ExprASTPtr init)
+      : DeclStatement(start, end, type), name(name), IsConst(isConst),
+        InitExpr(init) {}
+  std::string getName() const { return name; }
+
+  std::shared_ptr<Type> getDeclType() const { return declType; }
+
+  void setInitExpr(ExprASTPtr B) { InitExpr = B; }
+
+  ExprASTPtr getInitExpr() const { return InitExpr; }
+
+  bool isClass() const { return declType->getKind() == TypeKind::USERDEFIED; }
+
+  bool isConst() const { return IsConst; }
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// @brief ParameterDecl - This class represents a ParameterDecl
+/// Note: ï¿½ï¿½Ê±ï¿½ï¿½Ã»ï¿½ï¿½Êµï¿½ï¿½paramdecl - const ï¿½ï¿½ init expr
+class ParameterDecl final : public VarDecl {
+public:
+  ParameterDecl(SourceLocation start, SourceLocation end, std::string name,
+                bool isConst, std::shared_ptr<Type> type)
+      : VarDecl(start, end, name, type, isConst, nullptr) {}
+
+  std::string getParmName() const { return VarDecl::getName(); }
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// \brief UnpackDecl - This class represents a UnpackDecl.
+/// ï¿½ï¿½ï¿½ï¿½mosesÖ§ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÍµÄ±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ø´ï¿½ï¿½Ý¡ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÍµÄ±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òª
+/// ï¿½ï¿½È¡ï¿½ï¿½ï¿½Ðµï¿½Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½Ð½ï¿½ï¿½ï¿½ï¿½×¢ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½Ä±ï¿½ï¿½ï¿½Ä¬ï¿½Ï¶ï¿½ï¿½ï¿½constï¿½Ä£ï¿½Ò²ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+/// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ý´ï¿½ï¿½Ý£ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½C++ï¿½Ðµï¿½ï¿½ï¿½Ê±Öµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ï¿½
+/// Note: UnpackDeclÖ»ï¿½ï¿½ï¿½Ú½ï¿½ï¿½ï¿½ï¿½Ã»ï¿½ï¿½ï¿½ï¿½ï¿½Ö¡ï¿½
+class UnpackDecl final : public DeclStatement {
+private:
+  std::vector<DeclASTPtr> decls;
+
+public:
+  UnpackDecl(SourceLocation start, SourceLocation end,
+             std::vector<DeclASTPtr> decls)
+      : DeclStatement(start, end, nullptr), decls(decls) {}
+
+  bool TypeCheckingAndTypeSetting(AnonTyPtr type);
+
+  // To Do: Shit code!
+  void setCorrespondingType(std::shared_ptr<Type> type);
+
+  unsigned getDeclNumber() const { return decls.size(); };
+
+  std::vector<VarDeclPtr> operator[](unsigned index) const;
+
+  void getDecls(std::vector<VarDeclPtr> &names) const;
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// @brief FunctionDecl - This class represents a Function Declaration
+/// which capture its name, and its argument names(thus implicitly the
+/// number of arguments the function takes).
+/// Forward declarations are not supported.
+/// ----------------------------------------------------------------
+/// Function Declaration's Grammar as below.
+/// function-declaration -> func identifier para-list compound-statement
+/// ----------------------------------------------------------------
+/// To Do: ï¿½ï¿½ï¿½ï¿½Æ²ï¿½ï¿½ÇºÜºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½FunctionDeclï¿½ï¿½Ó¦ï¿½ï¿½ï¿½ï¿½DeclStatementï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+class FunctionDecl : public DeclStatement {
+  std::string FDName;
+  std::vector<ParmDeclPtr> parameters;
+  unsigned paraNum;
+  StmtASTPtr funcBody;
+  std::shared_ptr<Type> returnType;
+
+public:
+  FunctionDecl(SourceLocation start, SourceLocation end,
+               const std::string &name, std::vector<ParmDeclPtr> Args,
+               StmtASTPtr body, std::shared_ptr<Type> returnType)
+      : DeclStatement(start, end, nullptr), FDName(name), parameters(Args),
+        funcBody(body), paraNum(parameters.size()), returnType(returnType) {}
+
+  virtual ~FunctionDecl() {}
+  unsigned getParaNum() const { return paraNum; }
+  std::vector<ParmDeclPtr> getParms() const { return parameters; }
+  std::string getParmName(unsigned index) const {
+    return parameters[index].get()->getParmName();
+  }
+  std::shared_ptr<Type> getReturnType() const { return returnType; }
+  std::string getFDName() const { return FDName; }
+  ParmDeclPtr getParmDecl(unsigned index) const { return (*this)[index]; }
+  ParmDeclPtr operator[](unsigned index) const {
+    assert(index <= paraNum - 1 &&
+           "Index out of range when we get specified ParmDecl.");
+    return parameters[index];
+  }
+  // ï¿½ï¿½ï¿½Ú±ï¿½Ê¶ï¿½Ãºï¿½ï¿½ï¿½ï¿½Ü·ï¿½constant-evaluator.
+  // ï¿½ï¿½ï¿½Úºï¿½ï¿½ï¿½ï¿½ï¿½Ëµï¿½ï¿½ï¿½Ü½ï¿½ï¿½ï¿½constant-evaluatorï¿½Ä±ï¿½×¼ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½returnï¿½ï¿½ä£¬ï¿½Ò·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
+  // ï¿½ï¿½ï¿½ç£º
+  //	func add() -> int  { return 10; }
+  // To Do: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ç¿ï¿½ï¿½Òªï¿½ï¿½ï¿½Ü¹ï¿½ï¿½ï¿½ï¿½ï¿½constant-evaluateï¿½Äºï¿½ï¿½ï¿½Ö»ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½returnï¿½ï¿½ï¿½
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Ç¿ï¿½Æµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ë¡ï¿½
+  ReturnStmtPtr isEvalCandiateAndGetReturnStmt() const;
+
+  /// Determine whether the function F ends with a return stmt.
+  bool endsWithReturn() const;
+
+  StmtASTPtr getCompoundBody() const { return funcBody; }
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+
+/// @brief ClassDecl - This class represents a Class Declaration
+/// ---------------------------------------------------------
+/// Class Declaration's Grammar as below.
+/// class-declarartion -> "class" identifier class-body ";"
+/// ----------------------------------------------------------
+///
+/// ----------------------------------------------------------
+/// Class Body's Grammar as below.
+/// class-body -> "{" variable-declaration* "}"
+/// ----------------------------------------------------------
+/// To Do: classÍ¨ï¿½ï¿½ï¿½ï¿½ï¿½Ý³ï¿½Ô±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô³ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ú´ï¿½Õ¼ä¡£
+class ClassDecl final : public DeclStatement {
+  // std::shared_ptr<UserDefinedType> classType;
+  std::string ClassName;
+  StmtASTPtr Body;
+
+public:
+  ClassDecl(SourceLocation start, SourceLocation end, std::string name,
+            StmtASTPtr body)
+      : DeclStatement(start, end, nullptr), ClassName(name), Body(body) {}
+
+  virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
+};
+} // namespace ast
+} // namespace compiler
 #endif

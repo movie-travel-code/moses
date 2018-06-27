@@ -1,73 +1,81 @@
 //===----------------------------TokenKinds.h-----------------------------===//
 //
-// This file defines class TokenValue. TokenValue is the key class for 
+// This file defines class TokenValue. TokenValue is the key class for
 // lexer and parser.
 //
 //===---------------------------------------------------------------------===//
 #ifndef TOKENKINDS_INCLUDE
 #define TOKENKINDS_INCLUDE
-namespace compiler
-{
-	namespace tok
-	{
-		enum class TokenValue : unsigned short
-		{
-			IDENTIFIER,					// ±êÊ¶·û
-			INTEGER_LITERAL,			// ÕûÐÍÊý×Ö³£Á¿
-			REAL_LITERAL,				// ÊµÊý³£Á¿
-			CHAR_LITERAL,				// ×Ö·û³£Á¿
-			STRING_LITERAL,				// ×Ö·û´®×ÖÃæÖµ
+namespace compiler {
+namespace tok {
+enum class TokenValue : unsigned short {
+  IDENTIFIER,      // ï¿½ï¿½Ê¶ï¿½ï¿½
+  INTEGER_LITERAL, // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö³ï¿½ï¿½ï¿½
+  REAL_LITERAL,    // Êµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  CHAR_LITERAL,    // ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½
+  STRING_LITERAL,  // ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Öµ
 
-			BO_Mul, BO_Div, BO_Rem,		// * / %
-			BO_Add, BO_Sub,				// + -
-			BO_LT, BO_GT, BO_LE, BO_GE,	// < > <= >=
-			BO_EQ, BO_NE,				// == !=
-			UO_Inc, UO_Dec,				// ++ --
-			UO_Exclamatory,				// !
+  BO_Mul,
+  BO_Div,
+  BO_Rem, // * / %
+  BO_Add,
+  BO_Sub, // + -
+  BO_LT,
+  BO_GT,
+  BO_LE,
+  BO_GE, // < > <= >=
+  BO_EQ,
+  BO_NE, // == !=
+  UO_Inc,
+  UO_Dec,         // ++ --
+  UO_Exclamatory, // !
 
-			BO_Assign, BO_MulAssign,	// = *=
-			BO_DivAssign, BO_RemAssign,	// /= %=
-			BO_AddAssign, BO_SubAssign,	// += -=
-			
-			BO_AndAssign,				// &&=
-			BO_OrAssign,				// ||=
-			BO_And,						// &&
-			BO_Or,						// ||
+  BO_Assign,
+  BO_MulAssign, // = *=
+  BO_DivAssign,
+  BO_RemAssign, // /= %=
+  BO_AddAssign,
+  BO_SubAssign, // += -=
 
-			PUNCTUATOR_Left_Paren,		// (
-			PUNCTUATOR_Right_Paren,		// )
-			// To Do: Éè¼ÆÊý×éÀàÐÍ
-			// PUNCTUATOR_Left_Square,		// [
-			// PUNCTUATOR_Right_Square,	// ]
-			PUNCTUATOR_Left_Brace,		// {
-			PUNCTUATOR_Right_Brace,		// }
-			PUNCTUATOR_Arrow,			// ->
+  BO_AndAssign, // &&=
+  BO_OrAssign,  // ||=
+  BO_And,       // &&
+  BO_Or,        // ||
 
-			PUNCTUATOR_Colon,		// :
-			PUNCTUATOR_Semicolon,	// ;
-			PUNCTUATOR_Member_Access,	// .
-			PUNCTUATOR_Comma,	// ,
+  PUNCTUATOR_Left_Paren,  // (
+  PUNCTUATOR_Right_Paren, // )
+  // To Do: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  // PUNCTUATOR_Left_Square,		// [
+  // PUNCTUATOR_Right_Square,	// ]
+  PUNCTUATOR_Left_Brace,  // {
+  PUNCTUATOR_Right_Brace, // }
+  PUNCTUATOR_Arrow,       // ->
 
-			KEYWORD_var,				// ±äÁ¿¶¨Òå
-			KEYWORD_const,				// const±äÁ¿¶¨Òå
-			KEYWORD_class,				// class¶¨Òå¹Ø¼ü×Ö
-			KEYWORD_if,					// ¿ØÖÆÁ÷if
-			KEYWORD_else,				// ¿ØÖÆÁ÷else
-			KEYWORD_break,		
-			KEYWORD_while,				// ¿ØÖÆÁ÷while
-			// To Do: Ìí¼Ófor¿ØÖÆÁ÷Óï¾ä
-			KEYWORD_continue,
-			KEYWORD_return,				// return stmt
-			KEYWORD_int,				// int
-			KEYWORD_bool,				// bool
-			KEYWORD_func,				// º¯Êý¶¨Òå
-			KEYWORD_void,				// º¯Êý·µ»Øvoid
-			BOOL_TRUE,					// Bool true ×ÖÃæ³£Á¿
-			BOOL_FALSE,					// Bool false ×ÖÃæ³£Á¿
+  PUNCTUATOR_Colon,         // :
+  PUNCTUATOR_Semicolon,     // ;
+  PUNCTUATOR_Member_Access, // .
+  PUNCTUATOR_Comma,         // ,
 
-			FILE_EOF,
-			UNKNOWN
-		};
-	}
+  KEYWORD_var,   // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  KEYWORD_const, // constï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  KEYWORD_class, // classï¿½ï¿½ï¿½ï¿½Ø¼ï¿½ï¿½ï¿½
+  KEYWORD_if,    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½if
+  KEYWORD_else,  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½else
+  KEYWORD_break,
+  KEYWORD_while, // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½while
+  // To Do: ï¿½ï¿½ï¿½forï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  KEYWORD_continue,
+  KEYWORD_return, // return stmt
+  KEYWORD_int,    // int
+  KEYWORD_bool,   // bool
+  KEYWORD_func,   // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  KEYWORD_void,   // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½void
+  BOOL_TRUE,      // Bool true ï¿½ï¿½ï¿½æ³£ï¿½ï¿½
+  BOOL_FALSE,     // Bool false ï¿½ï¿½ï¿½æ³£ï¿½ï¿½
+
+  FILE_EOF,
+  UNKNOWN
+};
 }
+} // namespace compiler
 #endif

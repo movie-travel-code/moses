@@ -1,10 +1,10 @@
 //===--------------------------------SymbolTable.h------------------------===//
 //
 // This file implements the main symbol table for moses IR.
-// 暂时moses使用 in-memory形式的IR，暂时不需要SymbolTable，in-memory IR直接
-// 使用链表进行关联，并且，Function、BasicBlock以及Instruction中间有links进行
-// 关联。但是还是保留这样一个文件。
-// 
+// 锟斤拷时moses使锟斤拷 in-memory锟斤拷式锟斤拷IR锟斤拷锟斤拷时锟斤拷锟斤拷要SymbolTable锟斤拷in-memory IR直锟斤拷
+// 使锟斤拷锟斤拷锟斤拷锟斤拷泄锟斤拷锟斤拷锟斤拷锟斤拷遥锟紽unction锟斤拷BasicBlock锟皆硷拷Instruction锟叫硷拷锟斤拷links锟斤拷锟斤拷
+// 锟斤拷锟斤拷锟斤拷锟斤拷锟角伙拷锟角憋拷锟斤拷锟斤拷锟斤拷一锟斤拷锟侥硷拷锟斤拷
+//
 //===----------------------------------------------------------------------===//
 #ifndef MOSES_IR_VALUE_SYMBOL_TABLE_H
 #define MOSES_IR_VALUE_SYMBOL_TABLE_H

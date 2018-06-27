@@ -10,134 +10,110 @@ using namespace compiler::tok;
 
 bool Scanner::errorFlag = false;
 
-Scanner::Scanner(const std::string& srcFileName) :
-FileName(srcFileName), CurLine(1), CurCol(0), CurrentChar(0), state(State::NONE)
-{
-	// ´ò¿ªÎÄ¼þ´æ´¢ÄÚÈÝµ½input
-	input.open(FileName);
-	if (input.fail())
-	{
-		errorReport("When trying to open file " + FileName + ", occurred error.");
-		errorFlag = true;
-	}
+Scanner::Scanner(const std::string &srcFileName)
+    : FileName(srcFileName), CurLine(1), CurCol(0), CurrentChar(0),
+      state(State::NONE) {
+  // ï¿½ï¿½ï¿½Ä¼ï¿½ï¿½æ´¢ï¿½ï¿½ï¿½Ýµï¿½input
+  input.open(FileName);
+  if (input.fail()) {
+    errorReport("When trying to open file " + FileName + ", occurred error.");
+    errorFlag = true;
+  }
 }
 
-void Scanner::getNextChar()
-{
-	CurrentChar = input.get();
-	if (CurrentChar == '\n')
-	{
-		CurLine++;
-		CurCol = 0;
-	}
-	else
-	{
-		CurCol++;
-	}
+void Scanner::getNextChar() {
+  CurrentChar = input.get();
+  if (CurrentChar == '\n') {
+    CurLine++;
+    CurCol = 0;
+  } else {
+    CurCol++;
+  }
 }
 
-char Scanner::peekChar()
-{
-	char c = input.peek();
-	return c;
+char Scanner::peekChar() {
+  char c = input.peek();
+  return c;
 }
 
-void Scanner::addToBuffer(char c)
-{
-	buffer.push_back(c);
+void Scanner::addToBuffer(char c) { buffer.push_back(c); }
+
+void Scanner::reduceBuffer() { buffer.pop_back(); }
+
+// ï¿½ï¿½ï¿½É±ï¿½Ê¶ï¿½ï¿½Token
+void Scanner::makeToken(TokenValue tv, const TokenLocation &Loc,
+                        std::string name) {
+  std::cout << name << std::endl;
+  LastTok = Tok;
+  Tok = Token(tv, Loc, name);
+  buffer.clear();
+  // ï¿½ï¿½ï¿½É³É¹ï¿½Ò»ï¿½ï¿½tokenï¿½ï¿½È»ï¿½ï¿½ï¿½Ù°ï¿½×´Ì¬ï¿½Ã¿ï¿½
+  state = State::NONE;
 }
 
-void Scanner::reduceBuffer()
-{
-	buffer.pop_back();
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Token
+void Scanner::makeToken(TokenValue tv, const TokenLocation &loc, long intvalue,
+                        std::string name) {
+  std::cout << name << std::endl;
+  LastTok = Tok;
+  Tok = Token(tv, loc, intvalue, name);
+  buffer.clear();
+  state = State::NONE;
 }
 
-// Éú³É±êÊ¶·ûToken
-void Scanner::makeToken(TokenValue tv, const TokenLocation& Loc, std::string name)
-{
-	std::cout << name << std::endl;
-	LastTok = Tok;
-	Tok = Token(tv, Loc, name);
-	buffer.clear();
-	// Éú³É³É¹¦Ò»¸ötoken£¬È»ºóÔÙ°Ñ×´Ì¬ÖÃ¿Õ
-	state = State::NONE;
+// ï¿½ï¿½ï¿½É¸ï¿½ï¿½ï¿½ï¿½ï¿½Token
+void Scanner::makeToken(TokenValue tv, const TokenLocation &loc,
+                        double realvalue, std::string name) {
+  std::cout << name << std::endl;
+  LastTok = Tok;
+  Tok = Token(tv, loc, realvalue, name);
+  buffer.clear();
+  state = State::NONE;
 }
 
-// Éú³ÉÕûÐÍToken
-void Scanner::makeToken(TokenValue tv, const TokenLocation& loc, long intvalue, std::string name)
-{
-	std::cout << name << std::endl;
-	LastTok = Tok;
-	Tok = Token(tv, loc, intvalue, name);
-	buffer.clear();
-	state = State::NONE;
+void Scanner::preprocess() {
+  do {
+    while (std::isspace(CurrentChar)) {
+      getNextChar();
+    }
+    handleLineComment();
+    // handleBlockComment();
+  } while (std::isspace(CurrentChar));
 }
 
-// Éú³É¸¡µãÐÍToken
-void Scanner::makeToken(TokenValue tv, const TokenLocation& loc, double realvalue, std::string name)
-{
-	std::cout << name << std::endl;
-	LastTok = Tok;
-	Tok = Token(tv, loc, realvalue, name);
-	buffer.clear();
-	state = State::NONE;
+void Scanner::handleLineComment() {
+  CurLoc = getTokenLocation();
+
+  if (CurrentChar == '#') {
+    getNextChar();
+
+    while (CurrentChar != '\n' && CurrentChar != '\r' && CurrentChar != EOF) {
+      getNextChar();
+    }
+
+    // ï¿½ï¿½ï¿½ï¿½
+    if (CurrentChar == '\n') {
+      CurLine++;
+      CurCol = 0;
+      getNextChar();
+    } else if (CurrentChar == '\r' && peekChar() == '\n') {
+      getNextChar();
+      getNextChar();
+      CurLine++;
+      CurCol = 0;
+    } else {
+      // ï¿½Ä¼ï¿½Î²
+      return;
+    }
+
+    if (!input.eof()) {
+      // \r
+      getNextChar();
+    }
+  }
 }
 
-void Scanner::preprocess()
-{
-	do
-	{
-		while (std::isspace(CurrentChar))
-		{
-			getNextChar();
-		}
-		handleLineComment();
-		// handleBlockComment();
-	} while (std::isspace(CurrentChar));
-}
-
-void Scanner::handleLineComment()
-{
-	CurLoc = getTokenLocation();
-
-	if (CurrentChar == '#')
-	{
-		getNextChar();
-
-		while (CurrentChar != '\n' && CurrentChar != '\r' && CurrentChar != EOF)
-		{
-			getNextChar();
-		}
-
-		// »»ÐÐ
-		if (CurrentChar == '\n')
-		{
-			CurLine++;
-			CurCol = 0;
-			getNextChar();
-		}
-		else if (CurrentChar == '\r' && peekChar() == '\n')
-		{
-			getNextChar();
-			getNextChar();
-			CurLine++;
-			CurCol = 0;
-		}
-		else
-		{
-			// ÎÄ¼þÎ²
-			return;
-		}
-
-		if (!input.eof())
-		{
-			// \r
-			getNextChar();
-		}
-	}
-}
-
-//void Scanner::handleBlockComment()
+// void Scanner::handleBlockComment()
 //{
 //	CurLoc = getTokenLocation();
 //	if (CurrentChar == '/' && peekChar() == '*')
@@ -152,338 +128,277 @@ void Scanner::handleLineComment()
 
 //			if (input.eof())
 //			{
-//				errorReport("end of file hapend in comment, */ is expected!, but find " + CurrentChar);
-//				break;
+//				errorReport("end of file hapend in comment, */ is
+//expected!, but find " + CurrentChar); 				break;
 //			}
 //		}
 
 //		if (!input.eof())
 //		{
-//			// ÏûºÄµô*
+//			// ï¿½ï¿½ï¿½Äµï¿½*
 //			getNextChar();
-//			// ÏûºÄµô/
+//			// ï¿½ï¿½ï¿½Äµï¿½/
 //			getNextChar();
 //		}
 //	}
 //}
 
-// ½«´Ê·¨·ÖÎö
-Token Scanner::getNextToken()
-{
-	bool matched = false;
-	do
-	{
-		if (state != State::NONE)
-		{
-			matched = true;
-		}
+// ï¿½ï¿½ï¿½Ê·ï¿½ï¿½ï¿½ï¿½ï¿½
+Token Scanner::getNextToken() {
+  bool matched = false;
+  do {
+    if (state != State::NONE) {
+      matched = true;
+    }
 
-		// Ïàµ±ÓÚÒ»¸ö´óµÄ×Ô¶¯»ú·Ö±ðÖ¸Ïò²»Í¬µÄ×Ó×Ô¶¯»ú
-		// ÆäÖÐÃ¿Ò»¸ö×Ó×Ô¶¯»úÓÃÓÚÊ¶±ðÄ³Ð©Ä£Ê½µÄ×Ö·û´®
-		switch (state)
-		{
-			// ÖØÐÂ¿ªÊ¼ÏÂÒ»TokenµÄ´Ê·¨·ÖÎö¹ý³Ì
-		case Scanner::State::NONE:
-			getNextChar();
-			break;
-			// Óöµ½ÎÄ¼þÎ²
-		case Scanner::State::END_OF_FILE:
-			handleEOFState();
-			LastTok = Tok;
-			Tok = Token();
-			return Tok;
-			break;
-			// µ¥¶À´¦Àí±êÊ¶·ûµÄ×Ô¶¯»ú
-		case Scanner::State::IDENTIFIER:
-			handleIdentifierState();
-			break;
-			// µ¥¶À´¦ÀíÕûÐÍµÄ×Ô¶¯»ú
-		case Scanner::State::NUMBER:
-			handleNumberState();
-			break;
-			// µ¥¶À´¦Àí×Ö·û´®µÄ×Ô¶¯»ú
-		case Scanner::State::STRING:
-			handleStringState();
-			break;
-			// µ¥¶À´¦ÀíÔËËã·ûµÄ×Ô¶¯»ú
-		case Scanner::State::OPERATION:
-			handleOperationState();
-			break;
-		default:
-			errorReport("Match token state error.");
-			errorFlag = true;
-			break;
-		}
+    // ï¿½àµ±ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½Ö±ï¿½Ö¸ï¿½ï¿½Í¬ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½
+    // ï¿½ï¿½ï¿½ï¿½Ã¿Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¶ï¿½ï¿½Ä³Ð©Ä£Ê½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½
+    switch (state) {
+      // ï¿½ï¿½ï¿½Â¿ï¿½Ê¼ï¿½ï¿½Ò»Tokenï¿½Ä´Ê·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    case Scanner::State::NONE:
+      getNextChar();
+      break;
+      // ï¿½ï¿½ï¿½ï¿½ï¿½Ä¼ï¿½Î²
+    case Scanner::State::END_OF_FILE:
+      handleEOFState();
+      LastTok = Tok;
+      Tok = Token();
+      return Tok;
+      break;
+      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê¶ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½
+    case Scanner::State::IDENTIFIER:
+      handleIdentifierState();
+      break;
+      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Íµï¿½ï¿½Ô¶ï¿½ï¿½ï¿½
+    case Scanner::State::NUMBER:
+      handleNumberState();
+      break;
+      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½
+    case Scanner::State::STRING:
+      handleStringState();
+      break;
+      // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½
+    case Scanner::State::OPERATION:
+      handleOperationState();
+      break;
+    default:
+      errorReport("Match token state error.");
+      errorFlag = true;
+      break;
+    }
 
-		// ³õÊ¼×´Ì¬Ê±£¬¸ù¾ÝCurrentChar¾ö¶¨Ê¹ÓÃÄÄ¸ö×Ô¶¯»úÀ´Ê¶±ðÒÔºóµÄToken
-		if (state == State::NONE)
-		{
-			preprocess();
-			if (input.eof())
-			{
-				state = State::END_OF_FILE;
-			}
-			else
-			{
-				if (std::isalpha(CurrentChar))
-				{
-					state = State::IDENTIFIER;
-				}
-				// if it is digit or xdigit
-				else if (std::isdigit(CurrentChar) || (CurrentChar == '$'))
-				{
-					state = State::NUMBER;
-				}
-				else if (CurrentChar == '\"')
-				{
-					state = State::STRING;
-				}
-				else
-				{
-					state = State::OPERATION;
-				}
-			}
-		}
-	} while (!matched);
-	return Tok;
+    // ï¿½ï¿½Ê¼×´Ì¬Ê±ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½CurrentCharï¿½ï¿½ï¿½ï¿½Ê¹ï¿½ï¿½ï¿½Ä¸ï¿½ï¿½Ô¶ï¿½ï¿½ï¿½ï¿½ï¿½Ê¶ï¿½ï¿½ï¿½Ôºï¿½ï¿½Token
+    if (state == State::NONE) {
+      preprocess();
+      if (input.eof()) {
+        state = State::END_OF_FILE;
+      } else {
+        if (std::isalpha(CurrentChar)) {
+          state = State::IDENTIFIER;
+        }
+        // if it is digit or xdigit
+        else if (std::isdigit(CurrentChar) || (CurrentChar == '$')) {
+          state = State::NUMBER;
+        } else if (CurrentChar == '\"') {
+          state = State::STRING;
+        } else {
+          state = State::OPERATION;
+        }
+      }
+    }
+  } while (!matched);
+  return Tok;
 }
 
-void Scanner::handleEOFState()
-{
-	CurLoc = getTokenLocation();
-	makeToken(TokenValue::FILE_EOF, CurLoc, std::string("FILE_EOF"));
-	input.close();
+void Scanner::handleEOFState() {
+  CurLoc = getTokenLocation();
+  makeToken(TokenValue::FILE_EOF, CurLoc, std::string("FILE_EOF"));
+  input.close();
 }
 
-void Scanner::handleNumberState()
-{
-	CurLoc = getTokenLocation();
-	bool matched = false;
-	bool isFloat = false;
-	int numberBase = 10;
+void Scanner::handleNumberState() {
+  CurLoc = getTokenLocation();
+  bool matched = false;
+  bool isFloat = false;
+  int numberBase = 10;
 
-	if (CurrentChar == '$')
-	{
-		numberBase = 16;
-		getNextChar();
-	}
-	enum class NumberState
-	{
-		INTEGER,
-		FRACTION,
-		EXPONENT,
-		DONE
-	};
+  if (CurrentChar == '$') {
+    numberBase = 16;
+    getNextChar();
+  }
+  enum class NumberState { INTEGER, FRACTION, EXPONENT, DONE };
 
-	NumberState numberState = NumberState::INTEGER;
+  NumberState numberState = NumberState::INTEGER;
 
-	do
-	{
-		switch (numberState)
-		{
-		case NumberState::INTEGER:
-			if (numberBase == 10)
-			{
-				handleDigit();
-			}
-			else if (numberBase == 16)
-			{
-				handleXDigit();
-			}
-			break;
-		case NumberState::FRACTION:
-			handleFraction();
-			isFloat = true;
-			break;
-		case NumberState::EXPONENT:
-			// handleExponent();
-			isFloat = true;
-			break;
-		case NumberState::DONE:
-			break;
-		default:
-			errorReport("Match number state error.");
-			errorFlag = true;
-			break;
-		}
+  do {
+    switch (numberState) {
+    case NumberState::INTEGER:
+      if (numberBase == 10) {
+        handleDigit();
+      } else if (numberBase == 16) {
+        handleXDigit();
+      }
+      break;
+    case NumberState::FRACTION:
+      handleFraction();
+      isFloat = true;
+      break;
+    case NumberState::EXPONENT:
+      // handleExponent();
+      isFloat = true;
+      break;
+    case NumberState::DONE:
+      break;
+    default:
+      errorReport("Match number state error.");
+      errorFlag = true;
+      break;
+    }
 
-		if (CurrentChar == '.')
-		{
-			numberState = NumberState::FRACTION;
-		}
-		else if (CurrentChar == 'E' || CurrentChar == 'e')
-		{
-			numberState = NumberState::EXPONENT;
-		}
-		else
-		{
-			numberState = NumberState::DONE;
-		}
-	} while (numberState != NumberState::DONE);
+    if (CurrentChar == '.') {
+      numberState = NumberState::FRACTION;
+    } else if (CurrentChar == 'E' || CurrentChar == 'e') {
+      numberState = NumberState::EXPONENT;
+    } else {
+      numberState = NumberState::DONE;
+    }
+  } while (numberState != NumberState::DONE);
 
-	if (!errorFlag)
-	{
-		if (isFloat)
-		{
-			makeToken(TokenValue::REAL_LITERAL, CurLoc, std::stod(buffer), buffer);
-		}
-		else
-		{
-			makeToken(TokenValue::INTEGER_LITERAL, CurLoc, std::stol(buffer, 0, numberBase), buffer);
-		}
-	}
-	else
-	{
-		// just clear buffer and set the state to State::NONE
-		buffer.clear();
-		state = State::NONE;
-	}
+  if (!errorFlag) {
+    if (isFloat) {
+      makeToken(TokenValue::REAL_LITERAL, CurLoc, std::stod(buffer), buffer);
+    } else {
+      makeToken(TokenValue::INTEGER_LITERAL, CurLoc,
+                std::stol(buffer, 0, numberBase), buffer);
+    }
+  } else {
+    // just clear buffer and set the state to State::NONE
+    buffer.clear();
+    state = State::NONE;
+  }
 }
 
-void Scanner::handleStringState()
-{
-	CurLoc = getTokenLocation();
-	// eat ' and NOT update currentChar
-	// because we don't want ' (single quote).
-	getNextChar();
+void Scanner::handleStringState() {
+  CurLoc = getTokenLocation();
+  // eat ' and NOT update currentChar
+  // because we don't want ' (single quote).
+  getNextChar();
 
-	while (true)
-	{
-		if (CurrentChar == '\"')
-		{
-			break;
-		}
-		addToBuffer(CurrentChar);
-		getNextChar();
-	}
+  while (true) {
+    if (CurrentChar == '\"') {
+      break;
+    }
+    addToBuffer(CurrentChar);
+    getNextChar();
+  }
 
-	// eat end ' and update currentChar
-	getNextChar();
+  // eat end ' and update currentChar
+  getNextChar();
 
-	// just one char
-	if (buffer.length() == 1)
-	{
-		makeToken(TokenValue::CHAR_LITERAL, CurLoc, static_cast<long>(buffer.at(0)), buffer);
-	}
-	else
-	{
-		makeToken(TokenValue::STRING_LITERAL, CurLoc, buffer);
-	}
+  // just one char
+  if (buffer.length() == 1) {
+    makeToken(TokenValue::CHAR_LITERAL, CurLoc, static_cast<long>(buffer.at(0)),
+              buffer);
+  } else {
+    makeToken(TokenValue::STRING_LITERAL, CurLoc, buffer);
+  }
 }
 
-// ´¦Àí±êÊ¶·ûÐÅÏ¢
-void Scanner::handleIdentifierState()
-{
-	CurLoc = getTokenLocation();
-	// add first char
-	addToBuffer(CurrentChar);
-	getNextChar();
+// ï¿½ï¿½ï¿½ï¿½ï¿½Ê¶ï¿½ï¿½ï¿½ï¿½Ï¢
+void Scanner::handleIdentifierState() {
+  CurLoc = getTokenLocation();
+  // add first char
+  addToBuffer(CurrentChar);
+  getNextChar();
 
-	while (std::isalnum(CurrentChar) || CurrentChar == '_')
-	{
-		addToBuffer(CurrentChar);
-		getNextChar();
-	}
+  while (std::isalnum(CurrentChar) || CurrentChar == '_') {
+    addToBuffer(CurrentChar);
+    getNextChar();
+  }
 
-	// ÅÐ¶Ïµ±Ç°ÊÇ·ñÊÇ¹Ø¼ü×Ö£¬ÊÇ¹Ø¼ü×ÖµÄ»°£¬ÔòÉèÖÃÆätoken
-	TokenValue tokenValue = table.isKeyword(buffer);
-	if (tokenValue == TokenValue::UNKNOWN)
-	{
-		// ²»ÊÇ¹Ø¼ü×Ö£¬ËµÃ÷tokenValueÊÇ identifier
-		tokenValue = TokenValue::IDENTIFIER;
-	}
-	// ·µ»ØÒ»¸ö´´½¨ºÃµÄtoken
-	makeToken(tokenValue, CurLoc, buffer);
+  // ï¿½Ð¶Ïµï¿½Ç°ï¿½Ç·ï¿½ï¿½Ç¹Ø¼ï¿½ï¿½Ö£ï¿½ï¿½Ç¹Ø¼ï¿½ï¿½ÖµÄ»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½token
+  TokenValue tokenValue = table.isKeyword(buffer);
+  if (tokenValue == TokenValue::UNKNOWN) {
+    // ï¿½ï¿½ï¿½Ç¹Ø¼ï¿½ï¿½Ö£ï¿½Ëµï¿½ï¿½tokenValueï¿½ï¿½ identifier
+    tokenValue = TokenValue::IDENTIFIER;
+  }
+  // ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½token
+  makeToken(tokenValue, CurLoc, buffer);
 }
 
-// ´¦Àí²Ù×÷·û
-void Scanner::handleOperationState()
-{
-	CurLoc = getTokenLocation();
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+void Scanner::handleOperationState() {
+  CurLoc = getTokenLocation();
 
-	bool matched = false;
+  bool matched = false;
 
-	addToBuffer(CurrentChar);
-	// ÓÉÓÚ´ó²¿·ÖÔËËã·û¶¼ÐèÒªÏòÇ°¿´Ò»²½
-	addToBuffer(peekChar());
+  addToBuffer(CurrentChar);
+  // ï¿½ï¿½ï¿½Ú´ó²¿·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½Ç°ï¿½ï¿½Ò»ï¿½ï¿½
+  addToBuffer(peekChar());
 
-	auto tokenKind = table.isOperator(buffer);
-	// ÏÈ¼ì²éÏòÇ°¿´µÄbufferÊÇ·ñ·ûºÅ·ûºÅ±íÖÐµÄÈÎÒâÔËËã·û
-	if (tokenKind == TokenValue::UNKNOWN)
-	{
-		// ²»ÊÇÈÎÒâ×Ö·û£¬ÔòºóÍËÒ»²½
-		reduceBuffer();
-		tokenKind = table.isOperator(buffer);
-	}
-	else
-	{
-		// ÏòÇ°¿´Ò»²½µÄ¹ý³ÌÖÐ·¢ÏÖ²»ÊÇoperator£¬ÔòÍÂ³öÀ´£¬È»ºó¼ÌÐøÏòÏÂÔËÐÐ
-		matched = true;
-		getNextChar();
-	}
+  auto tokenKind = table.isOperator(buffer);
+  // ï¿½È¼ï¿½ï¿½ï¿½ï¿½Ç°ï¿½ï¿½ï¿½ï¿½bufferï¿½Ç·ï¿½ï¿½ï¿½Å·ï¿½ï¿½Å±ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  if (tokenKind == TokenValue::UNKNOWN) {
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ò»ï¿½ï¿½
+    reduceBuffer();
+    tokenKind = table.isOperator(buffer);
+  } else {
+    // ï¿½ï¿½Ç°ï¿½ï¿½Ò»ï¿½ï¿½ï¿½Ä¹ï¿½ï¿½ï¿½ï¿½Ð·ï¿½ï¿½Ö²ï¿½ï¿½ï¿½operatorï¿½ï¿½ï¿½ï¿½ï¿½Â³ï¿½ï¿½ï¿½ï¿½ï¿½È»ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+    matched = true;
+    getNextChar();
+  }
 
-	if (tokenKind == TokenValue::UNKNOWN)
-	{
-		std::cerr << "Bad Token!" << std::endl;
-		exit(1);
-	}
+  if (tokenKind == TokenValue::UNKNOWN) {
+    std::cerr << "Bad Token!" << std::endl;
+    exit(1);
+  }
 
-	// Ê¶±ðÔËËã·û³É¹¦£¬´´½¨¸Ãtoken
-	makeToken(tokenKind, CurLoc, buffer);
-	getNextChar();
+  // Ê¶ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½É¹ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½token
+  makeToken(tokenKind, CurLoc, buffer);
+  getNextChar();
 }
 
-// ´¦ÀíÊý×Ö
-void Scanner::handleDigit()
-{
-	addToBuffer(CurrentChar);
-	getNextChar();
-	// Ñ­»·ÏòºóÈ¥È¡×Ö·û£¬Ö±µ½È¡µÃ×Ö·û²»ÊÇÊý×ÖÎªÖ¹
-	while (std::isdigit(CurrentChar))
-	{
-		addToBuffer(CurrentChar);
-		getNextChar();
-	}
-	// ÓÉÓÚÊý×ÖÓÐ¿ÉÄÜÓÐ.(dot)»òÕßE/eÐÎÊ½
-	// Èç¹ûº¬ÓÐÉÏÊöµÄ.(dot)µÄÇéÐÎ£¬ÔòÌø×ªµ½fraction´¦Àí
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+void Scanner::handleDigit() {
+  addToBuffer(CurrentChar);
+  getNextChar();
+  // Ñ­ï¿½ï¿½ï¿½ï¿½ï¿½È¥È¡ï¿½Ö·ï¿½ï¿½ï¿½Ö±ï¿½ï¿½È¡ï¿½ï¿½ï¿½Ö·ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ÎªÖ¹
+  while (std::isdigit(CurrentChar)) {
+    addToBuffer(CurrentChar);
+    getNextChar();
+  }
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ð¿ï¿½ï¿½ï¿½ï¿½ï¿½.(dot)ï¿½ï¿½ï¿½ï¿½E/eï¿½ï¿½Ê½
+  // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.(dot)ï¿½ï¿½ï¿½ï¿½ï¿½Î£ï¿½ï¿½ï¿½ï¿½ï¿½×ªï¿½ï¿½fractionï¿½ï¿½ï¿½ï¿½
 }
 
-void Scanner::handleXDigit()
-{
-	bool readFlag = false;
+void Scanner::handleXDigit() {
+  bool readFlag = false;
 
-	while (std::isxdigit(CurrentChar))
-	{
-		readFlag = true;
-		addToBuffer(CurrentChar);
-		getNextChar();
-	}
+  while (std::isxdigit(CurrentChar)) {
+    readFlag = true;
+    addToBuffer(CurrentChar);
+    getNextChar();
+  }
 
-	if (!readFlag)
-		errorReport("Hexadecimal number format error!");
+  if (!readFlag)
+    errorReport("Hexadecimal number format error!");
 }
 
-void Scanner::handleFraction()
-{
-	if (!std::isdigit(peekChar()))
-		errorReport("Fraction number part should be numbers");
+void Scanner::handleFraction() {
+  if (!std::isdigit(peekChar()))
+    errorReport("Fraction number part should be numbers");
 
-	addToBuffer(CurrentChar);
-	getNextChar();
+  addToBuffer(CurrentChar);
+  getNextChar();
 
-	while (std::isdigit(CurrentChar))
-	{
-		addToBuffer(CurrentChar);
-		getNextChar();
-	}
+  while (std::isdigit(CurrentChar)) {
+    addToBuffer(CurrentChar);
+    getNextChar();
+  }
 }
 
-void Scanner::handleExponent()
-{
-	addToBuffer(CurrentChar);
-}
+void Scanner::handleExponent() { addToBuffer(CurrentChar); }
 
-void Scanner::errorReport(const std::string& msg)
-{
-	errorToken(getTokenLocation().toString() + msg);
+void Scanner::errorReport(const std::string &msg) {
+  errorToken(getTokenLocation().toString() + msg);
 }

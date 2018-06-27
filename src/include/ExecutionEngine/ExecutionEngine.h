@@ -6,165 +6,164 @@
 #ifndef EXECUTION_ENGINE_H
 #define EXECUTION_ENGINE_H
 
-#include <vector>
+#include "../IR/BasicBlock.h"
+#include "../IR/Function.h"
+#include "../IR/IRType.h"
+#include "../IR/Instruction.h"
+#include "../IR/User.h"
+#include "../IR/Value.h"
+#include "GenericValue.h"
 #include <iostream>
-#include <sstream>
-#include <string>
 #include <map>
 #include <memory>
-#include "../IR/Function.h"
-#include "../IR/Instruction.h"
-#include "../IR/IRType.h"
-#include "../IR/BasicBlock.h"
-#include "../IR/Value.h"
-#include "../IR/User.h"
-#include "GenericValue.h"
+#include <sstream>
+#include <string>
+#include <vector>
 
-namespace compiler
-{
-	namespace Interpreter
-	{
-		using namespace IR;
-		using Opcode = Instruction::Opcode;
 
-		/// AllocaHolder - Object to track all of the blocks of memory allocated by
-		/// alloca. When the function returns, this object is "popped off" the execution
-		/// stack, which causes the dtor to be run, which free all the alloca'd memory.
-		class AllocaHolder
-		{
-			std::vector<void*> Allocations;
-		public:
-			AllocaHolder() {}
-			~AllocaHolder()
-			{
-				for (auto item : Allocations)
-					free(item);
-			}
+namespace compiler {
+namespace Interpreter {
+using namespace IR;
+using Opcode = Instruction::Opcode;
 
-			void add(void* Memory) { Allocations.push_back(Memory); }
-		};
+/// AllocaHolder - Object to track all of the blocks of memory allocated by
+/// alloca. When the function returns, this object is "popped off" the execution
+/// stack, which causes the dtor to be run, which free all the alloca'd memory.
+class AllocaHolder {
+  std::vector<void *> Allocations;
 
-		/// ExecutionContext struct - This struct represents one stack frame currently
-		/// executing.
-		struct ExecutionContext
-		{
-			// The currently executing function.
-			FuncPtr CurFunction;
-			// The currently executing BB
-			BBPtr CurBB;
-			// The next instruction to execute.
-			std::list<InstPtr>::iterator CurInst;
-			// Values used in this invocation.
-			// http://stackoverflow.com/questions/24239696/using-std-shared-ptr-as-stdmap-key
-			std::map<ValPtr, GenericValue> Values;
+public:
+  AllocaHolder() {}
+  ~AllocaHolder() {
+    for (auto item : Allocations)
+      free(item);
+  }
 
-			// Holds the call that called subframes.
-			CallInstPtr Caller;
+  void add(void *Memory) { Allocations.push_back(Memory); }
+};
 
-			// Track memory allocated by alloca.
-			AllocaHolder Allocas;
-			InstPtr IssueInstruction()
-			{
-				if (CurInst != CurBB->end())
-					return *CurInst++;
-				return nullptr;
-			}
-			ExecutionContext() : CurFunction(nullptr), CurBB(nullptr) {}
-		};
+/// ExecutionContext struct - This struct represents one stack frame currently
+/// executing.
+struct ExecutionContext {
+  // The currently executing function.
+  FuncPtr CurFunction;
+  // The currently executing BB
+  BBPtr CurBB;
+  // The next instruction to execute.
+  std::list<InstPtr>::iterator CurInst;
+  // Values used in this invocation.
+  // http://stackoverflow.com/questions/24239696/using-std-shared-ptr-as-stdmap-key
+  std::map<ValPtr, GenericValue> Values;
 
-		class Interpreter
-		{
-			// The return value of the called function.
-			GenericValue ExitValue;
+  // Holds the call that called subframes.
+  CallInstPtr Caller;
 
-			// The runtime stack of executing code. The top of the stack is the current
-			// function record.
-			std::vector<ExecutionContext> ECStack;
+  // Track memory allocated by alloca.
+  AllocaHolder Allocas;
+  InstPtr IssueInstruction() {
+    if (CurInst != CurBB->end())
+      return *CurInst++;
+    return nullptr;
+  }
+  ExecutionContext() : CurFunction(nullptr), CurBB(nullptr) {}
+};
 
-			// Base frame.
-			ExecutionContext TopLevelFrame;
+class Interpreter {
+  // The return value of the called function.
+  GenericValue ExitValue;
 
-			// AtExitHandlers - List of functions to call when the program exits,
-			// registered with the atexit() library function.
-			// mosesÔÝÊ±²»Ö§³Ö×¢²á½áÊøº¯Êý¡£
-			// std::vector<Function*> AtExitHandlers;
-			const std::list<ValPtr> &Insts;
-			const MosesIRContext &Ctx;
+  // The runtime stack of executing code. The top of the stack is the current
+  // function record.
+  std::vector<ExecutionContext> ECStack;
 
-		private:
-			/// Methods used to execute code:
-			/// Place a call on the stack.
-			void callFunction(Function *F, const std::vector<GenericValue> &ArgVals);
-			/// Execute Intrinsic call.
-			void callIntrinsic(CallInstPtr I);
+  // Base frame.
+  ExecutionContext TopLevelFrame;
 
-			void LoadValueFromMemory(GenericValue &Dest, GenericValue SrcAddr, IR::TyPtr Ty);
-			void StoreValueToMemory(GenericValue V, GenericValue DestAddr, IR::TyPtr Ty);
-			void PopStackAndSetReturnValue(GenericValue ReturnValue, bool isVoid);
-		public:
-			Interpreter(const std::list<ValPtr> &Insts, const MosesIRContext &Ctx);
-			~Interpreter(){}
+  // AtExitHandlers - List of functions to call when the program exits,
+  // registered with the atexit() library function.
+  // mosesï¿½ï¿½Ê±ï¿½ï¿½Ö§ï¿½ï¿½×¢ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+  // std::vector<Function*> AtExitHandlers;
+  const std::list<ValPtr> &Insts;
+  const MosesIRContext &Ctx;
 
-			/// runAtExitHandlers - Run any functions registered by the program's calls
-			/// to atexit(3).
-			/// void runAtExitHandlers();
+private:
+  /// Methods used to execute code:
+  /// Place a call on the stack.
+  void callFunction(Function *F, const std::vector<GenericValue> &ArgVals);
+  /// Execute Intrinsic call.
+  void callIntrinsic(CallInstPtr I);
 
-			/// create - Create an interpreter ExecutionEngine. This can never fail.
-			static std::shared_ptr<Interpreter> create(const std::list<ValPtr> &Insts, const MosesIRContext &Ctx);
+  void LoadValueFromMemory(GenericValue &Dest, GenericValue SrcAddr,
+                           IR::TyPtr Ty);
+  void StoreValueToMemory(GenericValue V, GenericValue DestAddr, IR::TyPtr Ty);
+  void PopStackAndSetReturnValue(GenericValue ReturnValue, bool isVoid);
 
-			/// StoreValueToMemory - Stores the data in Val of type Ty at address Ptr.
-			/// Ptr is the address of the memory at which to store Val, cast to 
-			/// GenericValue *(It is not a pointer to a GenericValue containing the
-			/// address at which to store Val).
-			void StoreValueToMemory(GenericValue Val, GenericValue *Ptr, IR::TyPtr Ty);
+public:
+  Interpreter(const std::list<ValPtr> &Insts, const MosesIRContext &Ctx);
+  ~Interpreter() {}
 
-			/// run - Start execution with the specified funciton and arguments.
-			GenericValue runFunction(Function *F, const std::vector<GenericValue> &ArgValues);
+  /// runAtExitHandlers - Run any functions registered by the program's calls
+  /// to atexit(3).
+  /// void runAtExitHandlers();
 
-			// Execute one instruction.
-			void executeInstruction();
-			/// Execute instructions until nothing left to do.
-			void run();
+  /// create - Create an interpreter ExecutionEngine. This can never fail.
+  static std::shared_ptr<Interpreter> create(const std::list<ValPtr> &Insts,
+                                             const MosesIRContext &Ctx);
 
-			void visitReturnInst(ReturnInstPtr I);
-			void visitBranchInst(BrInstPtr I);
+  /// StoreValueToMemory - Stores the data in Val of type Ty at address Ptr.
+  /// Ptr is the address of the memory at which to store Val, cast to
+  /// GenericValue *(It is not a pointer to a GenericValue containing the
+  /// address at which to store Val).
+  void StoreValueToMemory(GenericValue Val, GenericValue *Ptr, IR::TyPtr Ty);
 
-			void visitBinaryOperator(BOInstPtr I);
-			void visitCmpInst(CmpInstPtr I);
-			void visitAllocaInst(AllocaInstPtr I);
-			void visitLoadInst(LoadInstPtr I);
-			void visitStoreInst(StoreInstPtr I);
-			void visitGEPInst(GEPInstPtr I);
+  /// run - Start execution with the specified funciton and arguments.
+  GenericValue runFunction(Function *F,
+                           const std::vector<GenericValue> &ArgValues);
 
-			void visitCallInst(CallInstPtr I);
+  // Execute one instruction.
+  void executeInstruction();
+  /// Execute instructions until nothing left to do.
+  void run();
 
-			void visitShl(BOInstPtr I);
-			void visitShr(BOInstPtr I);
+  void visitReturnInst(ReturnInstPtr I);
+  void visitBranchInst(BrInstPtr I);
 
-			void visit(InstPtr I);
+  void visitBinaryOperator(BOInstPtr I);
+  void visitCmpInst(CmpInstPtr I);
+  void visitAllocaInst(AllocaInstPtr I);
+  void visitLoadInst(LoadInstPtr I);
+  void visitStoreInst(StoreInstPtr I);
+  void visitGEPInst(GEPInstPtr I);
 
-			void exitCalled(GenericValue GV);
+  void visitCallInst(CallInstPtr I);
 
-			// SwitchToNewBasicBlock - Start execution in a new basic block and run any
-			// PHI nodes in the top of the block. This is used for intraprocedural
-			// control flow.
-			void SwitchToNewBasicBlock(BBPtr New, ExecutionContext &SF);
+  void visitShl(BOInstPtr I);
+  void visitShr(BOInstPtr I);
 
-			GenericValue getOperandValue(ValPtr V, ExecutionContext &SF);
+  void visit(InstPtr I);
 
-			GenericValue getConstantValue(ConstantPtr C);
+  void exitCalled(GenericValue GV);
 
-			GenericValue getLocalAndGlobalGV(ValPtr V);
+  // SwitchToNewBasicBlock - Start execution in a new basic block and run any
+  // PHI nodes in the top of the block. This is used for intraprocedural
+  // control flow.
+  void SwitchToNewBasicBlock(BBPtr New, ExecutionContext &SF);
 
-			void *getPointerToFunction(Function *F) { return (void*)F; };
+  GenericValue getOperandValue(ValPtr V, ExecutionContext &SF);
 
-			/// SetGenericValue - Update the GenericValue of specified V on the SF.
-			void SetGenericValue(ValPtr V, GenericValue GV, ExecutionContext &SF);
+  GenericValue getConstantValue(ConstantPtr C);
 
-			/// callFunction - Switch the context info and create a new stack frame.
-			void callFunction(FuncPtr Function, std::vector<GenericValue> ArgVals);
-		};
-	}	
-}
+  GenericValue getLocalAndGlobalGV(ValPtr V);
+
+  void *getPointerToFunction(Function *F) { return (void *)F; };
+
+  /// SetGenericValue - Update the GenericValue of specified V on the SF.
+  void SetGenericValue(ValPtr V, GenericValue GV, ExecutionContext &SF);
+
+  /// callFunction - Switch the context info and create a new stack frame.
+  void callFunction(FuncPtr Function, std::vector<GenericValue> ArgVals);
+};
+} // namespace Interpreter
+} // namespace compiler
 
 #endif

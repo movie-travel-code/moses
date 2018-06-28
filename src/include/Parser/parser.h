@@ -261,7 +261,7 @@ class Parser
 	std::shared_ptr<AnonymousType> ParseAnony();
 
   public:
-	std::shared_ptr<Scope> getCurScope() const { Actions.getCurScope(); }
+	std::shared_ptr<Scope> getCurScope() const { return Actions.getCurScope(); }
 	std::vector<StmtASTPtr> getAST() const { return AST; }
 
   private:

@@ -155,12 +155,12 @@ bool EvaluatedExprVisitorBase::EvalDeclRefExpr(DeclRefExprPtr DRE,
     // }
     // add(10, 20);      <----------------evaluated
     // �����Ѿ��õ��� <lhs, 10> <rhs, 20>������evaluate "return lhs + rhs;"
-    auto bookkeeping = ActiveBookingInfo.back();
-    auto num = bookkeeping.second;
+    // auto bookkeeping = ActiveBookingInfo.back();
+    // auto num = bookkeeping.second;
     auto stackSize = ActiveStack.size();
     // ActiveStack β����ʼ����Ƿ����parm�������ڣ���ֱ�ӷ��ء�
     // <start, Evalinfo> <lhs, EvalInfo> <rhs, EvalInfo>
-    for (unsigned i = stackSize - 1; i >= 0; i--) {
+    for (int i = stackSize - 1; i >= 0; i--) {
       if (ActiveStack[i].first == PD->getParmName()) {
         info = ActiveStack[i].second;
         return true;

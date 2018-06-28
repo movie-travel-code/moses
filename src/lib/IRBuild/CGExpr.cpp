@@ -343,6 +343,7 @@ ValPtr ModuleBuilder::EmitUnaryExpr(const UnaryExpr *UE) {
     print(ret);
     return ret;
   }
+  return nullptr;
 }
 
 ValPtr ModuleBuilder::EmitMemberExpr(const MemberExpr *ME) { return nullptr; }

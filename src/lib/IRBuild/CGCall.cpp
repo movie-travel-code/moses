@@ -36,7 +36,7 @@ public:
   ASTToIRMapping(const CGFunctionInfo &FI) : TotalIRArgs(0), HasSRet(false) {
     construct(FI);
   }
-  bool hasSRetArg() const { HasSRet; }
+  bool hasSRetArg() const { return HasSRet; }
   unsigned totalIRArgs() const { return TotalIRArgs; }
 
   std::pair<unsigned, unsigned> getIRArgs(unsigned ArgNo) const {

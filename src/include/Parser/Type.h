@@ -5,276 +5,251 @@
 //===---------------------------------------------------------------------===//
 #ifndef TYPE_INCLUDE
 #define TYPE_INCLUDE
-#include <string>
-#include <vector>
-#include <memory>
-#include <utility>
-#include <cassert>
-#include <algorithm>
-#include "../Support/error.h"
 #include "../Lexer/TokenKinds.h"
 #include "../Support/Hasing.h"
 #include "../Support/TypeSet.h"
+#include "../Support/error.h"
+#include <algorithm>
+#include <cassert>
+#include <memory>
+#include <string>
+#include <utility>
+#include <vector>
 
-namespace compiler
-{
-	namespace ast
-	{
-		class FunctionDecl;
-		// Note: VOIDÖ»ÓÃÓÚº¯Êý·µ»ØÀàÐÍ
-		enum class TypeKind : unsigned char
-		{
-			INT,
-			BOOL,
-			VOID,
-			USERDEFIED, 
-			ANONYMOUS
-		};		
 
-		class Type
-		{
-		public:
-			typedef std::shared_ptr<Type> TyPtr;
-		protected:
-			TypeKind Kind;
-		public:
-			Type(TypeKind kind, bool isConst) : Kind(kind){}
-			Type(TypeKind kind) : Kind(kind) {}
+namespace compiler {
+namespace ast {
+class FunctionDecl;
+// Note: VOIDÖ»ï¿½ï¿½ï¿½Úºï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+enum class TypeKind : unsigned char { INT, BOOL, VOID, USERDEFIED, ANONYMOUS };
 
-			virtual TyPtr const_remove() const;
-			// Shit code!
-			virtual unsigned long size() const { return 0; }
-			virtual unsigned MemberNum() const { return 1; }
-			virtual std::pair<TyPtr, std::string> operator[](unsigned idx) const
-			{
-				assert(0 && "There is no chance to call this function.");
-				return std::make_pair(nullptr, "");
-			}
-			virtual TyPtr StripOffShell() const { return nullptr; };
+class Type {
+public:
+  typedef std::shared_ptr<Type> TyPtr;
 
-			bool operator==(const Type& rhs) const;
- 			TypeKind getKind() const { return Kind; }
-			static TypeKind checkTypeKind(tok::TokenValue kind);
+protected:
+  TypeKind Kind;
 
-			virtual std::string getTypeName() const;
-			virtual ~Type() {}
-		};
+public:
+  Type(TypeKind kind, bool isConst) : Kind(kind) {}
+  Type(TypeKind kind) : Kind(kind) {}
 
-		class BuiltinType final : public Type
-		{
-		public:
-			BuiltinType(TypeKind kind) : Type(kind) {}
-			virtual unsigned long size() const
-			{
-				switch (Kind)
-				{
-				case compiler::ast::TypeKind::INT:
-					return 32;
-				case compiler::ast::TypeKind::BOOL:
-					return 32;
-				case compiler::ast::TypeKind::VOID:
-					return 0;
-				default:
-					assert(0 && "Unreachable code!");
-				}
-				return 0;
-			}
-		};
+  virtual TyPtr const_remove() const;
+  // Shit code!
+  virtual unsigned long size() const { return 0; }
+  virtual unsigned MemberNum() const { return 1; }
+  virtual std::pair<TyPtr, std::string> operator[](unsigned idx) const {
+    assert(0 && "There is no chance to call this function.");
+    return std::make_pair(nullptr, "");
+  }
+  virtual TyPtr StripOffShell() const { return nullptr; };
 
-		/// \brief UserDefinedType - This Represents class type.
-		// To Do: Shit Code!
-		// ÈÝÒ×ÒýÆðÆçÒå.
-		class UserDefinedType final : public Type
-		{
-			// The user defined type, e.g. class A {}
-			std::string TypeName;
-			std::vector< std::pair<TyPtr, std::string> > subTypes;
-		public:
-			UserDefinedType(TypeKind kind, std::string TypeName) :
-				Type(kind), TypeName(TypeName) {}
+  bool operator==(const Type &rhs) const;
+  TypeKind getKind() const { return Kind; }
+  static TypeKind checkTypeKind(tok::TokenValue kind);
 
-			UserDefinedType(TypeKind kind, std::string TypeName,
-				std::vector<std::pair<TyPtr, std::string>> subTypes) :
-				Type(kind), TypeName(TypeName) {}							
+  virtual std::string getTypeName() const;
+  virtual ~Type() {}
+};
 
-			// StripOffShell - ÓÐÊ±ÐèÒªÈ¥µôÀàÐÍµÄ±í²ãÎÞÓÃµÄÐÅÏ¢¡£
-			// e.g.		class A 
-			//			{
-			//				var m : int;
-			//			};
-			//			class B
-			//			{
-			//				var m : A;
-			//			};
-			// class BÊµ¼ÊÉÏÖ»ÓÐ "var m : A" ÕâÒ»ÖÖÀàÐÍ£¬ÔÚ×÷Îª·µ»ØÖµ»òÕß²ÎÊý´«µÝÊ±£¬ÓÐ¿ÉÄÜÐèÒª½«
-			// B coerce ³É int.
-			TyPtr StripOffShell() const;
+class BuiltinType final : public Type {
+public:
+  BuiltinType(TypeKind kind) : Type(kind) {}
+  virtual unsigned long size() const {
+    switch (Kind) {
+    case compiler::ast::TypeKind::INT:
+      return 32;
+    case compiler::ast::TypeKind::BOOL:
+      return 32;
+    case compiler::ast::TypeKind::VOID:
+      return 0;
+    default:
+      assert(0 && "Unreachable code!");
+    }
+    return 0;
+  }
+};
 
-			bool HaveMember(std::string name) const;
-			bool operator==(const Type& rhs) const;
-			TyPtr getMemberType(std::string name) const;
-			int getIdx(std::string name) const;
-			unsigned long size() const;
-			virtual unsigned MemberNum() const { return subTypes.size(); }
+/// \brief UserDefinedType - This Represents class type.
+// To Do: Shit Code!
+// ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
+class UserDefinedType final : public Type {
+  // The user defined type, e.g. class A {}
+  std::string TypeName;
+  std::vector<std::pair<TyPtr, std::string>> subTypes;
 
-			std::pair<TyPtr, std::string> operator[](unsigned index) const { return subTypes[index]; }
-			std::string getTypeName() const { return TypeName; }			
-			std::vector<std::pair<TyPtr, std::string>> getMemberTypes() const { return subTypes; }
-			void addSubType(TyPtr subType, std::string name) { subTypes.push_back({ subType, name }); }
-			
-			virtual ~UserDefinedType() {}
-		};		
+public:
+  UserDefinedType(TypeKind kind, std::string TypeName)
+      : Type(kind), TypeName(TypeName) {}
 
-		/// Note: AnonymousTypeÊÇmosesºÜÖØÒªµÄÌØÐÔ
-		/// var num = {{132, 23}, num * 9, {false, 10}};
-		/// ÆäÖÐnumËù¾ßÓÐµÄÀàÐÍ¾ÍÊÇÄäÃûÀàÐÍ.
-		class AnonymousType final : public Type
-		{
-			AnonymousType() = delete;
-			std::vector<TyPtr> subTypes;
-		public:
-			AnonymousType(std::vector<TyPtr> types) : 
-				Type(TypeKind::ANONYMOUS), subTypes(types) {}
+  UserDefinedType(TypeKind kind, std::string TypeName,
+                  std::vector<std::pair<TyPtr, std::string>> subTypes)
+      : Type(kind), TypeName(TypeName) {}
 
-			TyPtr getSubType(unsigned index) const
-			{
-				assert(index < subTypes.size() && "Index out of range!");
-				return subTypes[index];
-			}
+  // StripOffShell - ï¿½ï¿½Ê±ï¿½ï¿½ÒªÈ¥ï¿½ï¿½ï¿½ï¿½ï¿½ÍµÄ±ï¿½ï¿½ï¿½ï¿½ï¿½Ãµï¿½ï¿½ï¿½Ï¢ï¿½ï¿½
+  // e.g.		class A
+  //			{
+  //				var m : int;
+  //			};
+  //			class B
+  //			{
+  //				var m : A;
+  //			};
+  // class BÊµï¿½ï¿½ï¿½ï¿½Ö»ï¿½ï¿½ "var m : A" ï¿½ï¿½Ò»ï¿½ï¿½ï¿½ï¿½ï¿½Í£ï¿½ï¿½ï¿½ï¿½ï¿½Îªï¿½ï¿½ï¿½ï¿½Öµï¿½ï¿½ï¿½ß²ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½Ê±ï¿½ï¿½ï¿½Ð¿ï¿½ï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½
+  // B coerce ï¿½ï¿½ int.
+  TyPtr StripOffShell() const;
 
-			std::pair<TyPtr, std::string> operator[](unsigned idx) const
-			{
-				return std::make_pair(subTypes[idx], "");
-			}
+  bool HaveMember(std::string name) const;
+  bool operator==(const Type &rhs) const;
+  TyPtr getMemberType(std::string name) const;
+  int getIdx(std::string name) const;
+  unsigned long size() const;
+  virtual unsigned MemberNum() const { return subTypes.size(); }
 
-			std::vector<TyPtr> getSubTypes() const
-			{
-				return subTypes;			
-			}
-			// To Do: ÕâÀïÓëUserDefinedTypeÓÐÈßÓà¡£
-			TyPtr StripOffShell() const;
-			unsigned getSubTypesNum() const { return subTypes.size(); };
-			void getTypes(std::vector<TyPtr>& types) const;
+  std::pair<TyPtr, std::string> operator[](unsigned index) const {
+    return subTypes[index];
+  }
+  std::string getTypeName() const { return TypeName; }
+  std::vector<std::pair<TyPtr, std::string>> getMemberTypes() const {
+    return subTypes;
+  }
+  void addSubType(TyPtr subType, std::string name) {
+    subTypes.push_back({subType, name});
+  }
 
-			unsigned long size() const;
-			virtual unsigned MemberNum() const { return subTypes.size(); }
-		};
+  virtual ~UserDefinedType() {}
+};
 
-		namespace TypeKeyInfo
-		{
-			typedef std::shared_ptr<UserDefinedType> UDTyPtr;
-			typedef std::shared_ptr<ast::Type> TyPtr;
-			typedef std::shared_ptr<AnonymousType> AnonTyPtr;
+/// Note: AnonymousTypeï¿½ï¿½mosesï¿½ï¿½ï¿½ï¿½Òªï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+/// var num = {{132, 23}, num * 9, {false, 10}};
+/// ï¿½ï¿½ï¿½ï¿½numï¿½ï¿½ï¿½ï¿½ï¿½Ðµï¿½ï¿½ï¿½ï¿½Í¾ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½.
+class AnonymousType final : public Type {
+  AnonymousType() = delete;
+  std::vector<TyPtr> subTypes;
 
-			using namespace Hashing;			
+public:
+  AnonymousType(std::vector<TyPtr> types)
+      : Type(TypeKind::ANONYMOUS), subTypes(types) {}
 
-			struct UserDefinedTypeKeyInfo
-			{
-				struct KeyTy
-				{
-					std::vector<TyPtr> SubTypes;
-					std::string Name;
-					KeyTy(std::vector<TyPtr> SubTy, std::string Name) : SubTypes(SubTy), Name(Name) {}
+  TyPtr getSubType(unsigned index) const {
+    assert(index < subTypes.size() && "Index out of range!");
+    return subTypes[index];
+  }
 
-					KeyTy(const UDTyPtr& U) : Name(U->getTypeName())
-					{
-						for (auto item : U->getMemberTypes())
-						{
-							SubTypes.push_back(item.first);
-						}						
-					}
+  std::pair<TyPtr, std::string> operator[](unsigned idx) const {
+    return std::make_pair(subTypes[idx], "");
+  }
 
-					bool operator==(const KeyTy& rhs) const
-					{
-						if (Name != rhs.Name)
-							return false;
-						if (SubTypes == rhs.SubTypes)
-							return true;
-						return false;
-					}
+  std::vector<TyPtr> getSubTypes() const { return subTypes; }
+  // To Do: ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½UserDefinedTypeï¿½ï¿½ï¿½ï¿½ï¿½à¡£
+  TyPtr StripOffShell() const;
+  unsigned getSubTypesNum() const { return subTypes.size(); };
+  void getTypes(std::vector<TyPtr> &types) const;
 
-					bool operator!=(const KeyTy& rhs) const { return !this->operator==(rhs); }
-				};
-				static unsigned long long getHashValue(const KeyTy& Key)
-				{
-					return hash_combine_range(hash_value(Key.Name), Key.SubTypes.begin(),
-						Key.SubTypes.end());
-				}
-				static unsigned long long getHashValue(const UDTyPtr& type) { return getHashValue(KeyTy(type)); }
-				static unsigned long long getAnonHashValue(const KeyTy& Key)
-				{
-					return hash_combine_range(0, Key.SubTypes.begin(), Key.SubTypes.end());
-				}
-				static unsigned long long getAnonHashValue(const UDTyPtr& type)
-				{
-					return getAnonHashValue(KeyTy(type));
-				}
-				static bool isEqual(const KeyTy& LHS, UDTyPtr RHS) { return LHS == KeyTy(RHS); }
-				static bool isEqual(UDTyPtr LHS, UDTyPtr RHS) { return LHS == RHS; }
-			};
+  unsigned long size() const;
+  virtual unsigned MemberNum() const { return subTypes.size(); }
+};
 
-			struct AnonTypeKeyInfo
-			{
-				struct KeyTy
-				{
-					std::vector<TyPtr> SubTypes;
-					KeyTy(const std::vector<TyPtr>& E) : SubTypes(E) {}
-					KeyTy(AnonTyPtr anony) : SubTypes(anony->getSubTypes()) {}
+namespace TypeKeyInfo {
+typedef std::shared_ptr<UserDefinedType> UDTyPtr;
+typedef std::shared_ptr<ast::Type> TyPtr;
+typedef std::shared_ptr<AnonymousType> AnonTyPtr;
 
-					bool operator==(const KeyTy& rhs) const
-					{
-						if (rhs.SubTypes == SubTypes)
-							return true;
-						return false;
-					}
-					bool operator!=(const KeyTy& rhs) const
-					{
-						return !this->operator==(rhs);
-					}
-				};
-				static unsigned long long getHashValue(const KeyTy& Key)
-				{
-					return hash_combine_range(0, Key.SubTypes.begin(), Key.SubTypes.end());
-				}
-				static unsigned long long getHashValue(AnonTyPtr RHS) { return getHashValue(KeyTy(RHS)); }
-				static bool isEqual(const KeyTy& LHS, AnonTyPtr RHS) { return LHS == KeyTy(RHS); }
-				static bool isEqual(AnonTyPtr LHS, AnonTyPtr RHS) { return LHS == RHS; }
-			};
+using namespace Hashing;
 
-			struct TypeKeyInfo
-			{
-				static unsigned long long getHashValue(TyPtr type)
-				{
-					if (UDTyPtr UD = std::dynamic_pointer_cast<UserDefinedType>(type))
-					{
-						return UserDefinedTypeKeyInfo::getHashValue(UD);
-					}
-					if (AnonTyPtr AnonT = std::dynamic_pointer_cast<AnonymousType>(type))
-					{
-						return AnonTypeKeyInfo::getHashValue(AnonT);
-					}
-					if (std::shared_ptr<BuiltinType> BT = std::dynamic_pointer_cast<BuiltinType>(type))
-					{
-						std::hash<std::shared_ptr<BuiltinType>> hasher;
-						return hasher(BT);
-					}
-				}
+struct UserDefinedTypeKeyInfo {
+  struct KeyTy {
+    std::vector<TyPtr> SubTypes;
+    std::string Name;
+    KeyTy(std::vector<TyPtr> SubTy, std::string Name)
+        : SubTypes(SubTy), Name(Name) {}
 
-				/// \brief This just for UserDefinedType.
-				static unsigned long long getAnonHashValue(TyPtr type)
-				{
-					if (UDTyPtr UD = std::dynamic_pointer_cast<UserDefinedType>(type))
-					{
-						return UserDefinedTypeKeyInfo::getHashValue(UD);
-					}
-					else
-					{
-						/// To Do: ErrorReport
-						return 0;
-					}
-				}
-			};
-		};
-	}
-}
+    KeyTy(const UDTyPtr &U) : Name(U->getTypeName()) {
+      for (auto item : U->getMemberTypes()) {
+        SubTypes.push_back(item.first);
+      }
+    }
+
+    bool operator==(const KeyTy &rhs) const {
+      if (Name != rhs.Name)
+        return false;
+      if (SubTypes == rhs.SubTypes)
+        return true;
+      return false;
+    }
+
+    bool operator!=(const KeyTy &rhs) const { return !this->operator==(rhs); }
+  };
+  static unsigned long long getHashValue(const KeyTy &Key) {
+    return hash_combine_range(hash_value(Key.Name), Key.SubTypes.begin(),
+                              Key.SubTypes.end());
+  }
+  static unsigned long long getHashValue(const UDTyPtr &type) {
+    return getHashValue(KeyTy(type));
+  }
+  static unsigned long long getAnonHashValue(const KeyTy &Key) {
+    return hash_combine_range(0, Key.SubTypes.begin(), Key.SubTypes.end());
+  }
+  static unsigned long long getAnonHashValue(const UDTyPtr &type) {
+    return getAnonHashValue(KeyTy(type));
+  }
+  static bool isEqual(const KeyTy &LHS, UDTyPtr RHS) {
+    return LHS == KeyTy(RHS);
+  }
+  static bool isEqual(UDTyPtr LHS, UDTyPtr RHS) { return LHS == RHS; }
+};
+
+struct AnonTypeKeyInfo {
+  struct KeyTy {
+    std::vector<TyPtr> SubTypes;
+    KeyTy(const std::vector<TyPtr> &E) : SubTypes(E) {}
+    KeyTy(AnonTyPtr anony) : SubTypes(anony->getSubTypes()) {}
+
+    bool operator==(const KeyTy &rhs) const {
+      if (rhs.SubTypes == SubTypes)
+        return true;
+      return false;
+    }
+    bool operator!=(const KeyTy &rhs) const { return !this->operator==(rhs); }
+  };
+  static unsigned long long getHashValue(const KeyTy &Key) {
+    return hash_combine_range(0, Key.SubTypes.begin(), Key.SubTypes.end());
+  }
+  static unsigned long long getHashValue(AnonTyPtr RHS) {
+    return getHashValue(KeyTy(RHS));
+  }
+  static bool isEqual(const KeyTy &LHS, AnonTyPtr RHS) {
+    return LHS == KeyTy(RHS);
+  }
+  static bool isEqual(AnonTyPtr LHS, AnonTyPtr RHS) { return LHS == RHS; }
+};
+
+struct TypeKeyInfo {
+  static unsigned long long getHashValue(TyPtr type) {
+    if (UDTyPtr UD = std::dynamic_pointer_cast<UserDefinedType>(type)) {
+      return UserDefinedTypeKeyInfo::getHashValue(UD);
+    }
+    if (AnonTyPtr AnonT = std::dynamic_pointer_cast<AnonymousType>(type)) {
+      return AnonTypeKeyInfo::getHashValue(AnonT);
+    }
+    if (std::shared_ptr<BuiltinType> BT =
+            std::dynamic_pointer_cast<BuiltinType>(type)) {
+      std::hash<std::shared_ptr<BuiltinType>> hasher;
+      return hasher(BT);
+    }
+    return 0;
+  }
+
+  /// \brief This just for UserDefinedType.
+  static unsigned long long getAnonHashValue(TyPtr type) {
+    if (UDTyPtr UD = std::dynamic_pointer_cast<UserDefinedType>(type)) {
+      return UserDefinedTypeKeyInfo::getHashValue(UD);
+    }
+    /// To Do: ErrorReport
+    return 0;
+  }
+};
+}; // namespace TypeKeyInfo
+} // namespace ast
+} // namespace compiler
 #endif

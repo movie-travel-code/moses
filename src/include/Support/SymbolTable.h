@@ -93,7 +93,7 @@ private:
 public:
   Scope(std::string name, unsigned depth, std::shared_ptr<Scope> paren,
         ScopeKind kind)
-      : ScopeName(name), Parent(paren), Depth(depth), Flags(kind) {}
+      : ScopeName(name), Parent(paren), Flags(kind), Depth(depth) {}
 
   /// getFlags - Return the flags for this scope.
   unsigned getFlags() const { return Flags; }

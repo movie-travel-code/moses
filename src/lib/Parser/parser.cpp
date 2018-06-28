@@ -3,7 +3,7 @@
 // This file is used to implement the parser.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/Parser/Parser.h"
+#include "../../include/Parser/parser.h"
 using namespace compiler::parse;
 using namespace compiler::parse::OperatorPrec;
 using namespace compiler::lex;
@@ -53,7 +53,7 @@ static Level getBinOpPrecedence(TokenValue Kind) {
 /// Note: ��Ȼmoses�����������Ƶ�������moses��Ȼ�Ǿ�̬��������
 /// ��moses�У�ÿ�������������ڱ����ڼ䶼�ǿ���Ψһȷ����
 Parser::Parser(Scanner &scan, Sema &sema, ASTContext &Ctx)
-    : scan(scan), Actions(sema), Ctx(Ctx) {
+    : scan(scan), Ctx(Ctx), Actions(sema) {
   scan.getNextToken();
   Actions.getScannerPointer(&(this->scan));
 }

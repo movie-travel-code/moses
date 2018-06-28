@@ -189,7 +189,7 @@ private:
   ValPtr Val;
 
 public:
-  Use() : Val(nullptr), U(nullptr) {}
+  Use() : U(nullptr), Val(nullptr) {}
   Use(ValPtr Val, User *U);
   Use(const Use &u);
   ~Use();

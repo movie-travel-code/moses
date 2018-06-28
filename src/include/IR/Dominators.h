@@ -46,7 +46,7 @@ private:
 
 public:
   DomTreeNode(BBPtr BB = nullptr)
-      : TheBB(BB), IDom(nullptr), DFSInNum(-1), DFSOutNum(-1), PostNumber(-1),
+      : TheBB(BB), PostNumber(-1), DFSInNum(-1), DFSOutNum(-1), IDom(nullptr),
         Father(nullptr) {}
 
   BBPtr getBlock() const { return TheBB; }

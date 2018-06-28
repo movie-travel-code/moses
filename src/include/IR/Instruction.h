@@ -111,6 +111,7 @@ public:
                     default:
                             return false;
                     }*/
+    return true;
   }
 
   // Return true if this instruction may modify memory.
@@ -228,7 +229,7 @@ public:
   static bool classof(InstPtr I) { return I->isBinaryOp(); }
 
   /// \brief Print the BinaryOperator.
-  void Print(std::ostringstream &out);
+  void Print(std::ostringstream &out) override;
 };
 
 //===-------------------------------------------------------------===//
@@ -290,7 +291,7 @@ public:
   }
 
   /// \brief Print the CmpInst.
-  void Print(std::ostringstream &out);
+  void Print(std::ostringstream &out) override;
 };
 
 //===-------------------------------------------------------------===//
@@ -314,7 +315,7 @@ public:
   TyPtr getAllocatedType() const { return AllocatedType; }
 
   /// \brief Print the AllocaInst.
-  void Print(std::ostringstream &out);
+  void Print(std::ostringstream &out) override;
 };
 
 //===-------------------------------------------------------------===//
@@ -378,7 +379,7 @@ public:
                             std::string Name = "",
                             InstPtr InsertBefore = nullptr);
 
-  static CallInstPtr CallInst::Create(IntrinsicPtr Intr,
+  static CallInstPtr Create(IntrinsicPtr Intr,
                                       std::vector<ValPtr> Args, BBPtr parent,
                                       std::string Name = "",
                                       InstPtr InsertBefore = nullptr);
@@ -429,7 +430,7 @@ public:
   }
 
   /// \brief Print the CallInst.
-  void Print(std::ostringstream &out);
+  void Print(std::ostringstream &out) override;
 };
 
 //===---------------------------------------------------------------===//
@@ -475,7 +476,7 @@ public:
   }
 
   /// \brief Print the ExtractValueInst.
-  void Print(std::ostringstream &out);
+  void Print(std::ostringstream &out) override;
 };
 
 //===---------------------------------------------------------------===//
@@ -532,11 +533,11 @@ public:
   ValPtr getIncomingValue(unsigned i) const { return nullptr; }
   void setIncomingValue(unsigned i, ValPtr V) {}
   /// getIncomingBlock - Return incoming basic block number @p i.
-  BBPtr getIncomingBlock(unsigned i) const {}
+  BBPtr getIncomingBlock(unsigned i) const { return nullptr; }
 
   /// getIncomingBlock - Return incoming basic block corresponding
   // to an operand of the PHI.
-  BBPtr getIncomingBlock(const Use &U) const {}
+  BBPtr getIncomingBlock(const Use &U) const { return nullptr; }
   void setIncomingBlock(unsigned i, BBPtr BB) {}
   /// addIncoming - Add an incoming value to the end of the PHI list.
   void addIncoming(ValPtr V, BBPtr BB) {}
@@ -603,7 +604,7 @@ public:
   }
 
   /// \brief Print the ReturnInst.
-  void Print(std::ostringstream &out);
+  void Print(std::ostringstream &out) override;
 };
 
 //===----------------------------------------------------------------===//
@@ -646,9 +647,9 @@ public:
            "Condition branch instruction must have 3 operands!");
     Operands[2] = V;
   }
-  unsigned getNumSuccessors() const { return 1 + isConditional(); }
-  BBPtr getSuccessor(unsigned i) const;
-  void setSuccessor(unsigned idx, BBPtr NewSucc);
+  unsigned getNumSuccessors() const override { return 1 + isConditional(); }
+  BBPtr getSuccessor(unsigned i) const override;
+  void setSuccessor(unsigned idx, BBPtr NewSucc) override;
 
   // Methods for support type inquiry through isa, cast and dyn_cast:
   static bool classof(InstPtr I) {
@@ -656,7 +657,7 @@ public:
   }
 
   /// \brief Print the BranchInst.
-  void Print(std::ostringstream &out);
+  void Print(std::ostringstream &out) override;
 };
 
 //===----------------------------------------------------------------===//
@@ -679,7 +680,7 @@ public:
   }
 
   /// \brief Print the LoadInst.
-  void Print(std::ostringstream &out);
+  void Print(std::ostringstream &out) override;
 };
 
 //===----------------------------------------------------------------===//

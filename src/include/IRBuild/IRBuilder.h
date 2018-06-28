@@ -114,8 +114,8 @@ struct FunctionBuilderStatus {
 
   explicit FunctionBuilderStatus()
       : CurFuncDecl(nullptr), CGFnInfo(nullptr), FnRetTy(nullptr),
-        CurFn(nullptr), ReturnValue(nullptr), NumReturnExprs(0),
-        TopLevelTempCounter(0) {}
+        CurFn(nullptr), NumReturnExprs(0), TopLevelTempCounter(0),
+        ReturnValue(nullptr) {}
 };
 
 /// \brief ModuleBuilder - This class for module code generation.
@@ -146,17 +146,6 @@ private:
   CodeGenTypes Types;
 
   // IRs for the whole translation-unit.
-  // e.g.		var num = 10; ------------
-  //			if (num > 0)                                |    BBPtr |
-  //			{ ------------ 				num = -num;                             |
-  //BBPtr   | 			}                                            ------------ 			func
-  //add(lhs : int, rhs : int) -> int       |  FuncPtr   | 			{ ------------ 				var sum
-  //= 0; 				while(lhs > rhs)
-  //				{
-  //					lhs--;
-  //					sum = sum + rhs;
-  //				}
-  //			}
   std::list<ValPtr> IRs;
 
   BBPtr CurBB;
@@ -236,15 +225,7 @@ private:
   // Helper for variable declaration generation.
   //===-----------------------------------------------------------===//
   class VarEmission {
-    const VarDecl *var;
-
-    /// The address of the alloca. Invalid if the variable was emitted as a
-    /// global constant.
-
-    /// True if the variable is of aggregate type and has a constant
-    /// initializer.
-    bool IsConstantAggregate;
-    bool wasEmittedAsGlobal() const {}
+    bool wasEmittedAsGlobal() const { return true; }
 
   public:
   };

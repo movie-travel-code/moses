@@ -30,8 +30,10 @@ std::string Type::getTypeName() const {
   case TypeKind::VOID:
     return "void";
   case TypeKind::ANONYMOUS:
+  case TypeKind::USERDEFIED:
     return "";
   }
+  return "";
 }
 
 // remove const attribute.

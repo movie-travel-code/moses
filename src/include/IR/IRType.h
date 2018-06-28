@@ -170,7 +170,7 @@ public:
   /// Create literal struct type.
   static IRStructTyPtr get(MosesIRContext &Ctx, ASTTyPtr type);
 
-  virtual unsigned getSize() const;
+  virtual unsigned getSize() const override;
 
   bool isLiteral() const { return Literal; }
 

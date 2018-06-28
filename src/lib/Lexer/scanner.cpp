@@ -218,7 +218,6 @@ void Scanner::handleEOFState() {
 
 void Scanner::handleNumberState() {
   CurLoc = getTokenLocation();
-  bool matched = false;
   bool isFloat = false;
   int numberBase = 10;
 

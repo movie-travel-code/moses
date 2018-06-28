@@ -332,7 +332,7 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok,
     }
   }
 
-  tok::TokenValue tokKind = tok.getKind();
+  // tok::TokenValue tokKind = tok.getKind();
 
   // Note:����mosesֻ���������ͣ�int��bool.
   // To Do: moses��û��ʵ������ת����type cast��

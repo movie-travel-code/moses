@@ -101,7 +101,7 @@ ReturnStmtPtr FunctionDecl::isEvalCandiateAndGetReturnStmt() const {
   if (CompoundStmtPtr body =
           std::dynamic_pointer_cast<CompoundStmt>(funcBody)) {
     if (body->getSize() != 1)
-      return false;
+      return nullptr;
     if (ReturnStmtPtr returnStmt =
             std::dynamic_pointer_cast<ReturnStatement>(body->getSubStmt(0))) {
       return returnStmt;

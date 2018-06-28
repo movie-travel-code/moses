@@ -52,7 +52,7 @@ public:
   bool RemoveInst(const Value *val);
   void setParent(FuncPtr parent) { Parent = parent; }
   // Specialize setName to take care of symbol table majik
-  virtual void setName(std::string name) { Name = name; }
+  virtual void setName(const std::string &name) override { Name = name; }
   // getParent - Return the enclosing method, or null if none
   FuncPtr getParent() { return Parent; }
 
@@ -97,7 +97,7 @@ public:
   }
 
   /// \brief Print the BasicBlock.
-  void Print(std::ostringstream &out);
+  void Print(std::ostringstream &out) override;
 };
 } // namespace IR
 } // namespace compiler

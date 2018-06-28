@@ -187,7 +187,7 @@ void DominatorTree::Calcuate() {
       auto PredDomNodeFromCFG = getDomNodePredsFromCFG(CurNode);
 
       // (1) Find the first non-nullptr predecessor.
-      auto getAvailiablePred = [this, &PredDomNodeFromCFG]() -> DomTreeNodePtr {
+      auto getAvailiablePred = [&PredDomNodeFromCFG]() -> DomTreeNodePtr {
         // ��Preds���ҵ�һ��IDom��Ϊ�յ�predecessor.
         for (auto pred : PredDomNodeFromCFG) {
           if (pred->getIDom() != nullptr)

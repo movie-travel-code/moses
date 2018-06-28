@@ -363,7 +363,7 @@ public:
            const std::string &Callee, std::vector<std::shared_ptr<Expr>> Args,
            ExprValueKind vk, FunctionDeclPtr FD, bool canDoEvaluate)
       : Expr(start, end, type, vk, canDoEvaluate), CalleeName(Callee),
-        Args(Args), FuncDecl(FD) {}
+        FuncDecl(FD), Args(Args) {}
 
   unsigned getArgsNum() const { return Args.size(); }
 
@@ -398,7 +398,7 @@ public:
              SourceLocation operatorloc, std::string name, bool canDoEvaluate,
              int idx)
       : Expr(start, end, type, ExprValueKind::VK_LValue, canDoEvaluate),
-        Base(base), OperatorLoc(operatorloc), MemberName(name), idx(idx) {}
+        Base(base), MemberName(name), OperatorLoc(operatorloc), idx(idx) {}
 
   void setBase(ExprASTPtr E) { Base = E; }
   std::string getMemberName() const { return MemberName; }
@@ -613,7 +613,7 @@ class VarDecl : public DeclStatement {
 public:
   VarDecl(SourceLocation start, SourceLocation end, std::string name,
           std::shared_ptr<Type> type, bool isConst, ExprASTPtr init)
-      : DeclStatement(start, end, type), name(name), IsConst(isConst),
+      : DeclStatement(start, end, type), IsConst(isConst), name(name),
         InitExpr(init) {}
   std::string getName() const { return name; }
 
@@ -692,7 +692,7 @@ public:
                const std::string &name, std::vector<ParmDeclPtr> Args,
                StmtASTPtr body, std::shared_ptr<Type> returnType)
       : DeclStatement(start, end, nullptr), FDName(name), parameters(Args),
-        funcBody(body), paraNum(parameters.size()), returnType(returnType) {}
+        paraNum(parameters.size()), funcBody(body), returnType(returnType) {}
 
   virtual ~FunctionDecl() {}
   unsigned getParaNum() const { return paraNum; }

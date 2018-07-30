@@ -58,11 +58,6 @@ enum class context : unsigned short
 };
 using namespace tok;
 
-// ʹ��Follow���Ͻ����﷨����ָ��������﷨�����ĺ������ķ�û��ǿ��Ӧ�������е��ķ���û�и���
-// SafeSymbols.
-// StmtSafeSymbols����statement, if-statement, while-statement, break-statement,
-// continue-statement, return-statement, expression-statement, declaration-statement,
-// varaiable-declaration, class-declaration, constant-declaration
 static std::vector<TokenValue> StmtSafeSymbols = {
 	TokenValue::PUNCTUATOR_Left_Brace, TokenValue::KEYWORD_while,
 	TokenValue::KEYWORD_continue, TokenValue::KEYWORD_if,
@@ -85,7 +80,6 @@ static std::vector<TokenValue> CompoundStmtSafeSymbols = {
 	TokenValue::BOOL_TRUE, TokenValue::BOOL_FALSE, TokenValue::KEYWORD_func,
 	TokenValue::PUNCTUATOR_Right_Brace};
 
-// ExprSafeSymbols����expression, assignment-expression, condition-or-expression
 static std::vector<TokenValue> ExprSafeSymbols = {
 	TokenValue::PUNCTUATOR_Right_Paren, TokenValue::PUNCTUATOR_Semicolon,
 	TokenValue::PUNCTUATOR_Left_Brace, TokenValue::PUNCTUATOR_Comma};
@@ -153,9 +147,6 @@ static std::vector<TokenValue> ReturnType = {TokenValue::PUNCTUATOR_Right_Brace,
 
 /// \brief Parser - Implenment a LL(1) parser.
 /// Use syntax-directed semantic analysis.
-/// --------------------------nonsense for coding-------------------------------
-/// parse*()�������ܸ÷��ս���ļ̳����ԣ������ظ÷��ս�����ۺ�����
-/// --------------------------nonsense for coding-------------------------------
 class Parser
 {
 
@@ -183,7 +174,6 @@ class Parser
 	/// \brief parse - Parse the entire file specified.
 	ASTPtr &parse();
 
-	// �﷨�����ӳ���
 	// The most important one is that this routine eats all of the tokens
 	// that correspond to the production and returns the lexer buffer with
 	// the next token (which is not part of the grammar production) ready
@@ -209,11 +199,8 @@ class Parser
 
 	StmtASTPtr ParseDeclStmt();
 
-	/// \brief moses�����Զ�������֧�֡��б��ʼ����
-	/// ���磺
 	/// var num : 10;
 	/// var num = {num, {10, 10 * num}, false}
-	/// num���������£�
 	/// class AnonymousType
 	///	{
 	///		var : int;

@@ -63,8 +63,6 @@ void EvaluatedExprVisitorBase::handleEvalCallTail() {
   }
 }
 
-/// \brief �ж�FunctionDecl�ܷ�evaluate��������Ƿ񳬳�eval
-/// call�Ĳ�������ǰһ�㣩��
 ReturnStmtPtr EvaluatedExprVisitorBase::handleEvalCallStart(CallExprPtr CE) {
   ReturnStmtPtr returnStmt =
       CE->getFuncDecl()->isEvalCandiateAndGetReturnStmt();
@@ -75,25 +73,16 @@ ReturnStmtPtr EvaluatedExprVisitorBase::handleEvalCallStart(CallExprPtr CE) {
   return returnStmt;
 }
 
-/// \brief �����CallExpr()����evaluation.
-/// ���磺
 /// func add(parm1 : int, parm2 : int) -> int { return parm1 + parm2; }
 /// var num = add(10, 20);
-/// �������ǻὫ add(10, 20) evaluate��Ϊ30.
-/// ��1�� �������ǻ��ʵ��ֵ����eval����¼�� (name, value) pair��Ȼ��Ӧ�õ���������
-/// ��2�� ����Ҫ����ֻ����һ��return��䡣����name,
-/// value��pairӦ�õ�return����У��������� ��3��
-/// ���գ����õ��Ľ��ֵ��ΪCallExpr��evaluate�õ���constant.
 bool EvaluatedExprVisitorBase::EvalCallExpr(CallExprPtr CE, EvalInfo &info) {
-  // (0) �����ж�FunctionDecl�ܷ�evaluate������Ƿ񳬳�eval
-  // call�Ĳ�������ǰһ�㣩��
   ReturnStmtPtr returnStmt = handleEvalCallStart(CE);
   if (!returnStmt) {
     return false;
   }
 
   ValueKind vk;
-  // (1) ��ʵ��ֵ����evaluate
+
   unsigned num = CE->getArgsNum();
   for (unsigned i = 0; i < num; i++) {
     ExprASTPtr Arg = CE->getArg(i);
@@ -105,36 +94,28 @@ bool EvaluatedExprVisitorBase::EvalCallExpr(CallExprPtr CE, EvalInfo &info) {
       return false;
     }
 
-    // ��Arg����evaluate
     EvalInfo info(vk, EvaluationMode::EM_ConstantFold);
     Evaluate(Arg, info);
 
-    // ��� <name, value> pair�洢��������¼��һ���ʵ��info
     ActiveStack.push_back(
         std::make_pair(CE->getFuncDecl()->getParmName(i), info));
   }
 
-  // ��¼�˴ε�bookkeeping info
   ActiveBookingInfo.push_back(std::make_pair(ActiveBookingInfo.size(), num));
 
-  // (2) ��ȡCallExpr��Ӧ�������е�ReturnStmt��Ȼ��ִ�����㣬�õ�constantֵ��Ȼ�󷵻�.
   EvalInfo returnInfo(vk, EvaluationMode::EM_ConstantFold);
   ExprASTPtr rexpr = returnStmt->getSubExpr();
   Evaluate(rexpr, returnInfo);
 
-  // (3) ��EvalCall������β����
   handleEvalCallTail();
 
-  // (4) �Եõ��Ľ�������ۺϴ���
   info = returnInfo;
   return true;
 }
 
-/// \brief ���ڶ�DeclRefExpr����evaluate.
 bool EvaluatedExprVisitorBase::EvalDeclRefExpr(DeclRefExprPtr DRE,
                                                EvalInfo &info) {
   auto decl = DRE->getDecl();
-  // ���DeclRefExpr���õı����Ƿ���const������const���ز�����constant-evaluator.
   if (VarDeclPtr VD = std::dynamic_pointer_cast<VarDecl>(decl)) {
     if (!VD->isConst())
       return false;
@@ -145,20 +126,16 @@ bool EvaluatedExprVisitorBase::EvalDeclRefExpr(DeclRefExprPtr DRE,
     info = declInfo;
     return true;
   }
-  // �����ParmDecl������ParmDecl�Ƿ����Ѿ����Ƶ�������
   else if (ParmDeclPtr PD = std::dynamic_pointer_cast<ParameterDecl>(decl)) {
-    // ��鵱ǰ��parmdecl��Ӧ��ʵ�Σ��Ƿ��Ѿ�evaluate����
-    // ���磺
     // func add(lhs : int, rhs : int) -> int
     // {
     //		return lhs + rhs;
     // }
     // add(10, 20);      <----------------evaluated
-    // �����Ѿ��õ��� <lhs, 10> <rhs, 20>������evaluate "return lhs + rhs;"
     // auto bookkeeping = ActiveBookingInfo.back();
     // auto num = bookkeeping.second;
     auto stackSize = ActiveStack.size();
-    // ActiveStack β����ʼ����Ƿ����parm�������ڣ���ֱ�ӷ��ء�
+    // ActiveStack
     // <start, Evalinfo> <lhs, EvalInfo> <rhs, EvalInfo>
     for (int i = stackSize - 1; i >= 0; i--) {
       if (ActiveStack[i].first == PD->getParmName()) {
@@ -192,7 +169,6 @@ bool IntExprEvaluator::EvalBinaryExpr(BinaryPtr B, EvalInfo &info,
   return true;
 }
 
-/// \brief �������͵ĵ�Ŀ�����������
 bool IntExprEvaluator::EvalUnaryExpr(UnaryPtr U, EvalInfo &info,
                                      EvalInfo &subVal) {
   std::string OpName = U->getOpcode();
@@ -203,25 +179,13 @@ bool IntExprEvaluator::EvalUnaryExpr(UnaryPtr U, EvalInfo &info,
   return false;
 }
 
-// To Do: �ȴ�ʵ��
 bool IntExprEvaluator::EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) {
   return false;
   if (UDTyPtr UDT = std::dynamic_pointer_cast<UserDefinedType>(
           ME->getBase()->getType())) {
-    // UserDefinedType��Member�Ƿ���const���͡�
+    // UserDefinedType
     // if (!UDT->getMemberType(ME->getMemberName())->isConst())
     return false;
-    // ��ȡconst��Ա�ĳ�ʼ�����ʽ
-    // ���磺
-    // class A
-    // {
-    //		var num : int;
-    //		const length : int;
-    // }
-    // A a;
-    // a.num = 10;
-    // a.length = 11;	/* const member��Ա��ʼ��*/
-    // �����ܹ���ȡ��11�����ʼ�����ʽ���ñ��ʽ����洢��a��Ӧ��Ա�ĳ�ʼ�����ʽ�С�
   }
   return false;
 }
@@ -238,7 +202,6 @@ bool BoolExprEvaluator::EvalBinaryExpr(BinaryPtr B, EvalInfo &info,
     info.evalstatus.boolVal = lhs.evalstatus.boolVal && rhs.evalstatus.boolVal;
     return true;
   } else if (OpName == "==") {
-    /// \brief lhs��bool����(���ڽ��й���������������Ҳ�϶�Ҳ��bool����)
     if (lhs.evalstatus.kind == ValueKind::BoolKind) {
       info.evalstatus.boolVal =
           lhs.evalstatus.boolVal == rhs.evalstatus.boolVal;
@@ -249,7 +212,6 @@ bool BoolExprEvaluator::EvalBinaryExpr(BinaryPtr B, EvalInfo &info,
     }
     return true;
   } else if (OpName == "!=") {
-    /// \brief lhs��bool���ͣ����ڽ��й���������������Ҳ�϶�Ҳ��bool���ͣ�
     if (lhs.evalstatus.kind == ValueKind::BoolKind) {
       info.evalstatus.boolVal =
           lhs.evalstatus.boolVal != rhs.evalstatus.boolVal;
@@ -264,14 +226,12 @@ bool BoolExprEvaluator::EvalBinaryExpr(BinaryPtr B, EvalInfo &info,
   return true;
 }
 
-/// \brief ����bool������˵����Ŀ�����ֻ��!
 bool BoolExprEvaluator::EvalUnaryExpr(UnaryPtr U, EvalInfo &info,
                                       EvalInfo &subVal) {
   info.evalstatus.boolVal = !subVal.evalstatus.boolVal;
   return false;
 }
 
-// To Do: ���ڸ��ӣ��۲�ʵ��
 bool BoolExprEvaluator::EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) {
   return false;
 }

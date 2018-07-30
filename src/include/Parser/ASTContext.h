@@ -14,85 +14,12 @@ namespace compiler {
 namespace ast {
 /// ASTContext - This class holds types that can be referred to thorought
 /// the semantic analysis of a file.
-///
-/// Note: ��sema�е�symbol tableҲ�ᱣ���������еõ��ķ��ţ�����userdefined
-/// type decl, �Լ�����decl�����оͰ�������ClassType�ľ�����Ϣ����������ClassType
-/// Ӧ����ȫ��ֻ����һ�ݶ�������AnonymousTypeҲӦ�ñ��������������������ﶨ����
-/// ASTContext���������Type info��Ȼ��ASTNode�Լ�SymbolTable���Ǵ�ASTContext��
-/// ���������ġ�
-///
-///		 --------------			-------------
-///------------------ 		|  ASTContext  |	   |   ASTNode	 |		   |
-///SymbolTableEntry |
-///		 --------------		    -------------
-///------------------ 				|					  |
-///| 				|					  |
-///|
-///			   \|/					 \|/
-///\|/ 	vector<shared_ptr<Type>>  shared_ptr<Type> shared_ptr<Type> 					/
-///����ASTContext������			(��ASTContext����) 				   /
-////
-///		==========/==============  /
-///	   ||		 /			    ||/
-///	   ||	ClassTypes		    |/
-///	   ||	AnonymousTypes		/|
-///	   ||	BuiltinTypes	   /||
-///	   ||					    ||
-///		=========================
-///
-/// ���磺
-/// class B
-///	{
-///		var flag : bool;
-/// }
-/// class A
-///	{
-///		var start : B;
-///		var end : int;
-///	};
-/// var num : int;
-/// var anonyWithInit = {10, {0, true}, {false, 10}};
-/// var anonyWithoutInit : {int, bool};
-/// ��ʱ��ASTContext�������µ�������Ϣ��
-///
-///				==============		=============
-///			   ||	bool 	 ||	   ||	int 	||
-///				===|==========	   /=============
-///				   |			  /
-///		===========|==========   /
-///	   ||	B{bool} : UDType || /
-///		========|============= /
-///				|			  /
-///				|			 /
-///		========|=========	/	 ========================
-///	   ||		|	 	 ||		||
-///||
-///	   ||	A : UDType	 ||	   /|| {int, bool} : Anony	||
-///	   ||				 ||	  /	||
-///||
-///		==================	 /	 ========================
-///							/
-///			===============/=================
-///		   ||			  / ||
-///		   ||	{int, Anony, Anony} : Anony	||
-///		   ||					| ||
-///			====================|============
-///								|
-///					============|==========
-///				   ||			|		  ||
-///				   ||	{bool, int}		  ||
-///				   ||					  ||
-///				    =======================
-///
-/// Ҳ����˵��mosesԴ�����г��ֵ���������element����ASTContext�ж�����Ψһ�Ĵ��ڡ�
-///
 class ASTContext {
 private:
   typedef TypeKeyInfo::UserDefinedTypeKeyInfo UDKeyInfo;
   typedef TypeKeyInfo::AnonTypeKeyInfo AnonTypeKeyInfo;
 
 public:
-  // Ԥ������������
   ASTContext()
       : Int(std::make_shared<BuiltinType>(TypeKind::INT)),
         Bool(std::make_shared<BuiltinType>(TypeKind::BOOL)),

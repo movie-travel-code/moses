@@ -21,7 +21,7 @@ using namespace compiler::IR;
 using namespace compiler::IRBuild;
 using namespace compiler::Interpreter;
 int main() {
-  Scanner scanner("E:/test/main.mo");
+  Scanner scanner("/Users/wangliushuai/workspace/opensource/moses/test/main.mo");
   ASTContext Ctx;
   Sema sema(Ctx);
   Parser parse(scanner, sema, Ctx);
@@ -35,7 +35,6 @@ int main() {
   }
 
   // ConstantEvaluator evaluator;
-  // ����evaluator
   auto AST = parse.getAST();
   MosesIRContext IRContext;
   ModuleBuilder moduleBuilder(sema.getScopeStackBottom(), IRContext);
@@ -48,7 +47,7 @@ int main() {
   IRPrinter::Print(moduleBuilder.getIRs(), out);
   cout << out.str();
 
-  std::ofstream mosesIR("E:/test/moses.mi");
+  std::ofstream mosesIR("/Users/wangliushuai/workspace/opensource/moses/test/main.mi");
   mosesIR << out.str();
   mosesIR.close();
 

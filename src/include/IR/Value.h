@@ -3,8 +3,6 @@
 // This file defines the very important Value class. This is subclassed by a
 // bunch of other important classes, like Instruction, Function, Type, etc...
 //
-// moses IR�ο���LLVM IR��ע�Ͳ���ժ��LLVM Value.h (�²ۣ�ΪʲôҪ��Value�������)
-//
 //===---------------------------------------------------------------------===//
 #ifndef MOSES_IR_VALUE
 #define MOSES_IR_VALUE
@@ -27,12 +25,6 @@
 ///
 /// Every value has a "use list" that keeps track of which other Values are
 /// using this value.
-/// ------------------------------nonsense for coding------------------------
-///	Value��moses
-///IR�еĻ��࣬�������﷨����statement��valueֻ����һЩ�򵥵Ĳ�����
-/// moses IR��һ������IR��������CFG��Ϣ��ͨ��Block����֯����������SSA-based�ģ�
-/// �����ں�def-use��Ϣ��Ϊ�˸�Ч�Ĳ��ң�ʹ��ɢ�б���Ϊ���ű�Ļ����ṹ����Ϊ��
-///	���㣬���ű���ʱ���Ϊvector����
 /// -------------------------------------------------------------------------
 namespace compiler {
 namespace IR {

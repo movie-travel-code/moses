@@ -111,7 +111,7 @@ private:
 
   // compute the DomTree.
   void computeDomTree(BBPtr EntryBlock);
-  // ��ȡ��ǰDomNode��CFG��ǰ����Ӧ��DomTreeNode.
+
   std::vector<DomTreeNodePtr> getDomNodePredsFromCFG(DomTreeNodePtr Node);
   // Intersect() - This function only be using to get closest parent of A and B.
   DomTreeNodePtr Intersect(DomTreeNodePtr A, DomTreeNodePtr B);

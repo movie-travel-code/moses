@@ -48,8 +48,6 @@ bool Type::operator==(const Type &rhs) const {
 
 //===---------------------------------------------------------------------===//
 // Implement class UserDefinedType.
-
-/// \brief ����Member Name��ȡ������������Ϣ
 std::shared_ptr<Type> UserDefinedType::getMemberType(std::string name) const {
   auto getType = [&]() -> TyPtr {
     for (auto item : subTypes) {
@@ -90,14 +88,9 @@ unsigned long UserDefinedType::size() const {
   return size;
 }
 
-/// \brief StripOfShell -
-/// ���class���ͣ�ֻ��һ�����͵ļ򵥰�������ȥ���㡣ע��
-/// �ú���ֻ��CodeGenΪUserDefinedType����ArgInfo��ʱ�򣬵��á�
 TyPtr UserDefinedType::StripOffShell() const {
   if (size() > 32)
     return nullptr;
-  // To Do: ����moses��ʱֻ����int��bool���Ҷ���4 bytes��ʾ��
-  // ���Ե�size <= 32ʱ����ʾsub
   if (auto UDTy = std::dynamic_pointer_cast<UserDefinedType>(subTypes[0].first))
     return UDTy->StripOffShell();
   else
@@ -106,7 +99,6 @@ TyPtr UserDefinedType::StripOffShell() const {
 
 bool UserDefinedType::operator==(const Type &rhs) const {
   unsigned subTypeNum = subTypes.size();
-  // ʹ��dynamic_cast<>�����ý���down_cast��ת��ʧ�ܻ��׳�bad_cast�쳣
   try {
     const UserDefinedType &rhsUserDef =
         dynamic_cast<const UserDefinedType &>(rhs);
@@ -125,9 +117,6 @@ bool UserDefinedType::operator==(const Type &rhs) const {
 
 //===---------------------------------------------------------------------===//
 // Implement class AnonymousType.
-
-/// Note: ��������������˵��{int, {int, int}} �� {int, int, int}
-/// �ǲ�ͬ�ģ���Ҫ����Դ������Լ�¼�ṹ��Ϣ
 void AnonymousType::getTypes(std::vector<std::shared_ptr<Type>> &types) const {
   unsigned size = subTypes.size();
   for (unsigned index = 0; index < size; index++) {
@@ -143,8 +132,6 @@ void AnonymousType::getTypes(std::vector<std::shared_ptr<Type>> &types) const {
 TyPtr AnonymousType::StripOffShell() const {
   if (size() > 32)
     return nullptr;
-  // To Do: ����moses��ʱֻ����int��bool���Ҷ���4 bytes��ʾ��
-  // ���Ե�size <= 32ʱ����ʾsub
   if (auto UDTy = std::dynamic_pointer_cast<AnonymousType>(subTypes[0]))
     return UDTy->StripOffShell();
   else

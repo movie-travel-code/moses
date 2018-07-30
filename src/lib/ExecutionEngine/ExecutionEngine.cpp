@@ -37,15 +37,10 @@ std::shared_ptr<Interpreter> Interpreter::create(const std::list<ValPtr> &Insts,
 
 void Interpreter::LoadValueFromMemory(GenericValue &Dest, GenericValue SrcAddr,
                                       IRTyPtr Ty) {
-  // ע������Moses��int bool
-  // �����޲��ģ�������int��ʽ���ڣ�������ȡvalue��ʱ�����ڿ���
-  // �޲��Ľ�����ȡ��
   if (Ty->isIntegerTy())
     Dest.IntVal = *(int *)GVTOP(SrcAddr);
   if (Ty->isBoolTy())
     Dest.BoolVal = *(int *)GVTOP(SrcAddr);
-
-  // To Do: ��Ϊ���ӵ�����
 }
 
 void Interpreter::StoreValueToMemory(GenericValue V, GenericValue DestAddr,
@@ -229,7 +224,6 @@ void Interpreter::visitBranchInst(BrInstPtr I) {
 void Interpreter::visitCallInst(CallInstPtr I) {
   ExecutionContext &SF = ECStack.back();
   // Check the current call is Intrinsic.
-  // ����mosesֻ��memcpy��һ�����ú���
   if (I->isIntrinsicCall()) {
     callIntrinsic(I);
     return;

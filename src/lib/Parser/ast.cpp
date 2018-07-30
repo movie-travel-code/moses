@@ -24,20 +24,12 @@ StmtASTPtr CompoundStmt::operator[](unsigned index) const {
 }
 
 //===---------------------------UnpackDecl-----------------------------===//
-//
-/// \brief ��Ҫ�������͵ļ�������
-/// ���磺 var {num, {lhs, rhs}} �� type
-/// To Do: ������������⣬ָ�뱩¶
 bool UnpackDecl::TypeCheckingAndTypeSetting(AnonTyPtr type) {
   unsigned size = decls.size();
-  // (1) ���unpack decl��size��Anonymous type����type�Ƿ���ͬ
   if (type->getSubTypesNum() != size) {
     return false;
   }
 
-  // (2) �ݹ�������ÿ��element.
-  // Note: ��������������ݽ�������type�����Բ�����type��������ָ��
-  // ʹ��ͬһ��ԭ��ָ���ʼ����������ָ�룬�п��ܻ��������ָ�롣
   for (unsigned index = 0; index < size; index++) {
     if (UnpackDeclPtr unpackd =
             std::dynamic_pointer_cast<UnpackDecl>(decls[index])) {
@@ -57,7 +49,6 @@ bool UnpackDecl::TypeCheckingAndTypeSetting(AnonTyPtr type) {
   return true;
 }
 
-/// \brief ��ȡdecl name
 std::vector<VarDeclPtr> UnpackDecl::operator[](unsigned index) const {
   std::vector<VarDeclPtr> SubDecls;
   if (UnpackDeclPtr unpackd =
@@ -71,7 +62,6 @@ std::vector<VarDeclPtr> UnpackDecl::operator[](unsigned index) const {
   return SubDecls;
 }
 
-/// \brief ��ȡdecl names
 void UnpackDecl::getDecls(std::vector<VarDeclPtr> &SubDecls) const {
   unsigned size = decls.size();
   for (unsigned index = 0; index < size; index++) {
@@ -97,7 +87,6 @@ ReturnStmtPtr FunctionDecl::isEvalCandiateAndGetReturnStmt() const {
       returnType->getKind() != TypeKind::BOOL) {
     return nullptr;
   }
-  // (1) �������Ƿ�ֻ��һ�� return stmt
   if (CompoundStmtPtr body =
           std::dynamic_pointer_cast<CompoundStmt>(funcBody)) {
     if (body->getSize() != 1)

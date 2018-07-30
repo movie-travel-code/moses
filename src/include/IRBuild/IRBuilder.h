@@ -1,8 +1,6 @@
 //===----------------------------IRBuilder.h-----------------------------===//
 //
 // This class for intermediate generation.
-// Note: IRBuilder refer to ��Crafting a Compiler��- "Syntax-directed
-// Translation" and "Code Generation for a Virtual Machine".
 //
 //===--------------------------------------------------------------------===//
 
@@ -122,11 +120,6 @@ struct FunctionBuilderStatus {
 /// The outermost portions of an AST contain class and method declarations.
 /// The ModuleBuilder is responsible for processing each class and method
 /// declarations.
-/// ------------------------nonsense for coding------------------------
-/// ����������������յõ�������Instruction������moses�﷨����python�����Զ���
-/// ͨ��block�����������Function Definition���Ƕ���ȥ��
-///
-/// ���⣬����ʹ��overload(����)ʵ�ֵڶ����dispatch��
 /// -------------------------------------------------------------------
 class ModuleBuilder : public StatementAST::Visitor<ValPtr> {
 public:
@@ -186,13 +179,8 @@ public:
     return LocalInstNamePrefix + Name + std::to_string(TempCounter++);
   }
 
-  /// \brief ��ǰ�������ܿ��Ժ���������ͨ������ASTÿ���ڵ㣬������Ӧ��visitor
-  /// ʹ��unique_ptr�����þ�����IR����֮��AST��������
   void VisitChildren(std::vector<std::shared_ptr<StatementAST>> AST);
 
-  //===----------------------------------------------------------------------===//
-  // �����һϵ�е�visit()����ͨ������ʵ�ֵڶ����dispatch
-  //===---------------------------------------------------------------------===//
   // Note: We only need to consider the type of AST leaf node.
   ValPtr visit(const StatementAST *stmt) { return nullptr; }
   ValPtr visit(const ExprStatement *exprstmt) { return nullptr; }
@@ -249,8 +237,6 @@ private:
   //===--------------------------------------------------------------===//
   /// ExpandTypeToArgs - Expand an RValue \arg Src, with the IR type for
   /// \arg Ty, into individual arguments on the provided vector \arg Args.
-  /// ��Clang2.6��ABIArgInfo����Expandѡ� ��Ӧ������ AggregateType �� Direct
-  /// ѡ�
   /// ----------------------clang2.6 Expand--------------------
   /// Expand - only valid for aggregate argument types. The structure should be
   /// expanded into consecutive arguments for its constituent fields. Currently
@@ -368,23 +354,12 @@ private:
   /// \brief Create a 'ret <val>' instruction.
   ReturnInstPtr CreateRet(ValPtr);
 
-  /// \brief ��������һ����ֵ����.
-  /// To Do: ��Ҫ����һ������ר�ű�ʾ��ֵ��������ʹ��Aggregate Type����ʾ��ֵ���ء�
-  /// ���磺
-  ///	func add() -> {int, {int, bool}} {}
-  /// �����ֵ�����е�ÿ��ֵ��һ���Ǵ���ͬһ���еģ�����LLVM�е�Aggregate Typeֻ�ܱ�ʾ����
-  /// ��ֵ��ͬһ��level�С����磺 {int, int, int}
-  ///
-  ///	moses�еĶ�ֵʾ��ͼ��
-  ///
   ReturnInstPtr CreateAggregateRet(std::vector<ValPtr> retVals, unsigned N);
 
   /// \brief Create an unconditional 'br label X' instruction.
-  /// ���磺��if stmt�ķ����У�then���Ľ�β����Ҫunconditional branch
   BrInstPtr Create(BBPtr Dest);
 
   /// \brief Create a conditional 'br Cond, TrueDest, FalseDest' instruction.
-  /// ��LLVM���ṩ��һЩ����Branch����Ϣ�������Ƿ��Ԥ�����Ϣ��
   /// MDNode *BranchWeights
   /// MDNode *Unpredictable
   BrInstPtr CreateCondBr(ValPtr Cond, BBPtr True, BBPtr False);
@@ -670,10 +645,10 @@ private:
 
   //===-----------------------------------------------------------------------===//
   // Aggregate Expr stuff.
-  // ����Aggregate Type����Ĵ�����Ҫ�����ں������Σ���������Լ���ֵ����ϡ�
-  // (1) �������Σ���Ҫ������ EmitFunctionProglog() �� EmitCallExpr()��
-  // (2) ������䣬��Ҫ������ EmitReturnStmt()��
-  // (3) ��ֵ��䣬��Ҫ������ EmitBinaryExpr()��
+  // Aggregate Type
+  // (1) EmitFunctionProglog()  EmitCallExpr()
+  // (2) EmitReturnStmt()
+  // (3) EmitBinaryExpr()
 
   /// EmitAggExpr - Emit the computation of the specified expression of
   /// aggregate type. The result is computed into DestPtr. Note that if DestPtr

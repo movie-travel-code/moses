@@ -81,7 +81,6 @@ class Interpreter {
 
   // AtExitHandlers - List of functions to call when the program exits,
   // registered with the atexit() library function.
-  // moses��ʱ��֧��ע�����������
   // std::vector<Function*> AtExitHandlers;
   const std::list<ValPtr> &Insts;
   const MosesIRContext &Ctx;

@@ -12,8 +12,6 @@ class TokenLocation {
   std::string FileName;
 
 public:
-  // ִ��Ĭ�ϵĿ�����Ϊ����
-  // ����string���ݳ�Աʱ����ִ��string�ĸ��������
   TokenLocation() : LineNumber(0), ColNumber(0), FileName("") {}
 
   TokenLocation(const TokenLocation &TL) {
@@ -22,7 +20,6 @@ public:
     FileName = TL.FileName;
   }
 
-  // Ĭ��inline
   bool operator==(const TokenLocation &tokenLoc) const {
     if (LineNumber == tokenLoc.LineNumber && ColNumber == tokenLoc.ColNumber &&
         FileName == tokenLoc.FileName)
@@ -30,7 +27,6 @@ public:
     return false;
   }
 
-  // ����������Ὣ��inline��ģ����ÿ��Ǻ������õĿ���
   bool operator!=(const TokenLocation &tokenLoc) const {
     return !operator==(tokenLoc);
   }
@@ -57,9 +53,6 @@ public:
   }
 };
 
-/// @brief
-/// Token������ʾһ�������ʷ�������һ���ʷ���Ԫ
-/// ����һЩToken�������ǱȽ϶̵ģ���������inline����
 class Token {
   typedef tok::TokenValue TokenValue;
 
@@ -68,7 +61,6 @@ class Token {
 
   std::string lexem;
 
-  // ����һЩtoken�ĳ���ֵ
   long intValue;
   double realValue;
   std::string strValue;
@@ -76,28 +68,19 @@ class Token {
 public:
   Token();
 
-  // �������캯��
-  // ��������ϳ�Ĭ�ϵĿ������캯��
-  // Token(const Token& token);
-  // ������һϵ�еĹ��캯��
-
-  // ����������Tokenֻ���ڹؼ��ֺ�Ԥ�����һЩ��������
   Token(TokenValue tv, std::string lexem);
 
-  // ��ʶ��
   Token(TokenValue tv, const TokenLocation &location, std::string lexem);
 
-  // �ַ���
   // Token(TokenValue tv, const TokenLocation& location, const std::string&
-  // strValue, std::string lexem); ����
+  // strValue, std::string lexem);
   Token(TokenValue tv, const TokenLocation &location, long intvalue,
         std::string lexem);
-  // С��
+
   Token(TokenValue tv, const TokenLocation &location, double realvalue,
         std::string lexem);
   enum class TokenFlags { StatrtOfLine, LeadingSpace };
 
-  // help������������Token��value
   void setKind(compiler::tok::TokenValue K) { value = K; }
   TokenValue getKind() const { return value; }
 
@@ -152,7 +135,6 @@ public:
     return false;
   }
 
-  // Note: ��moses�У�int��bool�����޷�ת��
   bool isLogicalOperator() {
     if (value == TokenValue::BO_EQ || value == TokenValue::BO_GE ||
         value == TokenValue::BO_GT || value == TokenValue::BO_LE ||
@@ -194,16 +176,13 @@ public:
   }
   bool isStringLiteral() { return value == TokenValue::STRING_LITERAL; }
 
-  // ��ȡToken��Tokenֵ
   tok::TokenValue getValue() const { return value; }
 
-  // ��ȡToken�ĳ���ֵ
   long getIntValue() const { return intValue; }
   double getRealValue() const { return realValue; }
   std::string getStringValue() const { return strValue; }
   std::string getLexem() { return lexem; }
 
-  // ����token�Ƿ����
   bool operator==(const Token &token) const {
     if (value == token.value && loc == token.loc) {
       return true;

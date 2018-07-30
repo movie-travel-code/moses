@@ -15,7 +15,6 @@ namespace compiler {
 namespace CodeGen {
 /// RValue - This trivial value class is used to represent the result of an
 /// expression that is evaluated.
-/// �����scalar��ôV1���Ǽ򵥵�value�������aggregate��ôV1����agg.temp�ĵ�ַ
 class RValue {
   enum { Scalar, Aggregate } Flavor;
   IR::ValPtr V1, V2;

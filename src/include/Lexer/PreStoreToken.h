@@ -16,23 +16,16 @@
 
 namespace compiler {
 namespace lex {
-/// @brief Ԥ��Token
-/// (1) �ؼ���
-/// (2) �����
 class PreStoreToken {
-  // ��vectorֻ��Ϊ�˴洢Ԥ��Ĺؼ��ֺ������
   std::vector<Token> tokenTable;
 
 public:
   PreStoreToken();
 
-  // Ԥ�Ƚ��ؼ��ֲ��룬�÷���֮�󱻵���һ�Σ�Ҳ����Ԥ�Ƚ��ؼ��ֺ������װ��
   void AddToken();
 
-  // ���Token�Ƿ��ǹؼ��֣����ڹؼ���ͨ��name�Ϳ��Ա�ʶ
   tok::TokenValue isKeyword(const std::string &lexem) const;
 
-  // ���Token�Ƿ���������������ͨ�����־Ϳ��Ա�ʶ
   tok::TokenValue isOperator(const std::string &lexem) const;
 };
 } // namespace lex

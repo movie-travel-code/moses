@@ -1,36 +1,7 @@
 //===-----------------------------SymbolTable.h---------------------------===//
 //
 // This file is used to implement SymbolTable.
-// Note: SymbolTable��������;��
-// (1) SymbolTable����semantic analysis, ������δ���塢�����ض����Լ����Ͳ�ƥ��
-//	   ����
-// ���磺	(1)	var num = 10;
-// ------------ -----------
-//			(2)	var sum = num * 10;		SymbolTable
-//|    num	 |    sum	 | 			(3)	if (num > 0)
-//------------ ----------- 			(4)	{
-//Symbol�д�����ر�����Decl���Լ����͵���Ϣ 			(5)		num = -sum; 			(6)	} 			(7)
-//else 			(8)	{ 			(9)		num = sum; 			(10)} 	���ǻ�ͨ�����ű���Ϊ �������� ������
-//�����壩-----��ʹ�ã�����ϵ��
-//
-// (2)
-// SymbolTable����IR���ɣ�mosesʹ��visitorģʽ����AST�﷨�����ڱ�������ĳ������
-//     ��Referenceʱ�������ű����Ƿ�����Ӧ��IR���ɡ�
-// ���磺	(1)	var num = 10;
-// ------------ -----------
-//			(2)	var sum = num * 10;		SymbolTable
-//|    num	 |    sum	 | 			(3)	if (num > 0)	\
-///------------ ----------- 			(4)	{				 \
-/// 			(5)		num = -sum;	  \	------------------/ 			(6)	}
-//| @num = alloca i32 | instr1 			(7)	else
-//------------------- 			(8)	{ 			(9)		num = sum; 			(10)}
-// ��һ������num��������������һ����num�Ķ��壬������num�����á��ڵ�(1)�У���num�Ķ���
-//  ���ǻᴴ��һ��allocaָ��(Ϊnum�����ڴ�)��Ȼ����SymbolTable��ָ���instruction��
-//	�ڵ�(2)�У���num����reference���˴����ǻ�����SymbolTable��ͨ��num�鵽instruction��
-//	�ڵ�(3)�У���num����reference���˴�����ͬ����ͨ��SymbolTable��ѯ��instruction��
-//
-// ����������mem��������������һ����mem�Ķ��壬������mem�����á�����ϸ����num��ͬ��
-//	��׸����
+// 
 //===---------------------------------------------------------------------===//
 #ifndef SYMBOL_TABLE_H
 #define SYMBOL_TABLE_H
@@ -140,9 +111,6 @@ protected:
   std::string Lexem;
   ScopePtr BelongTo;
 
-  /// \brief ����Variable��˵��type��ʾ������������
-  /// ����ClassSymbol��˵��type��ʾClass��Ӧ��type.
-  /// ����FunctionSymbol��˵��type��ʾFunction�ķ�������.
   std::shared_ptr<Type> type;
 
 public:
@@ -234,8 +202,6 @@ public:
 ///			var num : int;
 ///			var flag : bool;
 ///		};
-/// ClassSymbol�л�洢һ�ݶ�����ָ��ָ��UserDefinedType������ASTContext�л��ǻ�
-/// �洢һ�ݶ���
 class ClassSymbol : public Symbol {
 private:
   ScopePtr scope;
@@ -246,14 +212,7 @@ public:
                std::make_shared<UserDefinedType>(TypeKind::USERDEFIED, name)),
         scope(scope) {}
 
-  /// ---------------------nonsense for coding----------------------------
-  /// moses���ýṹ���͵ȼۣ�������Ҫ��pase�Ĺ����У������ռ�UserDefined������
-  /// ��SubType.
-  /// ---------------------nonsense for coding----------------------------
   void addSubType(std::shared_ptr<Type> subType, std::string name) {
-    // Note: ��δ���û�ж�ת���Ƿ�ɹ������жϣ��������⣡
-    // ��������type��������UserDefinedType�ģ���ʼ����Ͳ�Ϊ��
-    // ͬʱ�ⲿ�Ӵ�����type�������ܽ����޸�Ϊnullptr�������������ǰ�ȫ���÷���
     if (std::shared_ptr<UserDefinedType> UDT =
             std::dynamic_pointer_cast<UserDefinedType>(type)) {
       UDT->addSubType(subType, name);
@@ -264,9 +223,6 @@ public:
   std::shared_ptr<Type> getType() { return Symbol::getType(); }
 };
 
-/// \brief ScopeSymbol - ��ʾһ��scope����Ϊ����õ���scope stack �����Ҫ���͵���ˣ�
-/// �ڴ������ɵ�ʱ��ʹ��symbol table��Ϊ����sematic������ʱ�򣬱���������symbol
-/// table ��Ϣ�� ���磺
 ///		func add(lhs : int, rhs : int) -> int
 ///		{
 ///			if (lhs > rhs)
@@ -277,9 +233,6 @@ public:
 ///			var num = 44;
 ///			return num + rhs;
 ///		}
-/// symbol
-/// table����֯��Ҫͨ��symbolʵ�֣���ʱ�޷��������scope����Ϣ�����Զ���һ������
-/// ��scope symbol(������Ϊ�˱���symbol��Ϣ)��
 class ScopeSymbol final : public Symbol {
 private:
   ScopePtr scope;

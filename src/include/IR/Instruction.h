@@ -19,9 +19,6 @@ namespace IR {
 class MosesIRContext;
 class Instruction : public User {
 public:
-  // LLVM��Opcode�Ƕ�����Instruction.def�еģ�������չ������û�����չLLVMָ�
-  // �޸�Instruction.def���ɣ�����Ҫ�޸�Դ�롣
-  // ����������ֱ����enum opcode������Դ����
   enum class Opcode {
     Ret, // ReturnInst
     Br,  // BranchInst
@@ -235,11 +232,9 @@ public:
 //===-------------------------------------------------------------===//
 //						TruncInst Class
 //===-------------------------------------------------------------===//
-// ��moses��Ψһ��Ҫִ�� cast
-// �����ľ����������͸�ֵ���û��Զ������͵�ת��
 // class TruncInst : public UnaryOperator
 //{
-//	// TrancInst Ҳ��operand��operand�����ͱ�����type���͵�
+//	// TrancInst
 //};
 
 //===-------------------------------------------------------------===//
@@ -440,7 +435,6 @@ public:
 // element value from an aggregate value.
 // <result> = extractvalue <aggregate type> <val>, <idx>{, <idx>}*
 // Example:  <result> = extractvalue {i32, float} %agg, 0
-// ��moses��û��array���ͣ�ֻ�оۺ����ͣ�Ҳ�����������ͺ��û��Զ�������
 class ExtractValueInst final : public UnaryOperator {
 private:
   TyPtr AggregateType;
@@ -486,7 +480,6 @@ public:
 // PHINode - The PHINode class is used to represent the magical mystical
 // (���ص�)PHI node, that can not exist in nature, but can be synthesized
 // in a computer scientist's overactive imagination.
-// To Do: PHINode�Ĳ�����һϵ�е�pair��PHINode�������ʱ��������
 class PHINode final : public Instruction {
 private:
   // void *operator new(size_t, unsigned) = delete;

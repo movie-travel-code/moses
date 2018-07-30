@@ -28,7 +28,6 @@ std::shared_ptr<Symbol> Scope::Resolve(std::string name) const {
   return nullptr;
 }
 
-/// \biref ���������Ҫ�������ļ�ͷ����Top-Level Scope.
 void Sema::ActOnTranslationUnitStart() {
   CurScope = std::make_shared<Scope>("##TranslationUnit", 0, nullptr,
                                      Scope::ScopeKind::SK_TopLevel);
@@ -83,7 +82,7 @@ StmtASTPtr Sema::ActOnIfStmt(SourceLocation start, SourceLocation end,
                              StmtASTPtr ElsePart) {
   Expr *cond = condition.get();
   if (!cond) {
-    // To Do: ����
+    // To Do:
   }
   return std::make_shared<IfStatement>(start, end, condition, ThenPart,
                                        ElsePart);
@@ -106,7 +105,6 @@ void Sema::ActOnCompoundStmt() {
 /// var {num, mem} = anony;
 /// Mainly check redefintion.
 bool Sema::ActOnUnpackDeclElement(std::string name) {
-  // �ڵ�ǰCurScope�з���ͬ������
   if (CurScope->CheckWhetherInCurScope(name)) {
     errorReport("Error occured in unpack decl.  Variable " + name +
                 " redefinition.");
@@ -125,7 +123,6 @@ bool Sema::ActOnBreakAndContinueStmt(bool whileContext) {
 
 /// \brief Mainly current whether identifier is user defined type.
 std::shared_ptr<Type> Sema::ActOnReturnType(const std::string &name) const {
-  // Note: ��moses�У�class��ʱ������Top-Level��
   if (ClassSymPtr sym = std::dynamic_pointer_cast<ClassSymbol>(
           ScopeStack[0]->CheckWhetherInCurScope(name))) {
     return sym->getType();
@@ -140,7 +137,7 @@ void Sema::ActOnParmDecl(std::string name, ParmDeclPtr parm) {
   if (CurScope->CheckWhetherInCurScope(name)) {
     errorReport("Parameter redefinition.");
   }
-  // Note: moses��FunctionDefinition�е�const�βΣ�Ĭ�϶���ͨ�����������е�ʵ�γ�ʼ����
+  
   auto vsym = std::make_shared<ParmDeclSymbol>(name, CurScope,
                                                parm->getDeclType(), true, parm);
 
@@ -190,13 +187,11 @@ void Sema::ActOnVarDecl(
   }
 }
 
-/// \brief ��reutrn anonymous���������������
 bool Sema::ActOnReturnAnonymous(std::shared_ptr<Type> type) const {
   if (!type) {
     return false;
   }
-  // ���豨��ǰ���ڽ���function�Լ�return type��ʱ��������⣬�Żᵼ��Ϊ��
-  // ǰ���Ѿ����������ظ�����
+
   if (!getFunctionStackTop() || !(getFunctionStackTop()->getReturnType())) {
     return false;
   }
@@ -216,12 +211,9 @@ bool Sema::ActOnReturnAnonymous(std::shared_ptr<Type> type) const {
 }
 
 bool Sema::ActOnReturnStmt(std::shared_ptr<Type> type) const {
-  // To Do: ����Ч�ʽϵͣ��еĺ�����Ҫ��������
   if (!getFunctionStackTop() || !(getFunctionStackTop()->getReturnType())) {
     return false;
   }
-  // �ж������Ƿ���ͬ
-  // Note: moses��ʱ��֧��const��������
   if (TypeKeyInfo::TypeKeyInfo::getHashValue(type) !=
       TypeKeyInfo::TypeKeyInfo::getHashValue(
           getFunctionStackTop()->getReturnType())) {
@@ -268,8 +260,6 @@ Sema::ActOnCallExpr(std::string name, std::vector<std::shared_ptr<Type>> args,
         continue;
       }
       // Note:
-      // ���������еĴ��󣬴˴����豨����continue����
-      // �����������ʽ�Ķ�·��ֵ���ԣ��������(*FuncSym)[i]Ϊ�գ�ͬʱ
       if (!(*FuncSym)[i] || !((*FuncSym)[i]->getType())) {
         continue;
       }
@@ -289,8 +279,7 @@ Sema::ActOnCallExpr(std::string name, std::vector<std::shared_ptr<Type>> args,
 }
 
 /// \brief Act on Binary Operator(Type checking and create new binary expr
-/// through lhs and rhs). Note: ��C/C++�У���ֵ��䷵�ص���������ֵ�� ���磺'a =
-/// 10;'���ص�ֵ��10. To Do: Shit code!
+/// through lhs and rhs). To Do: Shit code!
 ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok,
                                      ExprASTPtr rhs) {
   if (!lhs || !rhs)
@@ -316,7 +305,6 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok,
     type = lhs->getType();
     if (DeclRefExprPtr DRE = std::dynamic_pointer_cast<DeclRefExpr>(lhs)) {
       if (DRE->getDecl()->isConst()) {
-        // ����Ƿ��ʼ��
         if (VarSymPtr sym = std::dynamic_pointer_cast<VariableSymbol>(
                 CurScope->Resolve(DRE->getDeclName()))) {
           if (sym->isInitial()) {
@@ -334,9 +322,6 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok,
 
   // tok::TokenValue tokKind = tok.getKind();
 
-  // Note:����mosesֻ���������ͣ�int��bool.
-  // To Do: moses��û��ʵ������ת����type cast��
-  // To Do: moses��ʱ�������Զ������ͽ������������
   // Type checking.
   if (tok.isIntOperator()) {
     if (lhs->getType()->getKind() != TypeKind::INT ||
@@ -360,17 +345,15 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok,
       errorReport("Type on the left and type on the right must be same.");
   }
 
-  // �����ǰ��������������㣬��BinaryOperator��int����
   if (tok.isArithmeticOperator()) {
     type = Ctx.Int;
   }
 
-  // �����ǰ��������߼����������BinaryOperator��bool����
   if (tok.isLogicalOperator()) {
     type = Ctx.Bool;
   }
 
-  // �����ǰ�����Ǹ�ֵ���㣬��BinaryOperator�ķ���ֵ��lhs��ֵ��
+  // BinaryOperator
   // --------------------Assignment operators-------------------------
   // An assignment operator stores a value in the object designated by the left
   // operand. An assignment expression has the value of the left operand after
@@ -381,7 +364,6 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok,
     type = lhs->getType();
   }
 
-  // Note: Ϊ�˼���ƣ�BinaryOperatorĬ����rvalue
   auto BE = std::make_shared<BinaryExpr>(lhs->getLocStart(), rhs->getLocEnd(),
                                          type, tok.getLexem(), lhs, rhs);
 
@@ -398,13 +380,6 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok,
 ///		base.num = 10;
 ExprASTPtr Sema::ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok) {
   /// (1) Check LHS
-  /// LHS��ʾ���Ƕ��󲿷֣����󲿷ִ󲿷�����¶���DeclRefExpr
-  /// ��Ҳ�кܴ��������DeclRefExpr��Ҳ�п����Ǻ������ñ��ʽ��
-  /// ���磺
-  /// func add() -> A {}
-  /// ����moses���Զ������Ͳ��õ����������ͣ�Ҳ����˵�Զ������Ͳ�����ջ�Ϸ����
-  /// ����ʹ��moses�Լ����ڴ������ƽ���ͳһ����ģ�Ȼ����ʱ�ؽ����������ա�
-  /// ����ֻ��Ҫ���LHS���ֵ������Ƿ�Ϊ�û��Զ������ͼ��ɡ�
   if (!(lhs->getType()) || lhs->getType()->getKind() != TypeKind::USERDEFIED) {
     errorReport("Type error. Expect user defined type.");
   }
@@ -412,10 +387,6 @@ ExprASTPtr Sema::ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok) {
   std::shared_ptr<Type> memberType = nullptr;
   int idx = -1;
   /// (2) Check Member name.
-  /// ������Ҫ�����û��Զ��������Ƿ��������Ա�������ڵĻ���ͬʱ��ȡ�����ݳ�Ա������
-  /// Note:
-  /// ���ｫUserDefinedType*ָ�뱩¶�����ǲ����Ϲ淶�ģ�����ֻ����ԭ��ָ̬���
-  /// ����²��ܽ��ж�̬��ת����
   if (UDTyPtr BaseType =
           std::dynamic_pointer_cast<UserDefinedType>(lhs->getType())) {
     if (!(BaseType->HaveMember(tok.getLexem()))) {
@@ -438,18 +409,15 @@ ExprASTPtr Sema::ActOnDecOrIncExpr(ExprASTPtr rhs) {
   if (!rhs->getType()) {
     return nullptr;
   }
-  // (1) rhs ������int����
+
   if (rhs->getType()->getKind() != TypeKind::INT) {
     errorReport("Operator '++' '--' need operand is int type.");
   }
 
-  // (2) rhs ��������ֵ
-  // Note: moses��ֻ����ֵ����ֵ֮�֣�û��ʲôxrvalue��prvalue֮�֡�
   if (rhs->isRValue()) {
     errorReport("Operator '++' '--' need operand is lvalue");
   }
 
-  // (3) ���rhs�Ƿ���const����
   if (DeclRefExprPtr DeclRef = std::dynamic_pointer_cast<DeclRefExpr>(rhs)) {
     auto decl = DeclRef->getDecl();
     if (!decl)
@@ -470,16 +438,12 @@ ExprASTPtr Sema::ActOnDecOrIncExpr(ExprASTPtr rhs) {
 }
 
 ExprASTPtr Sema::ActOnUnaryExclamatoryExpr(ExprASTPtr rhs) {
-  // ����moses���û��Զ������Ͳ������������������ȡ������ֻ������bool����
   if (rhs->getType()->getKind() != TypeKind::BOOL) {
     errorReport("Operator '!' need operand is bool type.");
   }
   return rhs;
 }
 
-/// \brief ���ڶԵ�Ŀ��ֵ������м��
-/// To Do:
-/// ע������intֵ�ı߽粢û���޶�����ʱ��C�����е�int����ͬ16λ(����������ʵ����32λ����)
 ExprASTPtr Sema::ActOnUnarySubExpr(ExprASTPtr rhs) {
   if (rhs->getType()->getKind() != TypeKind::INT) {
     errorReport("Operator '-' need operand is int type");
@@ -487,8 +451,7 @@ ExprASTPtr Sema::ActOnUnarySubExpr(ExprASTPtr rhs) {
   return rhs;
 }
 
-/// \brief ��unpack decl���������������Ҫ�����ͼ��
-/// ���磺 var {num, {flag, lhs, rhs}} = anony;
+/// var {num, {flag, lhs, rhs}} = anony;
 /// Shit code!
 UnpackDeclPtr Sema::ActOnUnpackDecl(UnpackDeclPtr unpackDecl,
                                     std::shared_ptr<Type> type) {
@@ -506,7 +469,7 @@ UnpackDeclPtr Sema::ActOnUnpackDecl(UnpackDeclPtr unpackDecl,
     return unpackDeclTypeChecking(unpackDecl, type);
   }
   errorReport("Left hand expression isn's unpack declaration.");
-  // To Do: �˴�ֱ�ӷ���nullptr̫����������Ҫ�����ʵĴ���ʽ��
+
   return nullptr;
 }
 
@@ -601,29 +564,21 @@ std::shared_ptr<Scope> Sema::getScopeStackTop() const {
   return ScopeStack[ScopeStack.size() - 1];
 }
 
-/// \brief �÷�����Ҫ���ڽ������ͼ�飬������������
 UnpackDeclPtr
 Sema::unpackDeclTypeChecking(UnpackDeclPtr decl,
                              std::shared_ptr<Type> initType) const {
   if (AnonTyPtr anonyt = std::dynamic_pointer_cast<AnonymousType>(initType)) {
-    // (1) ������е�ÿ�������Ƿ�����
     if (!(decl->TypeCheckingAndTypeSetting(anonyt))) {
       errorReport("Unpack declaration type error.");
       return nullptr;
     }
 
-    // Note: ��ʵ����Ҫtype���ã���Ϊ����Ҫ����symbol table.
     decl->setCorrespondingType(initType);
 
-    // (2) ����symbol
-    // Note: �������������Ҫ�ǽ�unpack decl�ֲ���
-    // ���磺 {{start, end}, {lhs, rhs}} = num;
-    // ���������start, end, lhs, rhs
-    // 1: �ռ�decl names
     std::vector<VarDeclPtr> unpackDecls;
     decl->getDecls(unpackDecls);
 
-    // 2: �ռ�types
+    // 2: types
     std::vector<std::shared_ptr<Type>> types;
     anonyt->getTypes(types);
 
@@ -631,12 +586,9 @@ Sema::unpackDeclTypeChecking(UnpackDeclPtr decl,
     if (unpackDecls.size() != types.size()) {
       errorReport("Unpack declaration type error.");
     }
-    // 3: ����symbol
+    // 3: symbol
     unsigned size = unpackDecls.size();
     for (unsigned index = 0; index < size; index++) {
-      // ����variable symbol�����뵱ǰscope
-      // ������һ�����⣺unpackdecl var {num1, num2} ��������VarSymbol
-      // ������VarSymbol����Ҫ�洢UnpackDecl.
       CurScope->addDef(std::make_shared<VariableSymbol>(
           unpackDecls[index]->getName(), CurScope, types[index], true,
           unpackDecls[index]));
@@ -647,7 +599,7 @@ Sema::unpackDeclTypeChecking(UnpackDeclPtr decl,
   }
   return decl;
 }
-/// \brief ����sema�ı���
+
 void Sema::errorReport(const std::string &msg) const {
   Ctx.isParseOrSemaSuccess = false;
   errorSema(scan->getLastToken().getTokenLoc().toString() + " --- " + msg);

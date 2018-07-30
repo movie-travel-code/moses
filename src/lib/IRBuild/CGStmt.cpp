@@ -94,15 +94,15 @@ void ModuleBuilder::EmitReturnBlock() {
 
 /// \brief EmitWhileStmt - Emit the code for while statement.
 /// e.g.    while (num < lhs)    -------------------------  ---> Pre-Block
-///         {				     |	    ...              |
-///            lhs += 2;	     | br label %while.cond  |
-///         }				     -------------------------
+///         {                   |	          ...           |
+///            lhs += 2;        |  br label %while.cond   |
+///         }				             -------------------------
 ///
-///                             -------------------------------------------------
-///                             ---> while.cond | %tmp = load i32* %num | |
-///                             %tmp1 = load i32* %lhs                        |
-///                             | %cmp = cmp lt i32 %tmp, %tmp1 | | br %cmp,
-///                             label %while.body, label %while.end  |
+///                              -----------------------------------------------
+///             ---> while.cond | %tmp = load i32* %num                         | 
+///                             |  %tmp1 = load i32* %lhs                       |
+///                             | %cmp = cmp lt i32 %tmp, %tmp1                 |
+///                             | br %cmp, label %while.body, label %while.end  |
 ///                             -------------------------------------------------
 ///
 ///                             ----------------------------- ---> while.body
@@ -136,17 +136,6 @@ void ModuleBuilder::EmitWhileStmt(const WhileStatement *whilestmt) {
 
   // while(true) is common, avoid extra blocks. Be sure to correctly handle
   // break/continue though.
-  // e.g.     while(1) -------------------------------------------
-  //          {                        |                     ... |
-  //              lhs -= 2;            | br label %while.body | if () | |
-  //                  break;           |while.body: |
-  //          }                        |        ... |
-  //                                   | br i1 %cmp, label %if.then. label
-  //                                   %if.end | | | |if.then: | | br label
-  //                                   %while.end                       | | |
-  //                                   |if.end: | | br label %while.body | | |
-  //                                   |while.end: | |         ... |
-  //                                    -------------------------------------------
   bool EmitBoolCondBranch = true;
   if (ConstantBoolPtr CB = std::dynamic_pointer_cast<ConstantBool>(CondVal)) {
     if (CB->getVal())
@@ -196,21 +185,6 @@ ValPtr ModuleBuilder::visit(const WhileStatement *WS) {
 /// \brief Dispatched the task to the children.
 ValPtr ModuleBuilder::visit(const CompoundStmt *comstmt) {
   // (1) Switch the scope.
-  // e.g.	var num = 10;
-  //  func add(lhs:int, rhs : int) -> int         ------------ <---- Symbol
-  //  table for the 'add' {                        ----> Old scope.   |    inc |
-  //      var inc = 100;                          ------------ <---- Not visited
-  //      yet. if (lhs > rhs)                          | AnonyScope| { ----> New
-  //      scope.    ------------ <---- Not visited yet.
-  //          lhs += 10;                          | AnonyScope|
-  //      }                                        ------------
-  //      else
-  //      {
-  //          rhs += 10;
-  //      }
-  //      return lhs + rhs + inc;
-  //  }
-  // Note: Search the first not accessed ScopeSymbol.
   auto symTab = CurScope->getSymbolTable();
   auto num = symTab.size();
   for (unsigned i = 0; i < num; i++) {

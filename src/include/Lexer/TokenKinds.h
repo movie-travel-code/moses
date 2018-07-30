@@ -9,11 +9,11 @@
 namespace compiler {
 namespace tok {
 enum class TokenValue : unsigned short {
-  IDENTIFIER,      // ��ʶ��
-  INTEGER_LITERAL, // �������ֳ���
-  REAL_LITERAL,    // ʵ������
-  CHAR_LITERAL,    // �ַ�����
-  STRING_LITERAL,  // �ַ�������ֵ
+  IDENTIFIER,
+  INTEGER_LITERAL,
+  REAL_LITERAL,
+  CHAR_LITERAL,
+  STRING_LITERAL,
 
   BO_Mul,
   BO_Div,
@@ -44,7 +44,6 @@ enum class TokenValue : unsigned short {
 
   PUNCTUATOR_Left_Paren,  // (
   PUNCTUATOR_Right_Paren, // )
-  // To Do: �����������
   // PUNCTUATOR_Left_Square,		// [
   // PUNCTUATOR_Right_Square,	// ]
   PUNCTUATOR_Left_Brace,  // {
@@ -56,22 +55,21 @@ enum class TokenValue : unsigned short {
   PUNCTUATOR_Member_Access, // .
   PUNCTUATOR_Comma,         // ,
 
-  KEYWORD_var,   // ��������
-  KEYWORD_const, // const��������
-  KEYWORD_class, // class����ؼ���
-  KEYWORD_if,    // ������if
-  KEYWORD_else,  // ������else
+  KEYWORD_var,
+  KEYWORD_const,
+  KEYWORD_class,
+  KEYWORD_if,
+  KEYWORD_else,
   KEYWORD_break,
-  KEYWORD_while, // ������while
-  // To Do: ���for���������
+  KEYWORD_while,
   KEYWORD_continue,
   KEYWORD_return, // return stmt
   KEYWORD_int,    // int
   KEYWORD_bool,   // bool
-  KEYWORD_func,   // ��������
-  KEYWORD_void,   // ��������void
-  BOOL_TRUE,      // Bool true ���泣��
-  BOOL_FALSE,     // Bool false ���泣��
+  KEYWORD_func,
+  KEYWORD_void,
+  BOOL_TRUE,
+  BOOL_FALSE,
 
   FILE_EOF,
   UNKNOWN

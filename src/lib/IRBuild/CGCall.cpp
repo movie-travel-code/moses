@@ -144,8 +144,6 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
             CreateAlloca(ArgType, LocalInstNamePrefix + Name + ".addr");
         print(Temp);
 
-        // ��function()�д���һ����ʱ��Struct��Ȼ��չ������filed��һһ������ȥ��
-        // ������һϵ�е� GEPָ��
         std::vector<ValPtr> SubArgs;
         for (unsigned index = FirstIRArg; index < FirstIRArg + NumIRArgs;
              index++) {
@@ -290,9 +288,7 @@ RValue ModuleBuilder::EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr,
     auto ty = Types.ConvertType(ArgInfo->getType());
     switch (ArgInfo->getKind()) {
     case ArgABIInfo::Kind::Direct:
-      // �����������һ����flattened��aggregate type����һ����builtin type
       if (ty->isAggregateType()) {
-        // ��ArgVal��aggregate tye�ĵ�ַ���е�ֵһһչ����vector��
         ExpandTypeToArgs(ArgInfo->getType(), ArgVal, Args);
       } else {
         Args.push_back(CallArgs[i].first.getScalarVal());
@@ -331,7 +327,6 @@ RValue ModuleBuilder::EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr,
 }
 
 // EmitCallArgs - Emit call arguments for a function.
-// ��һ����Ҫ�����⴦��ľ���AggregateType�Ĵ�������AggregateType�õ���ֵ����AggregateAddr����ʽ���ֵ�
 void ModuleBuilder::EmitCallArgs(CallArgList &CallArgs,
                                  const std::vector<ExprASTPtr> &ArgExprs) {
   ValPtr V = nullptr;

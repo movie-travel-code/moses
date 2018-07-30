@@ -13,7 +13,6 @@ bool Scanner::errorFlag = false;
 Scanner::Scanner(const std::string &srcFileName)
     : FileName(srcFileName), CurLine(1), CurCol(0), CurrentChar(0),
       state(State::NONE) {
-  // ���ļ��洢���ݵ�input
   input.open(FileName);
   if (input.fail()) {
     errorReport("When trying to open file " + FileName + ", occurred error.");
@@ -40,18 +39,15 @@ void Scanner::addToBuffer(char c) { buffer.push_back(c); }
 
 void Scanner::reduceBuffer() { buffer.pop_back(); }
 
-// ���ɱ�ʶ��Token
 void Scanner::makeToken(TokenValue tv, const TokenLocation &Loc,
                         std::string name) {
   std::cout << name << std::endl;
   LastTok = Tok;
   Tok = Token(tv, Loc, name);
   buffer.clear();
-  // ���ɳɹ�һ��token��Ȼ���ٰ�״̬�ÿ�
   state = State::NONE;
 }
 
-// ��������Token
 void Scanner::makeToken(TokenValue tv, const TokenLocation &loc, long intvalue,
                         std::string name) {
   std::cout << name << std::endl;
@@ -61,7 +57,6 @@ void Scanner::makeToken(TokenValue tv, const TokenLocation &loc, long intvalue,
   state = State::NONE;
 }
 
-// ���ɸ�����Token
 void Scanner::makeToken(TokenValue tv, const TokenLocation &loc,
                         double realvalue, std::string name) {
   std::cout << name << std::endl;
@@ -91,7 +86,6 @@ void Scanner::handleLineComment() {
       getNextChar();
     }
 
-    // ����
     if (CurrentChar == '\n') {
       CurLine++;
       CurCol = 0;
@@ -102,7 +96,6 @@ void Scanner::handleLineComment() {
       CurLine++;
       CurCol = 0;
     } else {
-      // �ļ�β
       return;
     }
 
@@ -135,15 +128,12 @@ void Scanner::handleLineComment() {
 
 //		if (!input.eof())
 //		{
-//			// ���ĵ�*
 //			getNextChar();
-//			// ���ĵ�/
 //			getNextChar();
 //		}
 //	}
 //}
 
-// ���ʷ�����
 Token Scanner::getNextToken() {
   bool matched = false;
   do {
@@ -151,33 +141,25 @@ Token Scanner::getNextToken() {
       matched = true;
     }
 
-    // �൱��һ������Զ����ֱ�ָ��ͬ�����Զ���
-    // ����ÿһ�����Զ�������ʶ��ĳЩģʽ���ַ���
     switch (state) {
-      // ���¿�ʼ��һToken�Ĵʷ���������
     case Scanner::State::NONE:
       getNextChar();
       break;
-      // �����ļ�β
     case Scanner::State::END_OF_FILE:
       handleEOFState();
       LastTok = Tok;
       Tok = Token();
       return Tok;
       break;
-      // ���������ʶ�����Զ���
     case Scanner::State::IDENTIFIER:
       handleIdentifierState();
       break;
-      // �����������͵��Զ���
     case Scanner::State::NUMBER:
       handleNumberState();
       break;
-      // ���������ַ������Զ���
     case Scanner::State::STRING:
       handleStringState();
       break;
-      // ����������������Զ���
     case Scanner::State::OPERATION:
       handleOperationState();
       break;
@@ -187,7 +169,6 @@ Token Scanner::getNextToken() {
       break;
     }
 
-    // ��ʼ״̬ʱ������CurrentChar����ʹ���ĸ��Զ�����ʶ���Ժ��Token
     if (state == State::NONE) {
       preprocess();
       if (input.eof()) {
@@ -303,7 +284,6 @@ void Scanner::handleStringState() {
   }
 }
 
-// �����ʶ����Ϣ
 void Scanner::handleIdentifierState() {
   CurLoc = getTokenLocation();
   // add first char
@@ -315,34 +295,26 @@ void Scanner::handleIdentifierState() {
     getNextChar();
   }
 
-  // �жϵ�ǰ�Ƿ��ǹؼ��֣��ǹؼ��ֵĻ�����������token
   TokenValue tokenValue = table.isKeyword(buffer);
   if (tokenValue == TokenValue::UNKNOWN) {
-    // ���ǹؼ��֣�˵��tokenValue�� identifier
     tokenValue = TokenValue::IDENTIFIER;
   }
-  // ����һ�������õ�token
   makeToken(tokenValue, CurLoc, buffer);
 }
 
-// ���������
 void Scanner::handleOperationState() {
   CurLoc = getTokenLocation();
 
   bool matched = false;
 
   addToBuffer(CurrentChar);
-  // ���ڴ󲿷����������Ҫ��ǰ��һ��
   addToBuffer(peekChar());
 
   auto tokenKind = table.isOperator(buffer);
-  // �ȼ����ǰ����buffer�Ƿ���ŷ��ű��е����������
   if (tokenKind == TokenValue::UNKNOWN) {
-    // ���������ַ��������һ��
     reduceBuffer();
     tokenKind = table.isOperator(buffer);
   } else {
-    // ��ǰ��һ���Ĺ����з��ֲ���operator�����³�����Ȼ�������������
     matched = true;
     getNextChar();
   }
@@ -352,22 +324,17 @@ void Scanner::handleOperationState() {
     exit(1);
   }
 
-  // ʶ��������ɹ���������token
   makeToken(tokenKind, CurLoc, buffer);
   getNextChar();
 }
 
-// ��������
 void Scanner::handleDigit() {
   addToBuffer(CurrentChar);
   getNextChar();
-  // ѭ�����ȥȡ�ַ���ֱ��ȡ���ַ���������Ϊֹ
   while (std::isdigit(CurrentChar)) {
     addToBuffer(CurrentChar);
     getNextChar();
   }
-  // ���������п�����.(dot)����E/e��ʽ
-  // �������������.(dot)�����Σ�����ת��fraction����
 }
 
 void Scanner::handleXDigit() {

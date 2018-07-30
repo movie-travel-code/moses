@@ -10,7 +10,6 @@ using namespace compiler::lex;
 using namespace compiler::tok;
 
 /// \brief
-/// ��ȡ����������ȼ������ڽ�����Ԫ���ʽ
 static Level getBinOpPrecedence(TokenValue Kind) {
   switch (Kind) {
   case TokenValue::PUNCTUATOR_Comma:
@@ -50,30 +49,22 @@ static Level getBinOpPrecedence(TokenValue Kind) {
 
 /// \brief Parser constructor.
 /// Get the first token and start parse	tokens.
-/// Note: ��Ȼmoses�����������Ƶ�������moses��Ȼ�Ǿ�̬��������
-/// ��moses�У�ÿ�������������ڱ����ڼ䶼�ǿ���Ψһȷ����
 Parser::Parser(Scanner &scan, Sema &sema, ASTContext &Ctx)
     : scan(scan), Ctx(Ctx), Actions(sema) {
   scan.getNextToken();
   Actions.getScannerPointer(&(this->scan));
 }
 
-/// @brief �ú����ǽ��������ļ�����������moses��C/C++��ͬ��C/C++��top-level��һϵ��
-/// ��Decl����moses��top-level��һϵ�е�decl��stmt
 ASTPtr &Parser::parse() {
   if (scan.getToken().getValue() == TokenValue::FILE_EOF) {
     AST.clear();
     return AST;
   }
 
-  // ��TranslationUnit��ʼʱ������Top-Level scope.
   Actions.ActOnTranslationUnitStart();
 
-  // Parser����ѭ��
+  // Parser
   for (;;) {
-    // ʹ�õݹ��½���Ԥ������������﷨������
-    // Ԥ�⼯��https://github.com/movie-travel-code/moses
-    // ��switch�������handle�Ȳ��stmt��decl.
     switch (scan.getToken().getKind()) {
       // Predict for { statement -> compound-statement }
       // Left Brace {, This represents the compound statement.
@@ -140,15 +131,12 @@ StmtASTPtr Parser::ParseIfStatement() {
   auto locStart = scan.getToken().getTokenLoc();
 
   // Whether the current token is the "if", match "if" and go ahead.
-  // �жϵ�ǰ��token�Ƿ���"if"�ؼ��֣�ƥ�䵽"if"����ǰ��
   if (!expectToken(TokenValue::KEYWORD_if, "if", true)) {
     syntaxErrorRecovery(ParseContext::context::Statement);
     return nullptr;
   }
 
-  // ����ʵ��һ�ּ򵥵Ļָ����ԣ���װ'('����
   // expectToken(TokenValue::PUNCTUATOR_Left_Paren, "(", true);
-
   // Parse condition expression and go head.
   auto condition = ParseExpression();
 
@@ -165,9 +153,6 @@ StmtASTPtr Parser::ParseIfStatement() {
   // parse then part and expect then statement.
   auto thenPart = ParseCompoundStatement();
 
-  // To Do: ����ṹ�Ż���Actions.PopScope()��PushScope()Ӧ�óɶԳ���
-  // ����PushScope�ڴ����µ�Scopeʱ�����̵���PushScope(),��PopScope()
-  // ֻ�ܷ��ڴ˴���
   Actions.PopScope();
 
   if (!thenPart) {
@@ -177,7 +162,7 @@ StmtASTPtr Parser::ParseIfStatement() {
   }
 
   StmtASTPtr elsePart = nullptr;
-  // �жϵ�ǰtoken�Ƿ�Ϊ"else"
+  // "else"
   if (validateToken(TokenValue::KEYWORD_else)) {
     // Perform simple semantic analysis for else part(Create new scope).
     Actions.ActOnCompoundStmt();
@@ -188,7 +173,7 @@ StmtASTPtr Parser::ParseIfStatement() {
       syntaxErrorRecovery(ParseContext::context::Statement);
       return nullptr;
     }
-    // To Do: ����ṹ�Ż�
+    // To Do:
     Actions.PopScope();
   }
   auto locEnd = scan.getToken().getTokenLoc();
@@ -197,7 +182,7 @@ StmtASTPtr Parser::ParseIfStatement() {
                                        elsePart);
 }
 
-/// \brief ParseNumberExpr - ����������ڽ���number literal.
+/// \brief ParseNumberExpr - number literal.
 ExprASTPtr Parser::ParseNumberExpr() {
   auto curTok = scan.getToken();
   if (!expectToken(TokenValue::INTEGER_LITERAL, "integer literal", true)) {
@@ -212,7 +197,7 @@ ExprASTPtr Parser::ParseNumberExpr() {
   return NumE;
 }
 
-/// \brief ParseCharLiteral - ����������ڽ���char literal.
+/// \brief ParseCharLiteral - char literal.
 ExprASTPtr Parser::ParseCharLiteral() {
   auto curTok = scan.getToken();
   if (!expectToken(TokenValue::CHAR_LITERAL, "char literal", true)) {
@@ -226,8 +211,8 @@ ExprASTPtr Parser::ParseCharLiteral() {
   return CharE;
 }
 
-/// \brief ParseParenExpr - �ú�����Ҫ���ڽ���paren expr.
-/// ����, "( num + 10 )".
+/// \brief ParseParenExpr - paren expr.
+/// "( num + 10 )".
 /// -------------------------nonsense for coding---------------------------
 /// This function will consume the all tokens of "( expression )".
 /// As you can see, ParseParenExpr() will call ParseExpression() and Parse-
@@ -243,8 +228,6 @@ ExprASTPtr Parser::ParseCharLiteral() {
 ///					| INT-LITERAL | BOOL-LITERAL "
 /// parenExpr -> ( expression )
 
-// Note: �˴����ǲ�û����AST������ʾ�����ParenExpr�ڵ㣬����Clang��AST��holdס
-// ���е���Ϣ��moses��ASTֻ��Ϊ�˽��к���������ʹ������ɶ������ģ����Լ��Ϊ����
 ExprASTPtr Parser::ParseParenExpr() {
   if (!expectToken(TokenValue::PUNCTUATOR_Left_Paren, "(", true)) {
     syntaxErrorRecovery(ParseContext::context::PrimaryExpression);
@@ -261,18 +244,11 @@ ExprASTPtr Parser::ParseParenExpr() {
   return expr;
 }
 
-/// \brief ParseIdentifierExpr - ����������ڽ�����ʶ����identifier.
-/// �п����Ǳ������ã�Ҳ�п����Ǻ������ã�����add();
-/// Ϊ��ʵ���ж�����ͨ�������û��Ǻ������ã�������Ҫlook-ahead�������һ��token��'('
-/// ��ô��Ҫ����CallExpr���������'('����ô����DeclRefExpr.
+/// \brief ParseIdentifierExpr
 /// " identifierexpr
 ///		-> identifier
 ///		-> identifier arg-list "
 ExprASTPtr Parser::ParseIdentifierExpr() {
-  // To Do: ���ֿ�IdentifierExpr��DeclRefExpr
-  // IdentifierExprֻҪ�Ǳ�ʶ�������ԣ�����DeclRefExpr�����Ǳ������ã�����'class
-  // Base{};' �е�'var b : Base',
-  // ��VarDecl������'Base'��IdentifierExpr������DeclRefExpr.
   auto curTok = scan.getToken();
   auto locStart = curTok.getTokenLoc();
   std::string IdName = curTok.getLexem();
@@ -283,8 +259,7 @@ ExprASTPtr Parser::ParseIdentifierExpr() {
   if (validateToken(TokenValue::PUNCTUATOR_Left_Paren)) {
     return ParseCallExpr(curTok);
   } else {
-    // Semantic analysis.(Identifierֻ����VariableSymbol)
-    // �ڽ���DeclRefExprʱ����ȡInitExpr.
+    // Semantic analysis.
     VarDeclPtr var = Actions.ActOnDeclRefExpr(IdName);
     auto locEnd = scan.getToken().getTokenLoc();
     return std::make_shared<DeclRefExpr>(
@@ -292,11 +267,10 @@ ExprASTPtr Parser::ParseIdentifierExpr() {
   }
 }
 
-/// \brief ParseDeclStmt - ����DeclStmt.
+/// \brief ParseDeclStmt - DeclStmt.
 StmtASTPtr Parser::ParseDeclStmt() {
   StmtASTPtr curStmt = nullptr;
   switch (scan.getToken().getValue()) {
-    // To Do: ��Ҫ��¼const������Ϣ
   case TokenValue::KEYWORD_var:
   case TokenValue::KEYWORD_const:
     curStmt = ParseVarDecl();
@@ -309,7 +283,6 @@ StmtASTPtr Parser::ParseDeclStmt() {
   default:
     break;
   }
-  // ʵ�м򵥵Ĵ���ָ����ԣ���װ';'����
   expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true);
   return curStmt;
 }
@@ -324,14 +297,13 @@ StmtASTPtr Parser::ParseCompoundStatement() {
   return ParseCompoundStatementBody();
 }
 
-/// \brief ParseCompoundStatementBody - �ú������ڽ���compound statement.
+/// \brief ParseCompoundStatementBody.
 StmtASTPtr Parser::ParseCompoundStatementBody() {
   auto locStart = scan.getToken().getTokenLoc();
   expectToken(TokenValue::PUNCTUATOR_Left_Brace, "{", true);
   std::vector<StmtASTPtr> bodyStmts;
   for (;;) {
     StmtASTPtr currentASTPtr = nullptr;
-    // �������'}'��ֱ���˳�
     if (validateToken(TokenValue::PUNCTUATOR_Right_Brace, false)) {
       break;
     }
@@ -342,7 +314,6 @@ StmtASTPtr Parser::ParseCompoundStatementBody() {
       // Create new scope.
       Actions.ActOnCompoundStmt();
       bodyStmts.push_back(ParseCompoundStatement());
-      // To Do: �Ż�����ṹ
       Actions.PopScope();
       break;
     case TokenValue::KEYWORD_if:
@@ -367,7 +338,6 @@ StmtASTPtr Parser::ParseCompoundStatementBody() {
     case TokenValue::KEYWORD_const:
     case TokenValue::KEYWORD_class:
       bodyStmts.push_back(ParseDeclStmt());
-      // ����moses����֧�ֱհ�
       // case TokenValue::KEYWORD_func:
       //	ParseFunctionDefinition();
       break;
@@ -390,7 +360,7 @@ StmtASTPtr Parser::ParseCompoundStatementBody() {
       break;
     }
   }
-  // ��δ������ָ�
+
   if (!expectToken(TokenValue::PUNCTUATOR_Right_Brace, "}", true)) {
     syntaxErrorRecovery(ParseContext::context::CompoundStatement);
   }
@@ -398,14 +368,11 @@ StmtASTPtr Parser::ParseCompoundStatementBody() {
                                         bodyStmts);
 }
 
-/// \brief ParseWhileStatement - �ú������ڽ���while���.
+/// \brief ParseWhileStatement - while.
 StmtASTPtr Parser::ParseWhileStatement() {
   auto locStart = scan.getToken().getTokenLoc();
 
   // Shit Code!
-  // To Do: ���һ�ָ��õĻ��ƣ������浱ǰ��Parse context.
-  // ��ʱ��Ҫ����while��break��鵱ǰ�Ļ����Ƿ���while-loop
-  // ���õ�ǰ�Ļ���Ϊwhile��Ϊ�˼��break������ƥ������⡣
   auto oldContext = CurrentContext;
   CurrentContext = ContextKind::While;
 
@@ -438,14 +405,11 @@ StmtASTPtr Parser::ParseWhileStatement() {
                                           compoundStmt);
 }
 
-/// \brief ParseBreakStatement - ����break statement.
-/// ---------------------nonsense for coding----------------------
-/// break statementֻ�ܴ���while��for��
-/// ---------------------nonsense for coding----------------------
+/// \brief ParseBreakStatement - break statement.
 StmtASTPtr Parser::ParseBreakStatement() {
   auto locStart = scan.getToken().getTokenLoc();
   scan.getNextToken();
-  // parse break statement����Ҫ�����������
+  // parse break statement
   if (!expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true)) {
     syntaxErrorRecovery(ParseContext::context::Statement);
   }
@@ -453,16 +417,13 @@ StmtASTPtr Parser::ParseBreakStatement() {
   return std::make_shared<BreakStatement>(locStart, locEnd);
 }
 
-/// \brief ParseContinueStatement - ����continue statement.
-/// --------------------nonsense for coding---------------------
-/// continue statementֻ�ܴ���while��for��
-/// --------------------nonsense for coding---------------------
+/// \brief ParseContinueStatement - continue statement.
 StmtASTPtr Parser::ParseContinueStatement() {
   auto locStart = scan.getToken().getTokenLoc();
   if (!expectToken(TokenValue::KEYWORD_continue, "continue", true)) {
     syntaxErrorRecovery(ParseContext::context::Statement);
   }
-  // parse continue statement����Ҫ�����������
+  // parse continue statement
   if (!expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true)) {
     syntaxErrorRecovery(ParseContext::context::Statement);
   }
@@ -470,7 +431,7 @@ StmtASTPtr Parser::ParseContinueStatement() {
   return std::make_shared<ContinueStatement>(locStart, locEnd);
 }
 
-/// \brief ParsereturnStatement() - ����return statement.
+/// \brief ParsereturnStatement() - return statement.
 /// \parm funcSym - Current function context thar parser dealing with.
 /// -------------------------------------------------------------
 /// Return Statement's Grammar as below:
@@ -482,15 +443,13 @@ StmtASTPtr Parser::ParseReturnStatement() {
   if (!expectToken(TokenValue::KEYWORD_return, "return", true)) {
     syntaxErrorRecovery(ParseContext::context::Statement);
   }
-  // �����"return;"����ֱ�ӷ���
+
   if (validateToken(TokenValue::PUNCTUATOR_Semicolon)) {
     return std::make_shared<ReturnStatement>(
         locStart, scan.getToken().getTokenLoc(), nullptr);
   }
 
   ExprASTPtr returnExpr = nullptr;
-  /// (1) moses֧�����������µĶ�ֵ���أ��ж�������expression���أ������������ͷ���
-  /// ���磺 return {num, num};
   if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false)) {
     returnExpr = ParseAnonymousInitExpr();
     /// Perform simple semantic analysis(Mainly for type checking.)
@@ -533,12 +492,8 @@ ExprASTPtr Parser::ParseBoolLiteral(bool isTrue) {
 }
 
 /// \brief ParseExpression - Parse the expression.
-/// ��tokenΪ '-' '!' 'identifier' '(' 'INTLITERAL' ��
-/// 'BOOLLITERAL'��ʱ��Ż���е��ú�����
 /// --------------------------nonsense for coding-------------------------------
-/// ���ʽ��һ�����Եݹ���ķ���Ԫ��������δ������е����ȼ��ͽ������һ������Ҫ������
 /// " expr1 + expr2 * expr3 + expr4 / (expr5 - 10) + true + !10 "
-/// ��ο��ǵ��������ҵĽ���ԣ������չ˵����ȼ���
 /// The basic idea of operator precedence parsing is to break down an expression
 /// with potentially ambigous binary operators into pieces. Consider, for exam-
 /// -ple, the expression "a + b + ( c + d ) * e * f + g". Operator precedence
@@ -549,13 +504,6 @@ ExprASTPtr Parser::ParseBoolLiteral(bool isTrue) {
 /// expression Parser doesn't need to worry about nested subexpressions like
 /// (c+d) at all.
 /// --------------------------nonsense for coding-------------------------------
-/// --------------------------nonsense for coding-------------------------------
-/// primary expressionӦ�ð�����Щ���ʽ���Ƿ���� ( expression ), -identifier,
-/// !identifier�ȵȡ�ע����ʽ��expression + - identifier���ǿ��Ա����ܵģ�����Ὣ
-/// -identifierʶ��Ϊһ�������ʽ���������������� " expr1 -- expr2 "�ǲ��ᱻ����ģ�
-/// ��Ϊ����Ὣ--ʶ���������������Ի����������⡣��ʵ��Щ�������赣�ģ���Ϊ��Щ
-/// �Ѿ���ʶ���token��
-/// --------------------------nonsense for coding-------------------------------
 
 ExprASTPtr Parser::ParseExpression() {
   auto LHS = ParseWrappedUnaryExpression();
@@ -563,41 +511,16 @@ ExprASTPtr Parser::ParseExpression() {
     syntaxErrorRecovery(ParseContext::context::Expression);
   }
 
-  // �����ȼ���ʼ��Ϊ��͵�
-  // "Assignment"��ֱ�������������͵����ȼ������˳�"expression"�Ľ��� ���磺num0 * num1
-  // - num2 / num3 - 5;
-  // ';'������͵����ȼ���unknown
-  // " num = num0 * num1 - num2 / num3 - 5;"
-  // ��ʼͨ��ParseWarppedUnaryExpression()������num0��Ȼ�����ȼ�����Ϊ
-  // 'Multiplicative' *�� Ȼ���ٽ�����num1��ע�� '=' < '*'�����Խ� 'num0*num1'
-  // �ϲ���һ������������ahead. �м仹
-  // ��������ص�����������������������ȼ���͵�';'�������������Ҳ����
-  // ------------------------nonsense for coding--------------------------------
-  // ���������е���񳬼�������
-  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  //		����'*'������͵����ȼ�����_______��������������֪�����ȼ����ͣ�____
-  // (���ȼ���ʼ��ΪAssignmen)______|
-  // |__________
-  // >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
-  // ���ȼ��ߵĻ���������ȥ����һ���µ�ParseBinOpRHS()��ֱ������һ�����ȼ����ߵģ����߸��͵�
-  // ���ȼ����ٵ���һ���µ�ParseBinOpRHS()���������н������ص��������������ִ����֮��
-  // ��������ز��������������ȼ��ߵ�һ���ӱ��ʽ��Ϊһ���µ�RHS������ǰ�ĺϲ�Ϊ�µ�LHS��Ȼ�����
-  // ��ԭ�еĲ㼶�Ͻ�����
-  // ------------------------nonsense for coding--------------------------------
   return ParseBinOpRHS(OperatorPrec::Level::Assignment, LHS);
 }
 
-/// \brief ParseWrappedUnaryExpression - ����parse UnaryExpression
+/// \brief ParseWrappedUnaryExpression - parse UnaryExpression
 /// u-expression's Grammar as below.
 /// "u-expression -> - u-expression | ! u-expression | ++ u-expression
 ///			| -- u-expression | post-expression"
 /// The code like this "int num = - + + - + + num1;" is accepted.
 /// fxxk expression!!!
 /// Token is the key to understand Parser, not the character!!!
-/// -----------------nonsense for coding--------------------------
-/// �ú������ڽ����򵥵�unary
-/// expression��Ҳ���ǿ�����Ϊ�������ı��ʽ
-/// -----------------nonsense for coding--------------------------
 ExprASTPtr Parser::ParseWrappedUnaryExpression() {
   auto tok = scan.getToken();
   TokenValue tokKind = tok.getKind();
@@ -605,7 +528,6 @@ ExprASTPtr Parser::ParseWrappedUnaryExpression() {
   ExprASTPtr RHS = nullptr;
 
   if (tokKind == TokenValue::BO_Sub) {
-    /// Note: ��ʾ��Ŀ�����-
     scan.getNextToken();
     RHS = ParseWrappedUnaryExpression();
     if (!RHS || !(RHS->getType())) {
@@ -616,7 +538,6 @@ ExprASTPtr Parser::ParseWrappedUnaryExpression() {
                                       RHS->getType(), tok.getLexem(), RHS,
                                       Expr::ExprValueKind::VK_RValue);
   } else if (tokKind == TokenValue::UO_Exclamatory) {
-    /// Note: ��ʾ��Ŀ����!
     scan.getNextToken();
     RHS = ParseWrappedUnaryExpression();
     if (!RHS || !(RHS->getType())) {
@@ -627,14 +548,12 @@ ExprASTPtr Parser::ParseWrappedUnaryExpression() {
                                       RHS->getType(), tok.getLexem(), RHS,
                                       Expr::ExprValueKind::VK_RValue);
   } else if (tokKind == TokenValue::UO_Dec || tokKind == TokenValue::UO_Inc) {
-    /// Note: ��ʾ��Ŀ����++ --
     scan.getNextToken();
     RHS = ParseWrappedUnaryExpression();
     if (!RHS || !(RHS->getType())) {
       errorReport("Error occured in left hand expression.");
     }
     RHS = Actions.ActOnDecOrIncExpr(RHS);
-    // ǰ��++ --�õ���������ʽ��LValue
     RHS = std::make_shared<UnaryExpr>(locStart, scan.getToken().getTokenLoc(),
                                       RHS->getType(), tok.getLexem(), RHS,
                                       Expr::ExprValueKind::VK_LValue);
@@ -644,7 +563,7 @@ ExprASTPtr Parser::ParseWrappedUnaryExpression() {
   return RHS;
 }
 
-/// \brief ParsePostfixExpression - ����parse PostfixExpression
+/// \brief ParsePostfixExpression
 /// for example - " ++num" or "point.mem"
 /// post-expression's Grammar as below.
 /// "post-expression -> primary-expression
@@ -657,13 +576,6 @@ ExprASTPtr Parser::ParseWrappedUnaryExpression() {
 
 /// ----------------------nonsense for coding-----------------
 /// There is a bug need to fix.
-/// ���磺num++���ص���rvalue( ���Ӧ�� ++num���ص�����ֵ)��
-/// ����num++ ++������ʽ��Υ���ġ��ķ�����'.'���Եݹ�ȡ����'++'
-/// ���ܵݹ�ʹ�á�
-/// ----------------------nonsense for coding-----------------
-/// ��ʵ'num++
-/// ++'���������﷨����Ӧ�������������Ϊ��ֵ����
-/// ����ֵ���������﷨�����Ĺ�������Ҫ��¼����ֵ��Ϣ��
 /// https://code.woboq.org/llvm/clang/include/clang/AST/Expr.h.html 247
 /// ----------------------nonsense for coding-----------------
 ExprASTPtr Parser::ParsePostfixExpression() {
@@ -711,7 +623,6 @@ ExprASTPtr Parser::ParsePostfixExpressionSuffix(ExprASTPtr LHS) {
       break;
     case TokenValue::UO_Inc: // postfix-expression: postfix-expression '++'
     case TokenValue::UO_Dec: // postfix-expression: postfix-expression '--'
-      // moses�е��Զ���������ʱ��֧����������أ������ܹ�����++ --��ֻ����int����
       OpName = scan.getToken().getLexem();
       LHS = Actions.ActOnDecOrIncExpr(LHS);
       // Consume the '++' or '--'
@@ -729,7 +640,7 @@ ExprASTPtr Parser::ParsePostfixExpressionSuffix(ExprASTPtr LHS) {
 /// from statement to expression.
 StmtASTPtr Parser::ParseExpressionStatement() {
   auto Expr = ParseExpression();
-  // �����ExpressionStatement AST
+  // ExpressionStatement AST
   // expect ;
   if (!expectToken(TokenValue::PUNCTUATOR_Semicolon, ";", true)) {
     syntaxErrorRecovery(ParseContext::context::Statement);
@@ -738,9 +649,6 @@ StmtASTPtr Parser::ParseExpressionStatement() {
 }
 
 /// \brief ParseBinOpRHS - Parse the expression-tail.
-/// Parser����һ�����������������������µ��л�ParseBinOpRHS()����ֻ��ͬ�㼶��ִ���﷨����
-/// �л��㼶��ʱ��Ҳ�������շ�������������ʱ�򣩣���������أ������ȼ��ߵ��ӱ��ʽ��Ϊһ��
-/// ���Ĳ�����
 /// Note: Anonymous type need specially handled.
 ExprASTPtr Parser::ParseBinOpRHS(OperatorPrec::Level MinPrec, ExprASTPtr lhs) {
   auto locStart = scan.getToken().getTokenLoc();
@@ -806,14 +714,11 @@ ExprASTPtr Parser::ParseBinOpRHS(OperatorPrec::Level MinPrec, ExprASTPtr lhs) {
     // ParserHSOfBinaryExpression() And if now the expression is "num0 = num1 =
     // num2", right association, so "num0 = (num1 = num2)", num1 is binds more
     // tightly with num2.
-    // �����ֻ���ڱ��ʽ�г�������������ͬ���ȼ��Ĳ������������������������
     if (ThisPrec < NextTokPrec || (ThisPrec == NextTokPrec && isRightAssoc)) {
       RHS = ParseBinOpRHS(
           static_cast<OperatorPrec::Level>(ThisPrec + !isRightAssoc), RHS);
-      // ����ParseBinOpRHS()���ص�ʱ����һ��Op�����ȼ�δ֪
       NextTokPrec = getBinOpPrecedence(scan.getToken().getKind());
     }
-    // ���û�еݹ����ParseBinOpRHS()�Ļ���NextTokPrec�����ȼ��ǹ̶���
     // Perform semantic and combine the LHS and RHS into LHS (e.g. build AST)
     lhs = Actions.ActOnBinaryOperator(lhs, OpToken, RHS);
   }
@@ -856,8 +761,6 @@ ExprASTPtr Parser::ParsePrimaryExpr() {
 /// proper-arg-list->arg proper-arg - list - tail
 /// proper-arg-list-tail ->, arg proper-arg-list-tail | EPSILON
 /// arg->expression | anonymous - initial
-/// Note: moses֧�ֺ�������ʱ���������͵�ʵ��
-/// ���磺 add({lhs, rhs}, num);
 ExprASTPtr Parser::ParseCallExpr(Token tok) {
   auto startLoc = tok.getTokenLoc();
   std::string funcName = tok.getLexem();
@@ -882,7 +785,6 @@ ExprASTPtr Parser::ParseCallExpr(Token tok) {
     }
 
     ExprASTPtr arg = nullptr;
-    // (1) ����argument expression��ʵ�������֣���ͨexpression������ʵ��
     if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false)) {
       arg = ParseAnonymousInitExpr();
     } else {
@@ -898,29 +800,17 @@ ExprASTPtr Parser::ParseCallExpr(Token tok) {
 
   // Perform simple semantic analysis
   // (Check whether the function is defined or parameter types match).
-
-  // ��ѯ���ű��ʱ����л�ȡ��FunctionDecl�ĵ�ַ
-  // To Do: �������һ���ݹ��bug.
   FunctionDeclPtr fd = nullptr;
   auto returnType = Actions.ActOnCallExpr(funcName, ParmTyps, fd);
 
-  // ���CallExpr�Ƿ��ǿ��Ƶ��ģ�CallExpr�Ƿ���Ƶ�����return type.
-
   auto endLoc = scan.getToken().getTokenLoc();
 
-  // Note: ��������CallExpr����ֵ������������Ҫע�⣬��1�������������void����Ϊrvalue
-  // ��2���������return-type������valueKind�����return-type������������Ϊrvalue
-  // ���磺func() = 10;
-  // ��Ϊ�����ķ���ֵ�ı��ʾ���һ����ʱ��������ʵ�ֻ�������stack frame�ϵ�һ����ʱ�ڴ档
-  // To Do: moses�������������ֵ���壬�û��Զ��������������塣
-  // ����Ŀǰȫ������ֵ���壨������C/C++��
   if (returnType) {
     return std::make_shared<CallExpr>(
         startLoc, endLoc, returnType, tok.getLexem(), Args,
         Expr::ExprValueKind::VK_RValue, fd,
         returnType->getKind() != TypeKind::USERDEFIED);
   }
-  // ���returnTypeΪ��
   return nullptr;
 }
 
@@ -934,14 +824,7 @@ DeclASTPtr Parser::ParseVarDecl() {
   auto locStart = scan.getToken().getTokenLoc();
 
   // 'isConst' and 'isInitial' for const
-  // ��moses�У�const��������Ҫ��C++�е������������ʼ��
-  // const num : int;
-  // num = 10;
-  // �����д�����moses��Ҳ������ģ����Զ�const�ĸ�ֵ����ȫ������
-  // ���const����û�н��й���ʼ������ô������״θ�ֵ��������ģ��༴��ʼ���������򱨴�.
-  // ������Ҫ��¼const�����Ƿ��ʼ������Ϣ.
   bool isConst = false;
-  // ��ʼ�����ʽ����ѡ
   ExprASTPtr InitExpr = nullptr;
 
   if (validateToken(TokenValue::KEYWORD_const, false)) {
@@ -952,24 +835,19 @@ DeclASTPtr Parser::ParseVarDecl() {
 
   if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false)) {
     /// var {int, {int, int}} = num;
-    /// ���decl��Ҫ���ڽ���anonymous type��unpack����
     if (isConst) {
       errorReport("Unpack declaration can't have const qualifier.");
     }
 
-    /// (1) ����unpack decl���󲿣����磺var {num, lhs} = ;
     auto unpackDecl = ParseUnpackDecl(isConst);
     // complicated actions routines.
     if (!(validateToken(TokenValue::BO_Assign))) {
-      // Note������ִ�м򵥵Ĵ���ָ����ԣ��򵥵ļ���"="����
       errorReport("Expected '=', but find " + scan.getToken().getLexem());
     }
 
-    /// (2) ����unpack decl���Ҳ������磺 = identifier | identifier()
     auto initexpr = ParseIdentifierExpr();
 
     /// (3)
-    /// ���м򵥵�����������������ͼ��
     return Actions.ActOnUnpackDecl(unpackDecl, initexpr->getType());
   }
 
@@ -991,8 +869,6 @@ DeclASTPtr Parser::ParseVarDecl() {
       DeclType = Ctx.Bool;
     } else if (validateToken(TokenValue::IDENTIFIER, false)) {
       // Simple semantic analysis. Check whether the user-defined type
-      // ����func�����class����ֻ������Top-Level�У�����ֻ��Ҫ��Top-Level Scope
-      // �н���name lookup�Ϳ����ˡ�
       DeclType = Actions.ActOnVarDeclUserDefinedType(scan.getToken());
       scan.getNextToken();
     } else if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false)) {
@@ -1003,9 +879,6 @@ DeclASTPtr Parser::ParseVarDecl() {
       errorReport("expect 'int' ot 'bool', but find " +
                   scan.getToken().getLexem());
       syntaxErrorRecovery(ParseContext::context::Statement);
-      // ---------------------nonsense for coding-------------------------------
-      // Ϊ�˱��ڴӴ����лָ��������﷨���󣬳���������ֹ
-      // ---------------------nonsense for coding-------------------------------
       scan.getNextToken();
     }
   } else if (validateToken(TokenValue::BO_Assign)) {
@@ -1019,8 +892,6 @@ DeclASTPtr Parser::ParseVarDecl() {
       InitExpr = ParseExpression();
       DeclType = InitExpr->getType();
     }
-    // ����InitExpr����ֵ��Ĭ��const���ͣ��ڶ�������ͽ����Ƶ�ʱ�����磺"lhs = rhs +
-    // 10;"��Ӧ�ö���const���� DeclType = Type::const_remove(InitExpr->getType());
   } else {
     // syntax error
     errorReport("expect ':' or '=', but find " + scan.getToken().getLexem());
@@ -1030,9 +901,6 @@ DeclASTPtr Parser::ParseVarDecl() {
   auto decl =
       std::make_shared<VarDecl>(locStart, scan.getToken().getTokenLoc(),
                                 curTok.getLexem(), DeclType, isConst, InitExpr);
-
-  // Perform simple semantic analysis(Create New Symbol
-  // Note: DeclType����const����.
   Actions.ActOnVarDecl(curTok.getLexem(), decl);
 
   return decl;
@@ -1040,10 +908,6 @@ DeclASTPtr Parser::ParseVarDecl() {
 
 /// \brief This function parse unpack decl.
 /// var {num, {start, end}} = num;
-/// ����{num, {start, end}}�������num.
-/// Note: �������Ϳ�����N��������ʾ
-/// {int, {int, bool, {int, bool}, int}, {int, int}}
-/// һ���������������Ը���Ƕ�������зֲ�
 UnpackDeclPtr Parser::ParseUnpackDecl(bool isConst) {
   // current token is '{'
   if (!(expectToken(TokenValue::PUNCTUATOR_Left_Brace, "{", true))) {
@@ -1057,7 +921,7 @@ UnpackDeclPtr Parser::ParseUnpackDecl(bool isConst) {
       decls.push_back(ParseUnpackDecl(isConst));
     } else if (validateToken(TokenValue::IDENTIFIER, false)) {
       Actions.ActOnUnpackDeclElement(scan.getToken().getLexem());
-      /// ע��unpack decl��typeֻ��ͨ���Ҳ���������ͱ��������á�
+
       decls.push_back(std::make_shared<VarDecl>(
           startloc, scan.getToken().getTokenLoc(), scan.getToken().getLexem(),
           nullptr, isConst, nullptr));
@@ -1075,12 +939,6 @@ UnpackDeclPtr Parser::ParseUnpackDecl(bool isConst) {
                                       decls);
 }
 
-/// \brief ����moses֧���Զ������͵��Ƶ������磺
-/// var num = {{12, 234}, false};
-/// ��ônum�����;��� class { class {int, int}, false}
-/// �����Ϳ���ͨ����num��ֵ�����ͽṹ������ͬ�ı�����
-/// ������moses���ýṹ���͵ȼ۵���Ҫ���֡�
-/// Note: �ú�������token���ı�׼����"{"��ͷ
 ExprASTPtr Parser::ParseAnonymousInitExpr() {
   auto startloc = scan.getToken().getTokenLoc();
   // consume '{'
@@ -1115,7 +973,6 @@ ExprASTPtr Parser::ParseAnonymousInitExpr() {
     expectToken(TokenValue::PUNCTUATOR_Comma, ",", true);
   }
 
-  /// ����һ����������
   unsigned size = initExprs.size();
   for (unsigned i = 0; i < size; i++) {
     initTypes.push_back(initExprs[i]->getType());
@@ -1188,7 +1045,6 @@ StmtASTPtr Parser::ParseFunctionDefinition() {
     break;
   }
 
-  // ����򵥵ļ�¼��Funcition Symbol��
   // Record return type and create new scope.
   Actions.ActOnFunctionDecl(name, returnType);
 
@@ -1199,8 +1055,6 @@ StmtASTPtr Parser::ParseFunctionDefinition() {
   auto FuncDecl = std::make_shared<FunctionDecl>(
       locStart, scan.getToken().getTokenLoc(), name, parm, body, returnType);
 
-  // To Do: �������ṹ���Ǻܺ���
-  // ��FunctionSymbol��¼FunctionDecl�ĵ�ַ
   Actions.getFunctionStackTop()->setFunctionDeclPointer(FuncDecl);
 
   // Pop function stack
@@ -1213,11 +1067,6 @@ StmtASTPtr Parser::ParseFunctionDefinition() {
 }
 
 /// \brief ParseFunctionStatementBody - Parse function body.
-/// ----------------------nonsense for coding-----------------------
-/// ��Ȼfunction body��compound statement�����ƣ����ǻ���һЩscope��
-/// ����������Ϊ��ʵ�ֺ���ĺ����հ������ｫCompoundStatement��
-/// FunctionStatementBody��parse�ֿ���
-/// ----------------------nonsense for coding-----------------------
 StmtASTPtr Parser::ParseFunctionStatementBody() {
   // Temporarily call 'ParseCompoundStatement()'
   auto body = ParseCompoundStatement();
@@ -1243,14 +1092,12 @@ std::vector<ParmDeclPtr> Parser::ParseParameterList() {
   // Cycle parse of formal parameters.
   while (1) {
     if (validateToken(TokenValue::PUNCTUATOR_Right_Paren)) {
-      // �������
       break;
     }
 
     parms.push_back(ParseParmDecl());
 
     if (validateToken(TokenValue::PUNCTUATOR_Right_Paren)) {
-      // �������
       break;
     } else if (validateToken(TokenValue::PUNCTUATOR_Comma)) {
       continue;
@@ -1263,12 +1110,6 @@ std::vector<ParmDeclPtr> Parser::ParseParameterList() {
 }
 
 /// \brief ParseParmDecl - Parse parameter declaration.
-/// parm decl's Grammar as below.
-/// para-declaration -> const ? identifier type-annotation
-/// type-annotation -> ��:�� type
-/// type -> ��int�� | ��bool�� | identifier | anonymous
-/// To Do: handle const keyword.
-/// Note: �����������swift��parm����ʱ����Ҫ'var'�ؼ���.
 ParmDeclPtr Parser::ParseParmDecl() {
   auto locStart = scan.getToken().getTokenLoc();
   // Get parm name.
@@ -1296,14 +1137,12 @@ ParmDeclPtr Parser::ParseParmDecl() {
   } else if (validateToken(TokenValue::KEYWORD_bool)) {
     DeclType = Ctx.Bool;
   } else if (validateToken(TokenValue::IDENTIFIER, false)) {
-    // �û��Զ��������β�
     // Type checking.
     DeclType = Actions.ActOnParmDeclUserDefinedType(scan.getToken());
     // DeclType->setConst(isConst);
     // consume user defined type(identifier).
     scan.getNextToken();
   } else if (validateToken(TokenValue::PUNCTUATOR_Left_Brace, false)) {
-    // ���������β�
     DeclType = ParseAnony();
     scan.getNextToken();
   } else {
@@ -1335,7 +1174,6 @@ DeclASTPtr Parser::ParseClassDecl() {
   std::string className = scan.getToken().getLexem();
   if (!expectToken(TokenValue::IDENTIFIER, "identifier", true)) {
     // class identifier '{' }
-    // ע������� func identifier() '{' }��ͬ
     syntaxErrorRecovery(ParseContext::context::ParmList);
   }
 
@@ -1348,7 +1186,6 @@ DeclASTPtr Parser::ParseClassDecl() {
 
   std::vector<StmtASTPtr> classBody;
   auto classBodyStart = scan.getToken().getTokenLoc();
-  // ��ʱ����Ҫ����ָ���ֱ��ʹ�ü򵥵Ĳ��Լ��ɣ�����װ������'{'token
   expectToken(TokenValue::PUNCTUATOR_Left_Brace, "{", true);
 
   for (;;) {
@@ -1359,24 +1196,14 @@ DeclASTPtr Parser::ParseClassDecl() {
     case TokenValue::KEYWORD_var:
       classBody.push_back(ParseDeclStmt());
       break;
-      /// Note: ��moses�У�class��ʱ��֧�ֳ�Ա��������
-      /*case TokenValue::KEYWORD_func:
-              classBody.push_back(ParseFunctionDefinition());
-              break;*/
-      /// Note: class body�ڲ�������'{'
-      /*case TokenValue::PUNCTUATOR_Left_Brace:
-              break;*/
     case TokenValue::PUNCTUATOR_Semicolon:
       scan.getNextToken();
       break;
     default:
-      // ����ָ���ֱfuck
       syntaxErrorRecovery(ParseContext::context::Statement);
-      // ��������';'����ͣ�´���ָ����
       scan.getNextToken();
       break;
     }
-    // To Do: ����ṹ����
     if (validateToken(TokenValue::PUNCTUATOR_Right_Brace, false)) {
       break;
     }
@@ -1404,11 +1231,6 @@ DeclASTPtr Parser::ParseClassDecl() {
   return ClassD;
 }
 
-/// \brief ������������
-/// anonymous -> ��{�� anonymous-internal ��}��
-/// anonymous-interal -> anonymous-type(��, ��  anonymous-type)*
-/// anonymous-type -> int | bool | anonymous
-/// {int, {flag, bool}, int}
 std::shared_ptr<AnonymousType> Parser::ParseAnony() {
   std::vector<std::shared_ptr<Type>> types;
   auto startloc = scan.getToken().getTokenLoc();
@@ -1483,7 +1305,6 @@ void Parser::errorReport(const std::string &msg) const {
 /// \brief syntaxErrorRecovery - achieve syntax error recovery.
 void Parser::syntaxErrorRecovery(ParseContext::context context) {
   std::vector<TokenValue> curSafeSymbols;
-  // ���ݵ�ǰ�Ľ����������ð�ȫ����safe symbol
   switch (context) {
   case ParseContext::context::CompoundStatement:
     curSafeSymbols = ParseContext::StmtSafeSymbols;
@@ -1492,7 +1313,6 @@ void Parser::syntaxErrorRecovery(ParseContext::context context) {
     // statement, if-statement, while-statement, break-statement,
     // continue-statement return-statement, expression-statement,
     // declaration-statement, variable-statement, class-declaration,
-    // constant-declaration To Do: ��������⣬���Ч��
     curSafeSymbols = ParseContext::StmtSafeSymbols;
     break;
   case ParseContext::context::Expression:
@@ -1532,13 +1352,12 @@ void Parser::syntaxErrorRecovery(ParseContext::context context) {
 
 iterate:
   auto curKind = initial;
-  // ����ҵ�SafeSymbol����ֹͣ������
   while (find(curSafeSymbols.begin(), curSafeSymbols.end(), curKind) ==
          curSafeSymbols.end()) {
     scan.getNextToken();
     curKind = scan.getToken().getKind();
   }
-  // Note: ���SyntaxZErrorRecovery()û���κν�չ����ǿ��ǰ��һ��
+
   if (initial == scan.getToken().getKind()) {
     scan.getNextToken();
     goto iterate;

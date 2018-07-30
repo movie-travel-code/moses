@@ -20,7 +20,6 @@
 namespace compiler {
 namespace ast {
 class FunctionDecl;
-// Note: VOIDֻ���ں�����������
 enum class TypeKind : unsigned char { INT, BOOL, VOID, USERDEFIED, ANONYMOUS };
 
 class Type {
@@ -72,7 +71,6 @@ public:
 
 /// \brief UserDefinedType - This Represents class type.
 // To Do: Shit Code!
-// ������������.
 class UserDefinedType final : public Type {
   // The user defined type, e.g. class A {}
   std::string TypeName;
@@ -86,7 +84,7 @@ public:
                   std::vector<std::pair<TyPtr, std::string>> subTypes)
       : Type(kind), TypeName(TypeName) {}
 
-  // StripOffShell - ��ʱ��Ҫȥ�����͵ı�����õ���Ϣ��
+  // StripOffShell
   // e.g.		class A
   //			{
   //				var m : int;
@@ -95,8 +93,6 @@ public:
   //			{
   //				var m : A;
   //			};
-  // class Bʵ����ֻ�� "var m : A" ��һ�����ͣ�����Ϊ����ֵ���߲�������ʱ���п�����Ҫ��
-  // B coerce �� int.
   TyPtr StripOffShell() const;
 
   bool HaveMember(std::string name) const;
@@ -120,9 +116,6 @@ public:
   virtual ~UserDefinedType() {}
 };
 
-/// Note: AnonymousType��moses����Ҫ������
-/// var num = {{132, 23}, num * 9, {false, 10}};
-/// ����num�����е����;�����������.
 class AnonymousType final : public Type {
   AnonymousType() = delete;
   std::vector<TyPtr> subTypes;
@@ -141,7 +134,6 @@ public:
   }
 
   std::vector<TyPtr> getSubTypes() const { return subTypes; }
-  // To Do: ������UserDefinedType�����ࡣ
   TyPtr StripOffShell() const;
   unsigned getSubTypesNum() const { return subTypes.size(); };
   void getTypes(std::vector<TyPtr> &types) const;

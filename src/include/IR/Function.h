@@ -94,7 +94,6 @@ public:
   void Print(std::ostringstream &out);
 };
 
-// Intrinsic���ڻ��ܼ�ª
 class Intrinsic : public GlobalValue {
   std::vector<std::string> Names;
 

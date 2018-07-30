@@ -5,11 +5,6 @@
 // with minimul folding. For general constant creation and folding,
 // use ConstantExpr and the routines in llvm/Analysis/ConstantFolding.h
 //
-// Note:
-// ��LLVM�У��ṩ��һ���򵥵�ConstantFolder����ConstantFolderֻ�Ǽ�
-// �Ķ�constant�����۵���AST�ϵ�constant-folding��Ϊ���ڴ�������ʱ���ṩһЩ
-// �򵥵İ���������: if(condition) {} else {}.
-//
 //===---------------------------------------------------------------------===//
 #ifndef MOSES_IR_CONSTANT_FOLDER_H
 #define MOSES_IR_CONSTANT_FOLDER_H

@@ -40,7 +40,6 @@ public:
     return nullptr;
   }
 
-  /// Note: ����֮ǰ��ͨ��ValueInfoT����HashValue���������Ƿ���ڡ�
   void insert(ValueT V) {
     if (lookup(V))
       return;

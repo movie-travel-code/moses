@@ -9,9 +9,7 @@ using namespace compiler::IRBuild;
 using namespace compiler::CodeGen;
 extern void print(std::shared_ptr<compiler::IR::Value> V);
 /// \brief EmitAggExpr -  Emit the computation of the specified expression of
-/// aggregate type 2016-7-28 Aggregate ֱ�Ӳ���ı��ʽҲ��ֻ�� return
-/// stmt�͸�ֵ���������� Aggregate
-/// �������������㣨��ʱ��֧�֣��������������Ļ�����
+/// aggregate type
 void ModuleBuilder::EmitAggExpr(const Expr *E, ValPtr DestPtr) {
   if (const DeclRefExpr *DRE = dynamic_cast<const DeclRefExpr *>(E)) {
     EmitAggLoadOfLValue(DRE, DestPtr);
@@ -35,14 +33,6 @@ void ModuleBuilder::EmitMemberExprAgg(const MemberExpr *ME, ValPtr DestPtr) {
 }
 
 void ModuleBuilder::EmitCallExprAgg(const CallExpr *CE, ValPtr DestPtr) {
-  // EmitCallExpr()���ص�ValPtr�����������
-  // (1) EmitCallExpr() ΪBuiltin���ͣ���ô���صľ���CallExpr�ĵ�ֵ
-  //     ��һ����ͨ��EmitCallExpr()�Ϳ��Դ���
-  // (2) EmitCallExpr()
-  // ΪAggregateType������Coerce��ĳ��BuiltinType����ô���ص������е�ֵ
-  //     ��һ�ֱȽ��鷳����Ϊ���ٵ�״���ǣ����ߵ����Ͳ�ͬ���ⲿ���ڽ��շ���ֵ��������AggregateType
-  //     �����ص�������coerce�õ������ͣ��������Ͳ�ͬ��
-  // (3) EmitCallExpr() ΪAggregateType��ʹ�õ���sret����ô���ص���TempAllocaָ��
   auto rvalue = EmitCallExpr(CE);
   EmitFinalDestCopy(CE, rvalue, DestPtr);
 }

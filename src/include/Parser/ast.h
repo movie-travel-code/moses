@@ -17,15 +17,6 @@
 
 
 namespace compiler {
-///---------------------------nonsense for
-///coding------------------------------///
-/// syntax tree����parse���֮�󹹽��ģ�����moses��������ʵ��one-pass��compile
-/// Ҳ����˵�ڹ���syntax
-/// tree��ʱ��ֻ��ִ��һЩ�򵥵�������������洢���󡣹������
-/// syntax tree���ٱ���syntax tree��ִ�д������ɲ��֡�
-///---------------------------nonsense for
-///coding------------------------------///
-
 namespace ast {
 using namespace compiler::lex;
 
@@ -77,16 +68,9 @@ using ContStmtPtr = std::shared_ptr<ContinueStatement>;
 using IRValue = std::shared_ptr<IR::Value>;
 
 /// \brief StatementAST - Base class for all statements.
-//--------------------------nonsense for coding---------------------------
-// ����ʹ��std::shared_ptr������AST������Щ���ߣ���ΪIR���ɵ�ʱ��ֱ�ӽ�
-// AST�����������ֱ����AST�������� CodeGen() ������һ�߱���һ�����ɴ��룩��
-//--------------------------nonsense for coding---------------------------
 class StatementAST {
 public:
-  // Visitor Pattern��ʹ��override(�麯��) + overload(����) ����double dispatch.
-  // ���й��ڱ������壨Ҳ����AST node�����֣�ͨ��override�� Accept()�ķ�����ʵ��
-  // ��һ��dispatch����һ��dispatchͨ��override�ķ�ʽ�õ�����Ľڵ����͡�
-  // �ڶ���dispatchʹ������ʵ�֣���IRbuilder����
+  // Visitor Pattern override + overload double dispatch.
   // http://www.cs.wustl.edu/~cytron/cacweb/Tutorial/Visitor/
   // And
   // http://programmers.stackexchange.com/questions/189476/implementing-the-visitor-pattern-for-an-abstract-syntax-tree
@@ -158,16 +142,10 @@ public:
   };
 
 private:
-  // ------------------------nonsense for coding---------------------------
-  // Expr��������Ӧ��Type���������Ҫ�����ڽ������ͼ�顣
-  // ------------------------nonsense for coding---------------------------
   std::shared_ptr<Type> ExprType;
   ExprValueKind VK;
-  // ���ڱ�ʶ��ǰExpr�Ƿ��ǿ��Ƶ���constant��
-  // ���磺
-  // a = num * 5; /* num * 5 �ǿ��Ƶ��� */
-  // var num = {10, num}; /* {10, num} �ǿ��Ƶ��� */
-  // ��moses��Ĭ���û��Զ��������ǲ����Ƶ��ġ�
+  // a = num * 5;
+  // var num = {10, num};
   bool CanBeEvaluated;
 
 public:
@@ -206,7 +184,6 @@ public:
   virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
 };
 
-/// \brief NumberExpr - ������ʾnumeric literal, ����"1".
 class NumberExpr : public Expr {
   double Val;
 
@@ -222,13 +199,10 @@ public:
   virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
 };
 
-/// \brief CharExpr - ������ʾchar literal, ����"c"
 class CharExpr : public Expr {
   std::string C;
 
 public:
-  /// To Do:
-  /// �˴�ʹ��INT����ʾCharExpr��Ҳ�������߿�����Ӽ�
   CharExpr(SourceLocation start, SourceLocation end, std::string c)
       : Expr(start, end, nullptr, ExprValueKind::VK_RValue, true), C(c) {}
 
@@ -239,7 +213,6 @@ public:
   virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
 };
 
-/// \brief StringLiteral - ������ʾstring.
 class StringLiteral : public Expr {
   std::string str;
 
@@ -252,7 +225,6 @@ public:
   virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
 };
 
-/// \brief BoolLiteral - ������ʾbool����ֵ.
 class BoolLiteral : public Expr {
   bool value;
 
@@ -272,22 +244,11 @@ public:
 /// @brief DeclRefExprAST - A reference to a declared variable, function, enum,
 /// etc. This encodes all the information about how a declaration is referenced
 /// within an expression.
-///-------------------------------nonsense for
-///coding-------------------------------
-/// moses
-/// IR��һ�����㣨Ӧ��˵��bug�������﷨����û��ֱ�����ֳ�����DeclRefExpr���Ҳ��
-/// DeclRefExpr��������Clang
-/// dump�����﷨������Ϊ��ֵ���ʽ��DeclRefExpr�ᱻһ����ֵת
-/// ��ֵ����ʽת�����Ͱ�����
-///---------------------------------------------------------------------------------
 class DeclRefExpr final : public Expr {
   std::string Name;
   VarDeclPtr var;
 
 public:
-  // Note: һ������£�DeclRefExpr������ֵ�ģ�������һ��������⣬���Ǻ������ֵ���
-  // ���Ǻ������ö�Ӧ��expression��CallExpr������DeclRefExpr.
-  // To Do: �п��ܻ���Ǳ�ڵ�bug
   DeclRefExpr(SourceLocation start, SourceLocation end,
               std::shared_ptr<Type> type, std::string name, VarDeclPtr var)
       : Expr(start, end, type, ExprValueKind::VK_LValue, true), Name(name),
@@ -308,10 +269,6 @@ class BinaryExpr : public Expr {
   ExprASTPtr LHS, RHS;
 
 public:
-  // Note: ��moses�в�����ָ�����ͣ����Բ�����binaryΪlvalue�����
-  // ����: 'int* p = &num;'
-  // 'p + 1'�Ϳ�����Ϊ��ֵ
-  // Note: BinaryExpr���ǿ��Խ���evaluate��
   BinaryExpr(SourceLocation start, SourceLocation end,
              std::shared_ptr<Type> type, std::string Op, ExprASTPtr LHS,
              ExprASTPtr RHS)
@@ -369,7 +326,6 @@ public:
 
   FunctionDeclPtr getFuncDecl() const { return FuncDecl; }
 
-  // Note: ��������û�жԴ����index���м��
   ExprASTPtr getArg(unsigned index) const { return Args[index]; }
 
   const std::vector<ExprASTPtr> getArgs() const { return Args; }
@@ -407,12 +363,6 @@ public:
   virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
 };
 
-/// \brief �������ͳ�ʼ�����ʽ��
-///	var start = 0;
-/// var end = 1;
-/// ���磺 var num = {start, end};
-///
-/// �����������û��Զ������͵ĳ�ʼ������������ķ�ʽ���и�ֵ��
 class AnonymousInitExpr final : public Expr {
   AnonymousInitExpr() = delete;
   AnonymousInitExpr(const AnonymousInitExpr &) = delete;
@@ -473,8 +423,6 @@ public:
 
   virtual ~IfStatement() {}
 
-  // To Do: �������ǲ����ʵģ�Ӧ��ʱ�̶�ʹ��unique_ptr�����ݸ����ڵ�
-  // �����������Ļ���̫���ڸ���
   StmtASTPtr getThen() const { return Then; }
 
   StmtASTPtr getElse() const { return Else; }
@@ -644,10 +592,6 @@ public:
 };
 
 /// \brief UnpackDecl - This class represents a UnpackDecl.
-/// ����moses֧���������ͣ��������͵ı����������ش��ݡ������������͵ı����������Ҫ
-/// ��ȡ���е�ֵ������Ҫ���н����ע�����õ��ı���Ĭ�϶���const�ģ�Ҳ����˵��������
-/// ��������ֻ�������ݴ��ݣ�������C++�е���ʱֵ������˵����ֵ����
-/// Note: UnpackDeclֻ���ڽ����û�����֡�
 class UnpackDecl final : public DeclStatement {
 private:
   std::vector<DeclASTPtr> decls;
@@ -675,11 +619,6 @@ public:
 /// which capture its name, and its argument names(thus implicitly the
 /// number of arguments the function takes).
 /// Forward declarations are not supported.
-/// ----------------------------------------------------------------
-/// Function Declaration's Grammar as below.
-/// function-declaration -> func identifier para-list compound-statement
-/// ----------------------------------------------------------------
-/// To Do: ����Ʋ��Ǻܺ�������FunctionDecl��Ӧ����DeclStatement������
 class FunctionDecl : public DeclStatement {
   std::string FDName;
   std::vector<ParmDeclPtr> parameters;
@@ -708,12 +647,7 @@ public:
            "Index out of range when we get specified ParmDecl.");
     return parameters[index];
   }
-  // ���ڱ�ʶ�ú����ܷ�constant-evaluator.
-  // ���ں�����˵���ܽ���constant-evaluator�ı�׼��ֻ����һ��return��䣬�ҷ�����������������.
-  // ���磺
-  //	func add() -> int  { return 10; }
-  // To Do: ��������ǿ��Ҫ���ܹ�����constant-evaluate�ĺ���ֻ����һ��return���
-  // ���������Ҫ��ǿ�Ƶ�����������Ҫ��������������ˡ�
+
   ReturnStmtPtr isEvalCandiateAndGetReturnStmt() const;
 
   /// Determine whether the function F ends with a return stmt.
@@ -734,7 +668,6 @@ public:
 /// Class Body's Grammar as below.
 /// class-body -> "{" variable-declaration* "}"
 /// ----------------------------------------------------------
-/// To Do: classͨ�����ݳ�Ա�������Գ�������ڴ�ռ䡣
 class ClassDecl final : public DeclStatement {
   // std::shared_ptr<UserDefinedType> classType;
   std::string ClassName;

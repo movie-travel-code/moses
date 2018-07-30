@@ -76,15 +76,10 @@ std::shared_ptr<FunctionType> FunctionType::get(TyPtr retty,
   return std::make_shared<FunctionType>(retty, parmsty);
 }
 
-/// \brief �������û�в����Ļ���
 std::shared_ptr<FunctionType> FunctionType::get(TyPtr retty) {
   return std::make_shared<FunctionType>(retty);
 }
 
-/// �ú������ڻ�ȡparam type.
-/// ���磺 returntype parm0 parm1 parm2
-/// [0] = parm0
-/// [2] = parm2
 IRTyPtr FunctionType::operator[](unsigned index) const {
   assert(index < NumContainedTys &&
          "Index out of range when we get parm IR type.");
@@ -96,10 +91,7 @@ bool FunctionType::classof(IRTyPtr Ty) { return Ty->getTypeID() == FunctionTy; }
 std::vector<IRTyPtr>
 FunctionType::ConvertParmTypeToIRType(MosesIRContext &Ctx,
                                       std::vector<ASTTyPtr> ParmTyps) {
-  // Note:����û�н��д�����Ҳ������if elseif else��else ��û�б���
-  // ��Ϊ�ܹ����е���һ����˵��û���﷨���������.
   std::vector<IRTyPtr> IRTypes;
-  // (1) ����parm type vector����ת����
   for (auto item : ParmTyps) {
     switch (item->getKind()) {
     case ASTTyKind::INT:
@@ -118,7 +110,6 @@ FunctionType::ConvertParmTypeToIRType(MosesIRContext &Ctx,
       break;
     }
   }
-  // (2) ��ת�����type���ء�
   return IRTypes;
 }
 
@@ -158,8 +149,6 @@ StructType::StructType(std::vector<IRTyPtr> members, std::string Name,
     : Type(TypeID::StructTy), Literal(isliteral), ContainedTys(members),
       NumContainedTys(members.size()) {}
 
-/// \brief ����ָ����AST class ����������llvm�е�������Ϣ��
-/// ���磺
 ///		class B
 ///		{
 ///			var num : int;
@@ -173,7 +162,6 @@ std::shared_ptr<StructType> StructType::Create(MosesIRContext &Ctx,
   if (ASTUDTyPtr UD = std::dynamic_pointer_cast<ASTUDTy>(type)) {
     auto subtypes = UD->getMemberTypes();
     Name = UD->getTypeName();
-    // ����һ���ݹ����.
     for (auto item : subtypes) {
       switch (item.first->getKind()) {
       case ASTTyKind::BOOL:
@@ -198,7 +186,6 @@ std::shared_ptr<StructType> StructType::get(MosesIRContext &Ctx,
   std::vector<IRTyPtr> members;
   if (ASTUDTyPtr UD = std::dynamic_pointer_cast<ASTUDTy>(type)) {
     auto subtypes = UD->getMemberTypes();
-    // ����һ���ݹ����.
     for (auto item : subtypes) {
       switch (item.first->getKind()) {
       case ASTTyKind::BOOL:

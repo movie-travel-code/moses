@@ -30,19 +30,17 @@ using GetFuncTypeRet = std::pair<IRFuncTyPtr, std::vector<std::string>>;
 
 /// This class orgasizes the cross-module state that is used while lowering
 /// AST types to moses-IR types.
-/// Note: ��moses IR����һ���ļ�MosesIRContext.h, �洢��Global��Type��Constant
-/// ����Ϣ��������Ĳ�����ͻ�������CodeGenTypesֻ����Ϊһ���ӿڣ�ֻ�����ڴ������ɡ�
 class CodeGenTypes {
-  //   ----------------		<--- CodeGenModule
-  //  |				 |
+  //   ----------------    <--- CodeGenModule
+  //  |                |
   //	 ----------------
-  //	|				 |
+  //	|                |
   //	 ----------------
-  //	|				 |
+  //	|                |
   //	 ----------------
   //	|  CodeGenTypes	 |
-  //	|				 |
-  //	|	   &CGM		 |
+  //	|                |
+  //	|      &CGM      |
   //	 ----------------
   MosesIRContext &IRCtx;
   ;
@@ -60,7 +58,6 @@ public:
   CodeGenTypes(MosesIRContext &IRCtx)
       : IRCtx(IRCtx), AnonyTypesCounter(0), TypeNamePrefix("@") {}
   /// ConvertType - Convert type T into a moses-IR type.
-  /// Note: ������ֵ�ǰType��StructType�����¼��Map�С�
   IRTyPtr ConvertType(ASTTyPtr type);
   GetFuncTypeRet getFunctionType(const FunctionDecl *FD,
                                  std::shared_ptr<CGFunctionInfo const> Info);

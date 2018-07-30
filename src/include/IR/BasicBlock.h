@@ -7,7 +7,7 @@
 // followed by a single TerminatorInst instruction. TerminatorInst's may not
 // occur in the middle of basic blocks, and must terminate the blocks.
 //
-// This code allows malformed(���ε�) basix blocks to occur, because it may be
+// This code allows malformed basix blocks to occur, because it may be
 // useful in the intermediate stage modification to a program.
 //
 //===---------------------------------------------------------------------===//

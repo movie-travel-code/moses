@@ -146,8 +146,6 @@ ValPtr ModuleBuilder::EmitBinAssignOp(const BinaryExpr *B) {
   LValue LHSAddr = EmitLValue(B->getLHS().get());
 
   // Aggregate
-  // Type�������ĸ�ֵ����ͨ�Ĳ�ͬ�������⴦��.
-  // ���Aggregate Type���ڴ��еĴ洢��ʽ������ʹ��memcpy�������ڴ浽�ڴ��Ŀ�����
   auto ty = Types.ConvertType(B->getType());
   if (ty->isAggregateType()) {
     EmitAggExpr(B->getRHS().get(), LHSAddr.getAddress());
@@ -228,8 +226,6 @@ ValPtr ModuleBuilder::EmitBinaryExpr(const BinaryExpr *B) {
 /// EmitLValue - Emit code to compute a designator that specifies the location
 /// of the expression. For example, 'a = 10' or 'a.start.hieght = 10', we need
 /// compute a location to store '10'.
-/// ע����Clang���ж���LValue��moses��ʱֻ��DeclRefLValue MemberExprLValue
-/// �Լ�CallExpr.
 LValue ModuleBuilder::EmitLValue(const Expr *E) {
   if (const DeclRefExpr *DRE = dynamic_cast<const DeclRefExpr *>(E)) {
     return EmitDeclRefLValue(DRE);
@@ -281,10 +277,6 @@ LValue ModuleBuilder::EmitMemberExprLValue(const MemberExpr *ME) {
   // a.num  ----> BaseAddr, int
   // a.flag ----> BaseAddr
   // a.b.mem ----> BaseAddr, int * 3
-  // ��Ϊint��bool��moses IR�����ռ��ͬ���Ŀռ䣨i32����������intΪoffset�Ļ�����λ��
-  // ����û�ж���ĸ������
-  // To Do: intû���з��Ϻ��޷��ŵ����𣬴�СҲ��ͬ��bool
-  // ռ�õĿռ���int��ͬ��
   auto idx = ME->getIdx();
   ValPtr MemberAddr =
       CreateGEP(Types.ConvertType(ME->getType()), BaseLValue.getAddress(), idx);
@@ -349,15 +341,16 @@ ValPtr ModuleBuilder::EmitUnaryExpr(const UnaryExpr *UE) {
 ValPtr ModuleBuilder::EmitMemberExpr(const MemberExpr *ME) { return nullptr; }
 
 /// \brief EmitPrePostIncDec - Generate code for inc and dec.
-/// e.g.	++num(pre-inc)	------>		-----------------------------
-///										| %tmp = load i32* %num
-///| 										| %inc = add i32 %tmp, 1	|	----> the result 										| store i32 %inc, i32*
-///%num |
-///										-----------------------------
-///			num++(post-inc) ------>
-///----------------------------- 										| %tmp1 = load i32* %num	|	---->
-///the result 										| %inc2 = add i32 %tmp, 1	| 										| store i32 %inc2, i32* %num|
-///										-----------------------------
+/// e.g.  ++num(pre-inc)  ------>	  -----------------------------
+///                                | %tmp = load i32* %num       |
+///                                | %inc = add i32 %tmp, 1	     |  ----> the result
+///                                | store i32 %inc, i32 * %num  |
+///                                 -----------------------------
+///			num++(post-inc) ------>     -----------------------------
+///                                | %tmp1 = load i32* %num	     |  ----> the result
+///                                | %inc2 = add i32 %tmp, 1     |
+///                                | store i32 %inc2, i32* %num  |
+///                                 -----------------------------
 /// Note: Since only integer can be increase and the decrese.
 ValPtr ModuleBuilder::EmitPrePostIncDec(const UnaryExpr *UE, bool isInc,
                                         bool isPre) {

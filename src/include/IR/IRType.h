@@ -1,9 +1,6 @@
 //===----------------------------------IRType.h---------------------------===//
 //
 // This file contains the declaration of the Type class.
-// ����Type info��moses IR��ʹ��һ�����ݽṹContext������ȫ�ֵ�������Ϣ����moses��
-// �û��Զ���������ȫ��Ψһ�ģ�����: class A{}, ��moses IR�о�ֻ��struct.type��
-// ȫ��ֻ����һ�ݶ���������ͬʱ������ݶ�Type info.
 //
 //===---------------------------------------------------------------------===//
 #ifndef MOSES_IR_IRTYPE_H
@@ -45,7 +42,6 @@ public:
     LabelTy,
     IntegerTy,
     BoolTy,
-    // ����Ķ��ж�Ӧ������
     FunctionTy,
     StructTy,
     PointerTy,
@@ -92,13 +88,10 @@ public:
 
 /// \brief FunctionType - Class to represent function types.
 class FunctionType : public Type {
-  // FunctionType��Ӧ�Ķ��󶼲��ǿɸ��Ƶġ�
-  // Function��ǩ����moses����Ψһ�ġ�
   FunctionType(const FunctionType &) = delete;
   const FunctionType &operator=(const FunctionType &) = delete;
 
 private:
-  /// ����FunctionType��˵��ContainedTys�����������β����͡�
   std::vector<IRTyPtr> ContainedTys;
 
   unsigned NumContainedTys;
@@ -115,8 +108,8 @@ public:
 
   IRTyPtr getReturnType() const { return ContainedTys[0]; }
 
-  /// �ú������ڻ�ȡparam type.
-  /// ���磺 returntype parm0 parm1 parm2
+  /// param type.
+  /// returntype parm0 parm1 parm2
   /// [0] = parm0
   /// [2] = parm2
   IRTyPtr operator[](unsigned index) const;
@@ -135,15 +128,9 @@ private:
 };
 
 /// Class to represent struct types.
-/// ����moses IR��˵��������struct type:
+/// struct type:
 /// (1) Literal struct types (e.g { i32, i32 })
 /// (2) Identifier structs (e.g %foo)
-///
-/// ����Literal struct types��˵����Ӧmoses�е��������� "{int, {bool ,int
-/// }}"����������
-/// ��ʱ�򣬱�����������������Ϣ��
-///
-/// ����Identifier structs ��˵����Ӧmoses�е�class���͡�
 class StructType : public Type {
   StructType(const StructType &) = delete;
   const StructType &operator=(const StructType &) = delete;
@@ -182,8 +169,6 @@ public:
   /// Change the name of this type to the specified name.
   void setName(std::string Name);
 
-  /// ������ߵĲ�����ͬ���򷵻�true.
-  /// (�е��������ǰ���е�����ָ�Ƶĸ��ͨ������Ԫ�ؽ��м��㣬���ж��������Ƿ�����)
   bool isLayoutIdentical(IRStructTyPtr Other) const;
   unsigned getNumElements() const { return NumContainedTys; }
   std::vector<std::shared_ptr<Type>> getContainedTys() const {

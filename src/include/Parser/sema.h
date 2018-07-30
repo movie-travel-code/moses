@@ -6,7 +6,7 @@
 //
 // Checks of many kinds.
 // (1) All identifiers are declared.
-// (2) Types (�����������֮���﷨���ϵ�������ʽ�������Ӧ���ͣ� ��fully typed)
+// (2) Types
 // (3) Inheritance relationsships(Temporarily moses's class type doesn't have
 //		inheritance).
 // (4) classes defined only once.
@@ -14,22 +14,6 @@
 //		doesn't support method.).
 // (6) Reserved identifiers are mot misused.
 // And others.
-// ---------------------------------Nonsense for coding------------------------
-// ����ʹ���﷨�Ƶ��ķ��뷽�����������﷨�����Ĺ����м䣬����һЩ�������������������
-// ��Щ������һ��ͳһ�����ƾ���Action Routines������һ�ֽǶȿ��������������ͨ��
-// �����ķ�����ʽ��Attribute Grammar���ķ����涨���ˣ��ڽ����﷨������ʱ��Ҫ����
-// ��Щ�����������ķ����м̳����Ժ��ۺ����Եĸı䣬�̳����Ծ��ǵ�ǰ�����ڵ�Ӹ��׽ڵ�
-// �������ֵܽڵ��õ����ԣ����ۺ�����ֻ���ɵ�ǰ�ڵ�Ϊ���������ṩ�ġ�
-//
-// moses����һЩ������Ϣ����Ҫ��;�ռ��ģ�moses����������ص����ԣ���Ҳ���Ǻ����ĳЩ�д���Ҫ
-// ǰ���ռ�������Ϣ��������ű�scope�ȣ�����Щ��Ϣ�������﷨������������õ��ǵݹ��½���
-// �Ĺ�������;�ռ��������ڵ�����´��ݣ���������˷��ű�Symbol Table���Ľṹ��Ϊ
-// ȫ�ֿɷ��ʵ����ݽṹ���������ؽڵ㴫�ݵ����⡣����moses������Ƚϼ򵥣����ű����
-// һЩ�򵥵�ActionRoutine���Ѿ�����Ҫ���ˡ�
-//
-// ������Щ����������Ⱥ�˳����������DeclRefExpr�����ȼ���identifier���޶��壬
-// û�ж��屨��undefined variable���������˵Ļ���ȡ����������Type Checking.
-// ----------------------------------------------------------------------------
 //
 // -----------------------------------Nonsense for coding------------------------
 // Three kinds of languages:
@@ -39,11 +23,6 @@
 //     execution(Scheme, Lisp, python, perl).
 // ------------------------------------------------------------------------------
 //===---------------------------------------------------------------------===//
-
-// To Do: Ϊ���ڴ�����ϵķ��㣬�Ҵ���ʹ����std::shared_ptr��shared_ptr��Ϊ
-// count���2���ֵĿ�����Ϊ���϶������һ��ָ���ֵĿ�����ͬʱ����ʹ����RAII����
-// ��ʵ�����ü����������������һ���ֵ�Overhead��
-// ������Ҫ�Դ�����о���
 
 #ifndef SEMA_INCLUDE
 #define SEMA_INCLUDE
@@ -64,10 +43,6 @@ using namespace compiler::Hashing;
 using namespace compiler::Support;
 
 /// sema - This implements sematic analysis and AST building for moses.
-/// ------------------------nonsense for coding------------------------
-/// ����moses���趨���ȶ����ʹ�ã�����Ad-hoc syntax translation����pass
-/// �Ϳ����������Ҫ��.
-/// ------------------------nonsense for coding------------------------
 class Sema
 {
 	Sema(const Sema &) = delete;
@@ -84,7 +59,6 @@ class Sema
 	/// \brief ScopeTree
 	std::shared_ptr<Scope> ScopeTreeRoot;
 
-	// To Do: ����Class scope��Ϊ��֧���Ժ��Class����Ƕ��
 	// class B
 	// {
 	//		public:
@@ -92,18 +66,13 @@ class Sema
 	//		{
 	//		}
 	// }
-	// Note: moses��ʱû��ClassǶ�ף�����ClassStackֻ��һ���������Ԫ��
-	// ���С�һ������ʾ����Top-Level�ĺ������壬�����������ʾ����Top-Level
 	std::vector<std::shared_ptr<ClassSymbol>> ClassStack;
 
-	// To Do: ����Function��Ϊ��֧���Ժ�ĺ����հ�ʵ��
 	// func add() -> void
 	// {
 	//		func sub() -> int {}
 	//		return sub;
 	// }
-	// Note: moses��ʱû��֧�ֱհ�ʵ�֣�����FunctionStackֻ��һ���������Ԫ��
-	// ���С�һ������ʾ����Top-Level�ĺ������壬�����������ʾ����Top-Level
 	std::vector<std::shared_ptr<FunctionSymbol>> FunctionStack;
 
   public:
@@ -112,7 +81,6 @@ class Sema
   public:
 	// The functions for handling scope.
 	// Shit Code!
-	// ���������Ψһ����sema���ȡ����ǰ��token��ֻ��ͨ����ȡscan�ĵ�ַ��
 	void getScannerPointer(parse::Scanner *scan) { this->scan = scan; };
 	std::shared_ptr<Scope> getCurScope() { return CurScope; }
 	std::shared_ptr<Scope> getTopLevelScope() { return ScopeStack[0]; }
@@ -130,9 +98,6 @@ class Sema
 	// Action routines for semantic analysis.
 	// (1) Statement
 	/// \brief Add a new function scope and symbol.
-
-	// Note: shit code!sema�б����޷���֪��ǰ����λ�á�
-	// To Do: ����������ƣ���������һ���������������
 	void ActOnTranslationUnitStart();
 
 	void ActOnFunctionDeclStart(std::string name);
@@ -200,14 +165,10 @@ class Sema
 	// (3) help method
 	bool isInFunctionContext() const { return FunctionStack.size() != 0; }
 
-	/// \brief ע�����ﲻ����ǰ��Inc�ͺ���Inc
-	/// (���ߵ�Ψһ������ǰ�߷��صı��ʽ����ֵ�ã������߷��ص�����ֵ��)
 	ExprASTPtr ActOnDecOrIncExpr(ExprASTPtr rhs);
 
-	/// \brief ���磺 -10;
 	ExprASTPtr ActOnUnarySubExpr(ExprASTPtr rhs);
 
-	/// \brief ���磺!flag
 	ExprASTPtr ActOnUnaryExclamatoryExpr(ExprASTPtr rhs);
 
 	// To Do: implement RAII

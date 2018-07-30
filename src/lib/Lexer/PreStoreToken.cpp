@@ -56,7 +56,6 @@ void PreStoreToken::AddToken() {
   tokenTable.push_back(Token(TokenValue::BO_AddAssign, "+="));
   tokenTable.push_back(Token(TokenValue::BO_SubAssign, "-="));
 
-  // To Do: �޸��ķ�������������Լ�
   tokenTable.push_back(Token(TokenValue::UO_Dec, "--"));
   tokenTable.push_back(Token(TokenValue::UO_Inc, "++"));
   tokenTable.push_back(Token(TokenValue::UO_Exclamatory, "!"));
@@ -64,8 +63,6 @@ void PreStoreToken::AddToken() {
   tokenTable.push_back(Token(TokenValue::PUNCTUATOR_Left_Paren, "("));
   tokenTable.push_back(Token(TokenValue::PUNCTUATOR_Right_Paren, ")"));
 
-  // To Do:
-  // �޸��ķ�������������š���������û������������͡�
   // tokenTable.push_back(Token(TokenValue::PUNCTUATOR_Left_Square, "["));
   // tokenTable.push_back(Token(TokenValue::PUNCTUATOR_Right_Square, "]"));
   tokenTable.push_back(Token(TokenValue::PUNCTUATOR_Left_Brace, "{"));
@@ -79,7 +76,6 @@ void PreStoreToken::AddToken() {
 
 TokenValue PreStoreToken::isKeyword(const std::string &lexem) const {
   TokenValue tokValue = TokenValue::UNKNOWN;
-  // ʹ��for_each�㷨������token�б�����ҵ�ͬ������TokenKindΪ�ؼ��ֵ�value�򷵻�true
   for_each(tokenTable.begin(), tokenTable.end(),
            [&tokValue, lexem](Token token) {
              if (token.getLexem() == lexem &&

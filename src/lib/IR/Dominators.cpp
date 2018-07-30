@@ -40,7 +40,6 @@ void DominatorTree::printDomFrontier(std::ostream &out) const {
 }
 
 void DominatorTree::runOnCFG(std::vector<BBPtr> &BBs) {
-  // (1) ��ʼ��DomTreeNode������Vertex, �Լ�EntryNode
   for (auto item : BBs)
     Vertex.push_back(item);
   computeDomTree(BBs[0]);
@@ -66,7 +65,7 @@ void DominatorTree::computeDomTree(BBPtr EntryBlock) {
     item.second->setVisitColor(color::WHITE);
   DFS(RootNode);
 
-  // (3) ������������������Dominance Info.
+  // (3) Dominance Info.
   Calcuate();
 
   // (4) print
@@ -168,7 +167,6 @@ DomTreeNodePtr DominatorTree::Intersect(DomTreeNodePtr A, DomTreeNodePtr B) {
   return finger1;
 }
 
-// ʹ�õ�����������������Dominance info.
 void DominatorTree::Calcuate() {
   if (ReversePostOrder.size() == 0)
     getReversePostOrder();
@@ -188,7 +186,6 @@ void DominatorTree::Calcuate() {
 
       // (1) Find the first non-nullptr predecessor.
       auto getAvailiablePred = [&PredDomNodeFromCFG]() -> DomTreeNodePtr {
-        // ��Preds���ҵ�һ��IDom��Ϊ�յ�predecessor.
         for (auto pred : PredDomNodeFromCFG) {
           if (pred->getIDom() != nullptr)
             return pred;
@@ -231,15 +228,6 @@ void DominatorTree::InsertFrontier(DomTreeNodePtr Node,
 
 // Compute the forward dominance frontier(Use Cooper's algorithm).
 // The algorithm to compute the dominance frontier.
-// ------------------------------------------------------
-// for all nodes, b
-//     if the number of predecessors of b �� 2
-//         for all predecessors, p, of b
-//             runner <- p
-//             while runner != doms[b]
-//                 add b to runner��s dominance frontier set
-//                 runner = doms[runner]
-// ------------------------------------------------------
 void DominatorTree::ComputeDomFrontier() {
   DomTreeNodePtr runner = nullptr;
   // Just compute the join points.

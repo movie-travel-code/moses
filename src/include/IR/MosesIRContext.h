@@ -122,9 +122,6 @@ class MosesIRContext {
   std::vector<std::shared_ptr<Intrinsic>> Intrinsics;
 
   // Basic type instances.
-  // To Do: Ϊ�˼��ٶ��ڴ��ռ�ã�������MosesIRContext�д��VoidTy��IntTy��
-  // ��������ͳһʹ��std::shared_ptr<>�����ڴ�������Է��������˶��ڴ��
-  // ռ�ã��������ڴ�ռ����Ȼ�Ǻܴ�ġ�
   std::shared_ptr<Type> VoidTy, IntTy, BoolTy, LabelTy;
   std::shared_ptr<ConstantBool> TheTrueVal, TheFalseVal;
 
@@ -154,7 +151,6 @@ public:
     NamedStructTypeSet.insert(Type);
   }
 
-  /// \brief ���ĳ��������GlobalType���Ƿ����.
   bool CheckHave(std::shared_ptr<StructType> forchecking);
 
   // helper method.

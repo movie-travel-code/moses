@@ -3,8 +3,8 @@
 // This file wrap the information about a call or function definition.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/IRBuild/CodeGenTypes.h"
-#include "../../include/IRBuild/IRBuilder.h"
+#include "include/IRBuild/CodeGenTypes.h"
+#include "include/IRBuild/IRBuilder.h"
 
 using namespace compiler::IR;
 using namespace compiler::IRBuild;

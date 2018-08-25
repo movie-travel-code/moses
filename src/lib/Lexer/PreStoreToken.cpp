@@ -3,7 +3,7 @@
 // IdentifierTable Implemention
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/Lexer/PreStoreToken.h"
+#include "include/Lexer/PreStoreToken.h"
 using namespace compiler::lex;
 using namespace compiler::tok;
 

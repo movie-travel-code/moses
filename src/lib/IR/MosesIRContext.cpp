@@ -3,7 +3,7 @@
 // This file implements class MosesIRContext.
 //
 //===--------------------------------------------------------------------===//
-#include "../../include/IR/MosesIRContext.h"
+#include "include/IR/MosesIRContext.h"
 using namespace compiler::IR;
 
 IRTyPtr Type::getVoidType(MosesIRContext &Ctx) { return Ctx.getVoidTy(); }

@@ -3,8 +3,8 @@
 // This file is used to implement sema.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/Parser/sema.h"
-#include "../../include/Support/error.h"
+#include "include/Parser/sema.h"
+#include "include/Support/error.h"
 using namespace compiler::sema;
 using namespace compiler::lex;
 

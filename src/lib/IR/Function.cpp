@@ -3,8 +3,8 @@
 // This file implements the class function.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/IR/Function.h"
-#include "../../include/IR/BasicBlock.h"
+#include "include/IR/Function.h"
+#include "include/IR/BasicBlock.h"
 using namespace compiler::IR;
 
 //===---------------------------------------------------------------------===//

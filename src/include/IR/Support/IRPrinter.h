@@ -3,11 +3,11 @@
 // This file implements the IRPrinter.
 //
 //===---------------------------------------------------------------------===//
-#include "../IRType.h"
-#include "../Instruction.h"
-#include "../MosesIRContext.h"
-#include "../User.h"
-#include "../Value.h"
+#include "include/IR/IRType.h"
+#include "include/IR/Instruction.h"
+#include "include/IR/MosesIRContext.h"
+#include "include/IR/User.h"
+#include "include/IR/Value.h"
 #include <iostream>
 #include <vector>
 

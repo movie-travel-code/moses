@@ -3,8 +3,8 @@
 // Impletation for class 'const' and class 'global'.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/IR/ConstantAndGlobal.h"
-#include "../../include/IR/MosesIRContext.h"
+#include "include/IR/ConstantAndGlobal.h"
+#include "include/IR/MosesIRContext.h"
 
 using namespace compiler::IR;
 //===-----------------------------------------------------------===//

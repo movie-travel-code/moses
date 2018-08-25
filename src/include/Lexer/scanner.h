@@ -1,6 +1,6 @@
 #ifndef Scanner_INCLUDE
 #define Scanner_INCLUDE
-#include "../Support/error.h"
+#include "include/Support/error.h"
 #include "PreStoreToken.h"
 #include "Token.h"
 #include "TokenKinds.h"

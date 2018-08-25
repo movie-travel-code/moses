@@ -3,7 +3,7 @@
 // This file implements type class.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/IR/IRType.h"
+#include "include/IR/IRType.h"
 using namespace compiler::IR;
 using TyPtr = std::shared_ptr<Type>;
 using StructTyPtr = std::shared_ptr<StructType>;

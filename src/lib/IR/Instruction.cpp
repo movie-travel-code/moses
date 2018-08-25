@@ -1,9 +1,9 @@
 //===--------------------------Instruction.cpp----------------------------===//
 // This file implements moses IR instructions.
 //===---------------------------------------------------------------------===//
-#include "../../include/IR/Instruction.h"
-#include "../../include/IR/IRType.h"
-#include "../../include/IR/MosesIRContext.h"
+#include "include/IR/Instruction.h"
+#include "include/IR/IRType.h"
+#include "include/IR/MosesIRContext.h"
 
 
 using namespace compiler::IR;

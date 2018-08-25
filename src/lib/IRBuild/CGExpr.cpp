@@ -3,7 +3,7 @@
 // This contains code to emit Expr nodes.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/IRBuild/IRBuilder.h"
+#include "include/IRBuild/IRBuilder.h"
 using namespace compiler::IR;
 using namespace compiler::IRBuild;
 extern void print(std::shared_ptr<compiler::IR::Value> V);

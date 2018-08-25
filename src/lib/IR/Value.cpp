@@ -3,7 +3,7 @@
 // This file implements the Value and user classes.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/IR/Value.h"
+#include "include/IR/Value.h"
 using namespace compiler::IR;
 Value::Value(std::shared_ptr<Type> ty, ValueTy vty, std::string name)
     : Ty(ty), VTy(vty), Name(name) {}

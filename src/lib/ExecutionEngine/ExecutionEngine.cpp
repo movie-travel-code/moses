@@ -3,7 +3,7 @@
 // Impletes the class ExecutionEngine.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/ExecutionEngine/ExecutionEngine.h"
+#include "include/ExecutionEngine/ExecutionEngine.h"
 
 using namespace compiler::Interpreter;
 extern void print(std::shared_ptr<compiler::IR::Value> V);

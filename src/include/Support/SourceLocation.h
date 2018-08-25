@@ -1,6 +1,6 @@
 #ifndef SOURCELOCATION_INCLUDE
 #define SOURCELOCATION_INCLUDE
-#include "../Lexer/Token.h"
+#include "include/Lexer/Token.h"
 #include <iostream>
 #include <string>
 

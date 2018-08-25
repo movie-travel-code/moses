@@ -7,8 +7,8 @@
 
 #ifndef AST_INCLUDE
 #define AST_INCLUDE
-#include "../IR/Value.h"
-#include "../Support/SourceLocation.h"
+#include "include/IR/Value.h"
+#include "include/Support/SourceLocation.h"
 #include "Type.h"
 #include <cassert>
 #include <memory>

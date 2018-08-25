@@ -5,10 +5,10 @@
 //===---------------------------------------------------------------===//
 #ifndef CODE_GEN_TYPES_H
 #define CODE_GEN_TYPES_H
-#include "../IR/IRType.h"
-#include "../IR/MosesIRContext.h"
-#include "../Parser/Type.h"
-#include "../Parser/ast.h"
+#include "include/IR/IRType.h"
+#include "include/IR/MosesIRContext.h"
+#include "include/Parser/Type.h"
+#include "include/Parser/ast.h"
 #include "CGCall.h"
 #include <cassert>
 #include <map>

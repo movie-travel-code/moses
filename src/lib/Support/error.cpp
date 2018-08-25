@@ -3,7 +3,7 @@
 // This file impletments error mechanism.
 //
 //===-----------------------------------------------------------------------------------===//
-#include "../../include/Support/error.h"
+#include "include/Support/error.h"
 #include <iostream>
 
 

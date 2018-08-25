@@ -3,7 +3,7 @@
 // This file implements the Expr constant evaluator.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/Parser/constant-evaluator.h"
+#include "include/Parser/constant-evaluator.h"
 using namespace compiler::ast;
 bool ConstantEvaluator::EvaluateAsRValue(ExprASTPtr Exp,
                                          EvalInfo &Result) const {

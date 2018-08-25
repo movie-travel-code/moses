@@ -3,7 +3,7 @@
 // This contains code to emit Decl nodes.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/IRBuild/IRBuilder.h"
+#include "include/IRBuild/IRBuilder.h"
 using namespace compiler::ast;
 using namespace compiler::IR;
 using namespace compiler::IRBuild;

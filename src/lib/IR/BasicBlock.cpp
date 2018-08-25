@@ -3,10 +3,10 @@
 // This file implements the BasicBlock class for the IR library.
 //
 //===----------------------------------------------------------------------===//
-#include "../../include/IR/BasicBlock.h"
-#include "../../include/IR/ConstantAndGlobal.h"
-#include "../../include/IR/IRType.h"
-#include "../../include/IR/Instruction.h"
+#include "include/IR/BasicBlock.h"
+#include "include/IR/ConstantAndGlobal.h"
+#include "include/IR/IRType.h"
+#include "include/IR/Instruction.h"
 
 using namespace compiler::IR;
 

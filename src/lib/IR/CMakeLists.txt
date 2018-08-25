@@ -1,7 +1,6 @@
 cmake_minimum_required(VERSION 2.8)
 
 ADD_SUBDIRECTORY(Support)
-
 ADD_LIBRARY(IR STATIC
 	BasicBlock.cpp
 	ConstantAndGlobal.cpp

@@ -6,7 +6,7 @@
 #ifndef PARSER_INCLUDE
 #define PARSER_INCLUDE
 #include <algorithm>
-#include "../Lexer/scanner.h"
+#include "include/Lexer/scanner.h"
 #include "ast.h"
 #include "sema.h"
 #include "ASTContext.h"

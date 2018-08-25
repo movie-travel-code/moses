@@ -5,8 +5,8 @@
 //===---------------------------------------------------------------------===//
 #ifndef CGCALL_H
 #define CGCALL_H
-#include "../IR/IRType.h"
-#include "../Parser/Type.h"
+#include "include/IR/IRType.h"
+#include "include/Parser/Type.h"
 #include <string>
 #include <vector>
 

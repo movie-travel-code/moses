@@ -12,17 +12,17 @@
 
 #ifndef MOSES_IR_BUILDER_H
 #define MOSES_IR_BUILDER_H
-#include "../IR/BasicBlock.h"
-#include "../IR/ConstantAndGlobal.h"
-#include "../IR/ConstantFolder.h"
-#include "../IR/Function.h"
-#include "../IR/Instruction.h"
-#include "../IR/MosesIRContext.h"
-#include "../IR/Value.h"
-#include "../IRBuild/CGCall.h"
-#include "../Parser/ast.h"
-#include "../Parser/constant-evaluator.h"
-#include "../Parser/sema.h"
+#include "include/IR/BasicBlock.h"
+#include "include/IR/ConstantAndGlobal.h"
+#include "include/IR/ConstantFolder.h"
+#include "include/IR/Function.h"
+#include "include/IR/Instruction.h"
+#include "include/IR/MosesIRContext.h"
+#include "include/IR/Value.h"
+#include "include/IRBuild/CGCall.h"
+#include "include/Parser/ast.h"
+#include "include/Parser/constant-evaluator.h"
+#include "include/Parser/sema.h"
 #include "CGValue.h"
 #include "CodeGenTypes.h"
 #include <cassert>
@@ -96,7 +96,7 @@ struct FunctionBuilderStatus {
   ///	moses IR:
   ///			%1 = alloca i32 ----> temp alloca to hold the return
   ///value.
-  ///			...
+  ///			include.
   ///		; <label>:then
   ///			%6 = load i32* %num
   ///			store i32 %6, i32* %1
@@ -532,7 +532,7 @@ private:
   /// http://stackoverflow.com/questions/35987493/return-void-type-in-c-and-c
   /// This topic, discussed whether the ret-void function's return statement
   /// can have sub-expression.
-  /// e.g.	void func1() { ... }
+  /// e.g.	void func1() { include. }
   ///			void func()
   ///			{
   ///				return func1();		----> is this correct?
@@ -548,7 +548,7 @@ private:
   /// However, this is allowed in C++.
   ///	C++14, 6.6.3 "The return statement:"
   ///	-	A return statement with an expression of non-void type can be used
-  ///only 		in functions returning a value[...] A return statement with an
+  ///only 		in functions returning a value[include.] A return statement with an
   ///expression 		of type void can be only in functions with a return type of cv
   ///void; the 		expression is evaluated just the function returns its caller.
   ///
@@ -685,7 +685,7 @@ private:
   /// another basic block, simplify it. This assumes that no other code could
   /// potentially reference the basic block.
   /// e.g.        ----------------  BB1
-  ///            |      ...       |
+  ///            |      include.       |
   ///            |                |
   ///             ----/-----------\
 			///                /             \
@@ -698,7 +698,7 @@ private:
   ///        ----------------
   /// Note: BB2 is useless, we can eliminate it and replace all use of BB2 to
   /// BB4. As shown below. e.g.        ----------------  BB1
-  ///            |      ...       |
+  ///            |      include.       |
   ///            |                |
   ///             ----/-----------\
 			///                /             \

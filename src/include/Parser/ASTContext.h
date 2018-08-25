@@ -5,8 +5,8 @@
 //===---------------------------------------------------------------------===//
 #ifndef AST_CONTEXT_H
 #define AST_CONTEXT_H
-#include "../Support/Hasing.h"
-#include "../Support/TypeSet.h"
+#include "include/Support/Hasing.h"
+#include "include/Support/TypeSet.h"
 #include "Type.h"
 
 using namespace compiler::SupportStructure;

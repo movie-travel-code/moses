@@ -3,7 +3,7 @@
 // This file is used to implement class Type.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/Parser/Type.h"
+#include "include/Parser/Type.h"
 using namespace compiler::ast;
 using namespace compiler::tok;
 typedef std::shared_ptr<Type> TyPtr;

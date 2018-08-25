@@ -6,9 +6,9 @@
 //===---------------------------------------------------------------------===//
 #ifndef CG_VALUE_H
 #define CG_VALUE_H
-#include "../IR/IRType.h"
-#include "../IR/Value.h"
-#include "../Parser/Type.h"
+#include "include/IR/IRType.h"
+#include "include/IR/Value.h"
+#include "include/Parser/Type.h"
 #include <cassert>
 
 namespace compiler {

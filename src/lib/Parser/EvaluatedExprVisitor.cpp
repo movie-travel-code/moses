@@ -3,7 +3,7 @@
 // This file defines the EvaluateExprVisitor class.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/Parser/EvaluatedExprVisitor.h"
+#include "include/Parser/EvaluatedExprVisitor.h"
 using namespace compiler::ast;
 
 //===-----------------------------------------------------------------------------------===//

@@ -3,8 +3,8 @@
 // This file implements class CodeGenTypes (AST -> moses type lowering).
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/IRbuild/CodeGenTypes.h"
-#include "../../include/IR/IRType.h"
+#include "include/IRbuild/CodeGenTypes.h"
+#include "include/IR/IRType.h"
 
 using namespace compiler::IRBuild;
 

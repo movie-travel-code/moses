@@ -3,7 +3,7 @@
 // This file handle the aggregate expr code generation.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/IRBuild/IRBuilder.h"
+#include "include/IRBuild/IRBuilder.h"
 using namespace compiler::IR;
 using namespace compiler::IRBuild;
 using namespace compiler::CodeGen;

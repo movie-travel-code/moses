@@ -29,9 +29,9 @@
 #include <string>
 #include <memory>
 #include "ASTContext.h"
-#include "../Support/Hasing.h"
-#include "../Lexer/scanner.h"
-#include "../Support/SymbolTable.h"
+#include "include/Support/Hasing.h"
+#include "include/Lexer/scanner.h"
+#include "include/Support/SymbolTable.h"
 
 namespace compiler
 {

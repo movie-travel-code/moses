@@ -8,7 +8,7 @@
 // dominator tree.
 //
 //===---------------------------------------------------------------------===//
-#include "../../include/IR/Dominators.h"
+#include "include/IR/Dominators.h"
 using namespace compiler::IR;
 using color = DomTreeNode::color;
 

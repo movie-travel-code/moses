@@ -5,10 +5,10 @@
 //===---------------------------------------------------------------------===//
 #ifndef TYPE_INCLUDE
 #define TYPE_INCLUDE
-#include "../Lexer/TokenKinds.h"
-#include "../Support/Hasing.h"
-#include "../Support/TypeSet.h"
-#include "../Support/error.h"
+#include "include/Lexer/TokenKinds.h"
+#include "include/Support/Hasing.h"
+#include "include/Support/TypeSet.h"
+#include "include/Support/error.h"
 #include <algorithm>
 #include <cassert>
 #include <memory>

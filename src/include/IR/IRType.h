@@ -5,7 +5,7 @@
 //===---------------------------------------------------------------------===//
 #ifndef MOSES_IR_IRTYPE_H
 #define MOSES_IR_IRTYPE_H
-#include "../../include/Parser/Type.h"
+#include "include/Parser/Type.h"
 #include <cassert>
 #include <iostream>
 #include <memory>

@@ -5,10 +5,10 @@
 //===---------------------------------------------------------------------===//
 #ifndef SYMBOL_TABLE_H
 #define SYMBOL_TABLE_H
-#include "../IR/Instruction.h"
-#include "../IRBuild/CGCall.h"
-#include "../Parser/Type.h"
-#include "../Parser/ast.h"
+#include "include/IR/Instruction.h"
+#include "include/IRBuild/CGCall.h"
+#include "include/Parser/Type.h"
+#include "include/Parser/ast.h"
 #include <memory>
 #include <string>
 

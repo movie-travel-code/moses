@@ -253,8 +253,8 @@ private:
   RValue EmitCall(const FunctionDecl *FD, ValPtr FuncAddr,
                   const std::vector<ExprASTPtr> &Args);
 
-  RValue EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr,
-                  CallArgList CallArgs);
+  RValue EmitCall(const FunctionDecl *FD, CGFuncInfoConstPtr CGFunInfo,
+                  ValPtr FuncAddr, CallArgList CallArgs);
 
   /// EmitCallArg - Emit a single call argument.
   void EmitCallArg(const Expr *E, compiler::IRBuild::ASTTyPtr ArgType);

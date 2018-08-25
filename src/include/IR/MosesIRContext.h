@@ -138,6 +138,7 @@ public:
         LabelTy(std::make_shared<Type>(Type::TypeID::LabelTy)) {
     std::vector<std::string> Names = {"dst", "src"};
     Intrinsics.push_back(std::make_shared<Intrinsic>("mosesir.memcpy", Names));
+    Intrinsics.push_back(std::make_shared<Intrinsic>("mosesir.print", Names));
   }
   /// \brief Add literal structure type(AnonymousType).
   void AddStructType(std::shared_ptr<StructType> Type) {
@@ -145,6 +146,7 @@ public:
   }
 
   std::shared_ptr<Intrinsic> getMemcpy() const { return Intrinsics[0]; }
+  std::shared_ptr<Intrinsic> getPrint() const { return Intrinsics[1]; }
 
   /// \brief Add named structure type(UserdefinedType - class).
   void AddNamedStructType(std::shared_ptr<StructType> Type) {

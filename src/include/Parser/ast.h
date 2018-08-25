@@ -625,13 +625,17 @@ class FunctionDecl : public DeclStatement {
   unsigned paraNum;
   StmtASTPtr funcBody;
   std::shared_ptr<Type> returnType;
+  // For now, we just have builtin function `print()`.
+  bool IsBuiltin;
 
 public:
   FunctionDecl(SourceLocation start, SourceLocation end,
                const std::string &name, std::vector<ParmDeclPtr> Args,
-               StmtASTPtr body, std::shared_ptr<Type> returnType)
+               StmtASTPtr body, std::shared_ptr<Type> returnType,
+               bool IsBuiltin = false)
       : DeclStatement(start, end, nullptr), FDName(name), parameters(Args),
-        paraNum(parameters.size()), funcBody(body), returnType(returnType) {}
+        paraNum(parameters.size()), funcBody(body), returnType(returnType),
+        IsBuiltin(IsBuiltin) {}
 
   virtual ~FunctionDecl() {}
   unsigned getParaNum() const { return paraNum; }
@@ -654,6 +658,7 @@ public:
   bool endsWithReturn() const;
 
   StmtASTPtr getCompoundBody() const { return funcBody; }
+  bool isBuiltin() const { return IsBuiltin; }
 
   virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
 };

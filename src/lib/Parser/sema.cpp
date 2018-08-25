@@ -5,6 +5,7 @@
 //===---------------------------------------------------------------------===//
 #include "include/Parser/sema.h"
 #include "include/Support/error.h"
+#include "include/Parser/Type.h"
 using namespace compiler::sema;
 using namespace compiler::lex;
 
@@ -241,6 +242,48 @@ std::shared_ptr<Type>
 Sema::ActOnCallExpr(std::string name, std::vector<std::shared_ptr<Type>> args,
                     FunctionDeclPtr &FD) {
   std::shared_ptr<Type> ReturnType = nullptr;
+
+  // First check whether the call is `print()`.
+  // FIXME: In the future, we should put the builtin functions, like `pint`,
+  // into `Builtin.def` or something like that.
+  if (name == "print") {
+    // FIXME: `print` can only handle `INT` and `BOOL`. In the future, we should
+    // enhance the `print`.
+
+    // Simple semantic analysis, we should make sure that there is just one
+    // parameter with builtin type.
+    if (args.size() != 1)
+      errorReport("Builtin function 'print()' can only accept one parameter.");
+
+    // Construct the funtion symbol for `print`.
+    // Record this func symbol.
+    std::shared_ptr<FunctionSymbol> PrintSym = std::make_shared<FunctionSymbol>(
+        name, std::make_shared<Type>(TypeKind::VOID), ScopeStack[0], nullptr);
+
+    ParmDeclPtr ParmDecl = std::make_shared<ParameterDecl>(
+        SourceLocation(), SourceLocation(), "parm", false, args[0]);
+
+    PrintSym->addParmVariableSymbol(std::make_shared<ParmDeclSymbol>(
+        "parm", nullptr, args[0], false, ParmDecl));
+
+    // FIXME: There need better approach to generate the Functiondecl about
+    // `print`.
+    std::vector<ParmDeclPtr> Parms;
+    Parms.push_back(ParmDecl);
+
+    FD = std::make_shared<FunctionDecl>(SourceLocation(), SourceLocation(),
+                                        name, Parms, nullptr,
+                                        PrintSym->getReturnType(), true);
+
+    if (args[0] != Ctx.Int && args[0] != Ctx.Bool)
+      errorReport("Builtin function 'print()' can only accept one parameter "
+                  "with builtin type 'int' or 'bool'.");
+
+    PrintSym->setReturnType(Ctx.Void);
+    CurScope->addDef(PrintSym);
+    return PrintSym->getReturnType();
+  }
+
   if (FuncSymPtr FuncSym = std::dynamic_pointer_cast<FunctionSymbol>(
           ScopeStack[0]->CheckWhetherInCurScope(name))) {
     ReturnType = FuncSym->getReturnType();
@@ -256,7 +299,7 @@ Sema::ActOnCallExpr(std::string name, std::vector<std::shared_ptr<Type>> args,
                     " is wrong.");
         continue;
       }
-      // Note:
+
       if (!(*FuncSym)[i] || !(*FuncSym)[i]->getType()) {
         continue;
       }

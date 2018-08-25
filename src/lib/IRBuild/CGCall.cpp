@@ -256,7 +256,7 @@ RValue ModuleBuilder::EmitCall(const FunctionDecl *FD, ValPtr FuncAddr,
 
   // (2) EmitCall() -> EmitCallArgs.
   auto CGFunInfo = Types.arrangeFunctionInfo(FD);
-  return EmitCall(CGFunInfo, FuncAddr, Args);
+  return EmitCall(FD, CGFunInfo, FuncAddr, Args);
 }
 
 /// \brief EmitCall - Generate a call of the given funciton.
@@ -264,7 +264,8 @@ RValue ModuleBuilder::EmitCall(const FunctionDecl *FD, ValPtr FuncAddr,
 /// 
 ///	When we come across 'add(n)', we should emit 'n' first and emit
 ///callexpr.
-RValue ModuleBuilder::EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr,
+RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
+                               CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr,
                                CallArgList CallArgs) {
   std::vector<ValPtr> Args;
   // Handle struct-return functions by passing a pointer to the location that we
@@ -302,6 +303,18 @@ RValue ModuleBuilder::EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr,
       break;
     default:
       break;
+    }
+  }
+
+  // Is this call a builtin function call.
+  if (FD->isBuiltin()) {
+    // FIXME: In the future, we should use a more natural approach to handle
+    // builtin call generation.
+    if (FD->getFDName() == "print") {
+      auto IRPrint = Context.getPrint();
+      auto Call = CreateIntrinsic(IRPrint, Args);
+      print(Call);
+      return RValue::get(0);
     }
   }
 
@@ -367,11 +380,10 @@ CGFunctionInfo::CGFunctionInfo(
 }
 
 /// \brief classifyReturnType - compute the ArgABIInfo for ReturnType.
-///	Rule:	int/bool						---->
-///Direct 			void							----> Ignore
-///			struct{int/bool}				----> Direct(coerce to
-///int) 			struct{int/bool, int/bool}		----> InDirect(sret hidden
-///pointer)
+///	Rule:	int/bool                      ----> Direct
+///       void                          ----> Ignore
+///       struct{int/bool}              ----> Direct(coerce to int)
+///       struct{int/bool, int/bool}    ----> InDirect(sret hidden pointer)
 AAIPtr CGFunctionInfo::classifyReturnTye(MosesIRContext &Ctx, ASTTyPtr RetTy) {
   if (RetTy->getKind() == TypeKind::VOID)
     return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Ignore);

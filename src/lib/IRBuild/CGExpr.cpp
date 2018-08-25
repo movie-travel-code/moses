@@ -394,12 +394,35 @@ ValPtr ModuleBuilder::EmitPrePostIncDec(const UnaryExpr *UE, bool isInc,
 RValue ModuleBuilder::EmitCallExpr(const CallExpr *CE) {
   // Get the funciton decl's address.
   auto FD = CE->getFuncDecl();
-  auto Sym = SymbolTree->Resolve(CE->getFuncDecl()->getFDName());
+
+  auto Sym = SymbolTree->Resolve(FD->getFDName());
   assert(Sym && "function decl symbol doesn't exists.");
   std::shared_ptr<FunctionSymbol> FuncSym =
       std::dynamic_pointer_cast<FunctionSymbol>(Sym);
   assert(FuncSym && "function decl symbol doesn't exists.");
+
   auto CalleeAddr = FuncSym->getFuncAddr();
+
+  // If `FD` is builtin function, we should create an artificial `FuncAddr`.
+  // Since there is no function declaration corresponding to `print`, so create
+  // one.
+  if (FD->isBuiltin()) {
+    assert(!CalleeAddr && "Builtin function have no function declaration.");
+
+    // generate function info.
+    std::shared_ptr<CGFunctionInfo const> FI =
+        Types.arrangeFunctionInfo(FD.get());
+
+    auto TypeAndName = Types.getFunctionType(FD.get(), FI);
+
+    CurFunc->CGFnInfo = FI;
+    CurFunc->CurFuncDecl = const_cast<FunctionDecl *>(FD.get());
+    CurFunc->FnRetTy = Types.ConvertType(FD->getReturnType());
+    CalleeAddr = Function::create(TypeAndName.first, FD->getFDName(),
+                                  TypeAndName.second);
+
+    FuncSym->setFuncAddr(CalleeAddr);
+  }
 
   return EmitCall(FD.get(), CalleeAddr, CE->getArgs());
 }

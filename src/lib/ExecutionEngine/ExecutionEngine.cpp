@@ -390,5 +390,13 @@ void Interpreter::callIntrinsic(CallInstPtr I) {
     unsigned size = ElementTy->getSize();
 
     memcpy((char *)GVTOP(DestAddr), (char *)GVTOP(SrcAddr), size);
+  } else if (I->getOperand(0).get()->getName() == "mosesir.print") {
+    GenericValue Val = getOperandValue(I->getOperand(1).get(), SF);
+    auto Ty = I->getOperand(1).get()->getType();
+    if (Ty->isIntegerTy()) {
+      std::cout << Val.IntVal << std::endl;
+    } else if (Ty->isBoolTy()) {
+      std::cout << Val.BoolVal << std::endl;
+    }
   }
 }

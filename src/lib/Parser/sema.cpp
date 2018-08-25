@@ -15,16 +15,17 @@ using FuncSymPtr = std::shared_ptr<FunctionSymbol>;
 using UDTyPtr = std::shared_ptr<UserDefinedType>;
 using AnonTyPtr = std::shared_ptr<AnonymousType>;
 
+// Lookup the symbol with specified 'name' in the scope chain. If not found,
+// return nullptr.
 std::shared_ptr<Symbol> Scope::Resolve(std::string name) const {
   // Look up the name in current scope.
-  for (auto item : SymbolTable) {
-    if (item->getLexem() == name) {
+  for (auto item : SymbolTable)
+    if (item->getLexem() == name)
       return item;
-    }
-  }
-  if (Parent) {
+
+  if (Parent)
     return Parent->Resolve(name);
-  }
+
   return nullptr;
 }
 
@@ -177,24 +178,20 @@ void Sema::ActOnVarDecl(
   CurScope->addDef(std::make_shared<VariableSymbol>(
       name, CurScope, declType, VD->getInitExpr() ? true : false, VD));
 
-  // To Do: moses���õ��ǽṹ���͵ȼ۵Ľṹ����Ҫ��¼Class Type����Type
   if (ClassStack.size() != 0) {
-    // moses��ʱ�ڶ���class�У����ܸ�Member���ݳ�ԱInitExpr.
-    if (Init) {
+    if (Init)
       errorReport("Member declaration can't have initial expression");
-    }
     CurScope->getTheSymbolBelongTo()->addSubType(declType, name);
   }
 }
 
 bool Sema::ActOnReturnAnonymous(std::shared_ptr<Type> type) const {
-  if (!type) {
+  if (!type)
     return false;
-  }
 
-  if (!getFunctionStackTop() || !(getFunctionStackTop()->getReturnType())) {
+  if (!getFunctionStackTop() || !getFunctionStackTop()->getReturnType())
     return false;
-  }
+
   if (getFunctionStackTop()->getReturnType()->getKind() !=
       TypeKind::ANONYMOUS) {
     errorReport("Current function's return type isn't anonymous.");
@@ -211,9 +208,9 @@ bool Sema::ActOnReturnAnonymous(std::shared_ptr<Type> type) const {
 }
 
 bool Sema::ActOnReturnStmt(std::shared_ptr<Type> type) const {
-  if (!getFunctionStackTop() || !(getFunctionStackTop()->getReturnType())) {
+  if (!getFunctionStackTop() || !getFunctionStackTop()->getReturnType())
     return false;
-  }
+
   if (TypeKeyInfo::TypeKeyInfo::getHashValue(type) !=
       TypeKeyInfo::TypeKeyInfo::getHashValue(
           getFunctionStackTop()->getReturnType())) {
@@ -260,7 +257,7 @@ Sema::ActOnCallExpr(std::string name, std::vector<std::shared_ptr<Type>> args,
         continue;
       }
       // Note:
-      if (!(*FuncSym)[i] || !((*FuncSym)[i]->getType())) {
+      if (!(*FuncSym)[i] || !(*FuncSym)[i]->getType()) {
         continue;
       }
 
@@ -284,12 +281,12 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok,
                                      ExprASTPtr rhs) {
   if (!lhs || !rhs)
     return nullptr;
-  if (!(lhs->getType())) {
+  if (!lhs->getType()) {
     errorReport("Left hand expression' type wrong.");
     return nullptr;
   }
 
-  if (!(rhs->getType())) {
+  if (!rhs->getType()) {
     errorReport("Right hand expression' type wrong.");
     return nullptr;
   }
@@ -331,6 +328,7 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok,
     }
   }
 
+  // FIXME: Should check the operation code here.
   if (tok.isBoolOperator()) {
     if (lhs->getType()->getKind() != TypeKind::BOOL ||
         rhs->getType()->getKind() != TypeKind::BOOL) {
@@ -380,7 +378,7 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok,
 ///		base.num = 10;
 ExprASTPtr Sema::ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok) {
   /// (1) Check LHS
-  if (!(lhs->getType()) || lhs->getType()->getKind() != TypeKind::USERDEFIED) {
+  if (!lhs->getType() || lhs->getType()->getKind() != TypeKind::USERDEFIED) {
     errorReport("Type error. Expect user defined type.");
   }
 
@@ -389,7 +387,7 @@ ExprASTPtr Sema::ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok) {
   /// (2) Check Member name.
   if (UDTyPtr BaseType =
           std::dynamic_pointer_cast<UserDefinedType>(lhs->getType())) {
-    if (!(BaseType->HaveMember(tok.getLexem()))) {
+    if (!BaseType->HaveMember(tok.getLexem())) {
       errorReport("Type " + BaseType->getTypeName() + " have no member " +
                   tok.getLexem());
       return nullptr;

@@ -1,0 +1,39 @@
+@struct.Node = struct.type { int,  int }
+
+ entry:
+%test.addr = alloca @struct.Node        ; < @struct.Node* >
+%result.addr = alloca int        ; < int* >
+%agg.tmp4 = alloca @struct.Node        ; < @struct.Node* >
+%0 = getelementptr @struct.Node* %test.addr, int 0, int 0
+store int 10.000000, int* %0        ; < void >
+%1 = load int* %0        ; < int >
+%2 = getelementptr @struct.Node* %test.addr, int 0, int 1
+store int 20.000000, int* %2        ; < void >
+%3 = load int* %2        ; < int >
+call mosesir.memcpy( @struct.Node* %agg.tmp4, @struct.Node* %test.addr)        ; 
+%6 = getelementptr @struct.Node* %agg.tmp4, int 0, int 0
+%7 = load int* %6        ; < int >
+%8 = getelementptr @struct.Node* %agg.tmp4, int 0, int 1
+%9 = load int* %8        ; < int >
+%10 = call int add( int %7, int %9)        ; < int>
+store int %10, int* %result.addr        ; < void >
+
+define int add( int parm.0, int parm.1)
+{
+ entry:
+%retval = alloca int        ; < int* >
+parm = alloca @struct.Node        ; < @struct.Node* >
+%0 = getelementptr @struct.Node* parm, int 0, int 0
+store int parm.0, int* %0        ; < void >
+%1 = getelementptr @struct.Node* parm, int 0, int 1
+store int parm.1, int* %1        ; < void >
+%2 = getelementptr @struct.Node* parm, int 0, int 0
+%3 = load int* %2        ; < int >
+%4 = getelementptr @struct.Node* parm, int 0, int 1
+%5 = load int* %4        ; < int >
+%add.tmp6 = add int %3, int %5        ; < int >
+store int %add.tmp6, int* %retval        ; < void >
+%7 = load int* %retval        ; < int >
+ret int %7
+}
+

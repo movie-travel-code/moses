@@ -88,11 +88,12 @@ void ASTToIRMapping::construct(const CGFunctionInfo &FI) {
 
 /// EmitFunctionPrologue - This function mainly generate prologue code.
 ///	e.g.	define i32 func(i32 lhs, i32 rhs)
-///			{
-///				%1 = alloca i32		----------> This is for
-///lhs. 				%2 = alloca i32		----------> This is for rhs.
-///			}
-/// Note: Moses's parameter passing will become very complex. We allow the
+///      {
+///        %1 = alloca i32   ----------> This is for lhs.
+///        %2 = alloca i32   ----------> This is for rhs.
+///      }
+///
+/// Note: moses's parameter passing will become very complex. We allow the
 /// parameter of anonymous type. And we will use reference modle later.
 ///	e.g.	%struct.1 = {i32, {i1, i32}}
 /// 		define i32 func(%struct.1 lhs) {}
@@ -259,8 +260,8 @@ RValue ModuleBuilder::EmitCall(const FunctionDecl *FD, ValPtr FuncAddr,
 }
 
 /// \brief EmitCall - Generate a call of the given funciton.
-/// e.g.	func add(n : Node) -> int {}    ----flattend---->   define @add(int
-/// n.1, int n.2) {}
+/// e.g.	func add(n : Node) -> int {}    ----flattend---->   define @add(int n.1, int n.2) {}
+/// 
 ///	When we come across 'add(n)', we should emit 'n' first and emit
 ///callexpr.
 RValue ModuleBuilder::EmitCall(CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr,
@@ -479,8 +480,7 @@ std::vector<std::string> CGFunctionInfo::getArgNames() const {
 
 /// \brief getFunctionType - Create FunctionType for CGFunctionInfo.
 /// e.g.	class Node { var x:int; var y:int; };
-///			func foo(parm:Node, length:int, Agg:{int, {bool, int}, int})
-///-> Node
+///			func foo(parm:Node, length:int, Agg:{int, {bool, int}, int}) -> Node
 ///			{
 ///				var n:Node;
 ///				n.x = 10;
@@ -492,8 +492,7 @@ std::vector<std::string> CGFunctionInfo::getArgNames() const {
 ///
 ///			%struct.Node = type {int, int}
 ///			%anony.1 = type {int, {bool, int}, int}
-///			define void @foo(%struct.Node* sret retvalue, int
-///%struct.Node.x, int %struct.Node.y, 							%anony.1* byval parm)
+///			define void @foo(%struct.Node* sret retvalue, int %struct.Node.x, int %struct.Node.y, %anony.1* byval parm)
 ///			{
 ///				%1 = alloca int
 ///				%2 = alloca int

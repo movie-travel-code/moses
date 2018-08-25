@@ -41,8 +41,7 @@ using AAIPtr = std::shared_ptr<ArgABIInfo>;
 //{} 		moses IR    =====> %struct.Size = type {int, bool, int}
 //					=====> define @add(%struct.Size parm) {}
 //
-//		Note: Caller allocate the space for temp memory and pass a
-//pointer 			  of the temp memory to the callee.
+//		Note: Caller allocate the space for temp memory and pass a pointer of the temp memory to the callee.
 class ArgABIInfo {
 public:
   enum Kind {
@@ -71,8 +70,7 @@ private:
   std::string Name;
 
   // struct type can be flattened.
-  // e.g. class { var num:int; };					---->	coerce to
-  // int(i32)
+  // e.g. class { var num:int; };					---->	coerce to int(i32)
   std::shared_ptr<IR::Type> TypeData; // isDirect()
   // e.g. class { var num:int, var flag:bool; };	---->	int, int
   bool CanBeFlattened;

@@ -497,7 +497,7 @@ ExprASTPtr Parser::ParseBoolLiteral(bool isTrue) {
 /// The basic idea of operator precedence parsing is to break down an expression
 /// with potentially ambigous binary operators into pieces. Consider, for exam-
 /// -ple, the expression "a + b + ( c + d ) * e * f + g". Operator precedence
-/// parsing considiers this as a stream of primary expressions separated by bi-
+/// parsing considers this as a stream of primary expressions separated by bi-
 /// -nary opreators. As such it will first parse the leading primary expression
 /// "a", then it will see the pairs [+, b] [+, (c+d)], [*, e], [*, f] and [+,
 /// g]. Note that because parenthese are primary expressions, the binary

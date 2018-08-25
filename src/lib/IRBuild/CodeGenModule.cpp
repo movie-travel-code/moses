@@ -9,11 +9,10 @@ std::string ModuleBuilder::LocalInstNamePrefix = "%";
 
 ModuleBuilder::ModuleBuilder(std::shared_ptr<Scope> SymbolInfo,
                              MosesIRContext &context)
-    : SymbolTree(SymbolInfo), Context(context), Types(CodeGenTypes(context)),
-      CurBB(CreateBasicBlock("entry", nullptr)),
-      isAllocaInsertPointSetByNormalInsert(false),
-      CurFunc(std::make_shared<FunctionBuilderStatus>()), CurScope(SymbolInfo),
-      TempCounter(0) {
+    : SymbolTree(SymbolInfo), CurScope(SymbolInfo), Context(context),
+      Types(CodeGenTypes(context)), CurBB(CreateBasicBlock("entry", nullptr)),
+      CurFunc(std::make_shared<FunctionBuilderStatus>()),
+      isAllocaInsertPointSetByNormalInsert(false), TempCounter(0) {
   SetInsertPoint(CurBB);
   EntryBlock = CurBB;
   AllocaInsertPoint = InsertPoint;

@@ -20,8 +20,13 @@ using namespace compiler::sema;
 using namespace compiler::IR;
 using namespace compiler::IRBuild;
 using namespace compiler::Interpreter;
-int main() {
-  Scanner scanner("/Users/wangliushuai/workspace/opensource/moses/test/main.mo");
+int main(int argc, char *argv[]) {
+  // FIXME: We should use more mature approach to handle user options.
+  if (argc != 2) {
+    errorOption("Please provide one option to indicate the source code path.");
+  }
+
+  Scanner scanner(argv[1]);
   ASTContext Ctx;
   Sema sema(Ctx);
   Parser parse(scanner, sema, Ctx);
@@ -29,10 +34,8 @@ int main() {
   parse.parse();
 
   // (2) check error.
-  if (!Ctx.isParseOrSemaSuccess) {
-    system("pause");
-    return 0;
-  }
+  if (!Ctx.isParseOrSemaSuccess)
+    exit(1);
 
   // ConstantEvaluator evaluator;
   auto AST = parse.getAST();

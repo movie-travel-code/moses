@@ -210,9 +210,7 @@ StoreInst::StoreInst(MosesIRContext &Ctx, ValPtr Val, ValPtr Ptr, BBPtr parent,
   // %retval must have i32* type.
   assert(Ptr->getType()->isPointerTy() && "Ptr must have pointer type!");
 
-  auto valty = Val->getType().get();
   auto dynptrty = std::dynamic_pointer_cast<PointerType>(Ptr->getType());
-  auto ptrty = dynptrty->getElementTy().get();
 
   assert(Val->getType().get() ==
              std::dynamic_pointer_cast<PointerType>(Ptr->getType())

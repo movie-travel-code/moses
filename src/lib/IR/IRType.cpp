@@ -28,6 +28,7 @@ unsigned Type::getSize() const {
   default:
     break;
   }
+  return 0;
 }
 
 /// \brief Print the Type info, i32 bool void and so on.

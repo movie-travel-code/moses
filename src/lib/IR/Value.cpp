@@ -6,7 +6,7 @@
 #include "include/IR/Value.h"
 using namespace compiler::IR;
 Value::Value(std::shared_ptr<Type> ty, ValueTy vty, std::string name)
-    : Ty(ty), VTy(vty), Name(name) {}
+    : Name(name), VTy(vty), Ty(ty) {}
 
 bool Value::hasOneUse() const {
   if (Uses.size() == 1)
@@ -44,11 +44,11 @@ Value::~Value() {
   // Tell the Users, this value is gone,
 }
 
-Use::Use(ValPtr Val, User *U) : Val(Val), U(U) {
+Use::Use(ValPtr Val, User *U) : U(U), Val(Val) {
   if (Val)
     Val->addUse(*this);
 }
-Use::Use(const Use &u) : Val(u.Val), U(u.U) {
+Use::Use(const Use &u) : U(u.U), Val(u.Val) {
   if (Val)
     Val->addUse(*this);
 }

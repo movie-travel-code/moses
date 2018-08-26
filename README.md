@@ -1,9 +1,38 @@
-# moses
+## How to build
+`$ mkdir build`
+`$ cd build`
+`$ cmake ..`
+`$ sudo make`
+
+## How to use
+虽然moses的功能非常不完善，但我们仍然能够通过编写简单的程序来进行简单的计算。
+`$ ./moses ../test/main.mo`
+
+如下代码所示：
+```
+class Node 
+{
+  var m1 : int;
+  var m2 : int;
+};
+
+func add(parm:Node) -> int
+{
+  return parm.m1 + parm.m2;
+}
+
+var test:Node;
+test.m1 = 10;
+test.m2 = 20;
+var result = add(test);
+print(result);
+```
+## moses
 Moses是一门很简单的编程语言，参考了swift，但是比swift更简单。
 
 ----------
 
-## 变量声明
+### 变量声明
 变量声明支持有类型的声明和无类型的声明。如下所示：
 
 ```
@@ -24,11 +53,11 @@ var num = {10, {!false, size}}; // Anonymous type.
 ```
 class 
 {
+  var : int;
+  {
+    var : bool;
     var : int;
-    {
-    	var : bool;
-		var : int;
-	}
+  }
 }
 ```
 
@@ -46,8 +75,8 @@ var {a, {b, c}} = num; // 进行解包操作之后，a = 10, b = true, c = true
 // (1) 通过用户自定义类型来进行解包(注： user defined type不能向anonymous type转换)
 class base
 {
-    var start : int;
-    var end : int;
+  var start : int;
+  var end : int;
 };
 
 var num = {0, 1};
@@ -69,7 +98,7 @@ num = 10;
 ```
 ----------
 
-## 类型
+### 类型
 moses内置类型暂时只有 **int** 和 **bool**，其中 **int** 是32位。关于用户自定义类型（也就是class），类似于C语言中的struct，默认数据成员都是public的。class的设计还很简陋，相当于类型的聚合，暂时不提供继承，访问控制等特性。
 
 moses采用结构类型等价（structural type equivalence），不像C/C++或者Java采用名称等价，结构类型等价是和匿名类型相辅相成的。
@@ -90,7 +119,7 @@ b = anony; // 由于结构类型等价的存在，这样做在moses中是合法�
 
 
 ----------
-##函数
+### 函数
 
 函数定义如下：
 ```
@@ -113,16 +142,18 @@ func add(const lhs : int, const rhs : int) -> int
 var num = {0, 0, {true, 0}};
 func add(lhs : {int, int, {bool, int}}, rhs : int) -> {int, int}
 {
-	// 匿名类型的形参需要进行解包操作
-	var {start, end, {flag, num}} = lhs;
-	return {start, end};
+  // 匿名类型的形参需要进行解包操作
+  var {start, end, {flag, num}} = lhs;
+  return {start, end};
 }
 ```
 函数支持匿名类型传参以及匿名类型的变量返回。
 
+另外目前moses只提供了一种简单的内置函数`print`。
+
 ----------
 
-##值语义与引用语义
+### 值语义与引用语义
 moses仿照 java 中的设计，内置类型采用值语义，而用户自定义类型默认采用引用语义。moses不存在指针和引用，为了支持用户自定义类型默认引用语义，moses需要实现垃圾回收机制。
 
 ```
@@ -130,7 +161,7 @@ moses仿照 java 中的设计，内置类型采用值语义，而用户自定义
 // 所以moses支持const 形参
 func add(parm : base) -> int
 {
-	return base.num;
+  return base.num;
 }
 
 // 形参lhs是const类型
@@ -139,13 +170,13 @@ func sub(const parm : base) -> int
 ```
 但是匿名类型形参在函数内部需要进行解包操作，这个操作就是一种值语义，需要将形参（所对应的实参）的值一一解包拷贝到函数的局部变量上。
 
-##函数返回多值
+### 函数返回多值
 由于匿名类型的存在，我们可以通过匿名类型的机制来返回多值。
 
 ```
 func add() -> {int, int}
 {
-	return {0, 0};
+  return {0, 0};
 }
 var num = add();
 // 匿名类型的返回可以由变量，但是变量没办法访问其内部的数据成员
@@ -154,23 +185,23 @@ var {a, b} = num;
 // 当然最好是一步到位，直接对返回结果进行解包
 var {start, end} = add();
 ```
-##控制结构
+### 控制结构
 moses暂时支持两种控制结构，if-else和while-loop。
 
 ```
 if lhs < rhs
 {
-	//...
+  //...
 }
 
 while flag
 {
-	// ...
+  // ...
 }
 ```
 条件表达式不需要使用 "(" 与")" 进行包裹。
 
-## 示例
+### 示例
 moses，如下代码所示：
 ```
 var number = 100;
@@ -178,21 +209,21 @@ var sum : int;
 
 while(number > 0)
 {
-	sum += number--;
+  sum += number--;
 }
 
 var result : bool;
 if (sum > 100000)
 {
-	result = true;
-	while(sum > 0)
-	{
-		sum--;
-	}
+  result = true;
+  while(sum > 0)
+  {
+    sum--;
+  }
 }
 else
 {
-	result = false;
+  result = false;
 }
 ```
 生成的近SSA的IR如下，现在的IR很原始，有很多冗余而且没有任何优化可言。后面会将该IR提升到完全SSA形式，然后在其上应用相关优化算法。

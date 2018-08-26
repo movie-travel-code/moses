@@ -1,11 +1,15 @@
 ## How to build
-`$ mkdir build`
-`$ cd build`
-`$ cmake ..`
-`$ sudo make`
+
+```
+$ mkdir build
+$ cd build
+$ cmake ..
+$ sudo make
+```
 
 ## How to use
 虽然moses的功能非常不完善，但我们仍然能够通过编写简单的程序来进行简单的计算。
+
 `$ ./moses ../test/main.mo`
 
 如下代码所示：

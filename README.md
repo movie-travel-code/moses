@@ -11,30 +11,129 @@ $ sudo make
 虽然moses的功能非常不完善，但我们仍然能够通过编写简单的程序来进行简单的计算。
 
 `$ ./moses ../test/main.mo`
+例如以上提供命令，可以得到如下的信息：
 
-如下代码所示：
+
+如下所示，为了展示整个分析过程，暂时将分析得到的`token`，以及得到的IR都打印了出来。最后将运行得到的结果打印出来。
 ```
-class Node 
+class
+Node
 {
-  var m1 : int;
-  var m2 : int;
-};
+var
+m1
+:
+int
+;
+var
+m2
+:
+int
+;
+}
+;
+func
+add
+(
+parm
+:
+Node
+)
+->
+int
+{
+return
+parm
+.
+m1
++
+parm
+.
+m2
+;
+}
+var
+test
+:
+Node
+;
+test
+.
+m1
+=
+10
+;
+test
+.
+m2
+=
+20
+;
+var
+result
+=
+add
+(
+test
+)
+;
+print
+(
+result
+)
+;
+FILE_EOF
+Parser done!
+--------------------------------------------------------------------------------
+@struct.Node = struct.type { int,  int }
 
-func add(parm:Node) -> int
+ entry:
+%test.addr = alloca @struct.Node        ; < @struct.Node* >
+%result.addr = alloca int        ; < int* >
+%agg.tmp4 = alloca @struct.Node        ; < @struct.Node* >
+%0 = getelementptr @struct.Node* %test.addr, int 0, int 0
+store int 10.000000, int* %0        ; < void >
+%1 = load int* %0        ; < int >
+%2 = getelementptr @struct.Node* %test.addr, int 0, int 1
+store int 20.000000, int* %2        ; < void >
+%3 = load int* %2        ; < int >
+call mosesir.memcpy( @struct.Node* %agg.tmp4, @struct.Node* %test.addr)        ;
+%6 = getelementptr @struct.Node* %agg.tmp4, int 0, int 0
+%7 = load int* %6        ; < int >
+%8 = getelementptr @struct.Node* %agg.tmp4, int 0, int 1
+%9 = load int* %8        ; < int >
+%10 = call int add( int %7, int %9)        ; < int>
+store int %10, int* %result.addr        ; < void >
+%11 = load int* %result.addr        ; < int >
+call mosesir.print( int %11)        ;
+
+define int add( int parm.0, int parm.1)
 {
-  return parm.m1 + parm.m2;
+ entry:
+%retval = alloca int        ; < int* >
+parm = alloca @struct.Node        ; < @struct.Node* >
+%0 = getelementptr @struct.Node* parm, int 0, int 0
+store int parm.0, int* %0        ; < void >
+%1 = getelementptr @struct.Node* parm, int 0, int 1
+store int parm.1, int* %1        ; < void >
+%2 = getelementptr @struct.Node* parm, int 0, int 0
+%3 = load int* %2        ; < int >
+%4 = getelementptr @struct.Node* parm, int 0, int 1
+%5 = load int* %4        ; < int >
+%add.tmp6 = add int %3, int %5        ; < int >
+store int %add.tmp6, int* %retval        ; < void >
+%7 = load int* %retval        ; < int >
+ret int %7
 }
 
-var test:Node;
-test.m1 = 10;
-test.m2 = 20;
-var result = add(test);
-print(result);
+--------------------------------------------------------------------------------
+IDom(entry): entry
+--------------------------------------------------------------------------------
+30
 ```
-## moses
-Moses是一门很简单的编程语言，参考了swift，但是比swift更简单。
 
 ----------
+## moses
+Moses是一门很简单的编程语言，参考了swift，但是比swift更简单。
 
 ### 变量声明
 变量声明支持有类型的声明和无类型的声明。如下所示：
@@ -100,7 +199,6 @@ var {start, end} = num;
 const num : int; 
 num = 10;
 ```
-----------
 
 ### 类型
 moses内置类型暂时只有 **int** 和 **bool**，其中 **int** 是32位。关于用户自定义类型（也就是class），类似于C语言中的struct，默认数据成员都是public的。class的设计还很简陋，相当于类型的聚合，暂时不提供继承，访问控制等特性。
@@ -121,8 +219,6 @@ b = anony; // 由于结构类型等价的存在，这样做在moses中是合法�
 ```
 上面提到moses暂时支持4种类型，**int**、**bool**、**user defined tpye**、**anonymous type**。从示例代码中我们可以看出moses支持 **anonymous type** 向 **user defined type** 的转换。
 
-
-----------
 ### 函数
 
 函数定义如下：
@@ -154,8 +250,6 @@ func add(lhs : {int, int, {bool, int}}, rhs : int) -> {int, int}
 函数支持匿名类型传参以及匿名类型的变量返回。
 
 另外目前moses只提供了一种简单的内置函数`print`。
-
-----------
 
 ### 值语义与引用语义
 moses仿照 java 中的设计，内置类型采用值语义，而用户自定义类型默认采用引用语义。moses不存在指针和引用，为了支持用户自定义类型默认引用语义，moses需要实现垃圾回收机制。

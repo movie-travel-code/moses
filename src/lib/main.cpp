@@ -49,12 +49,19 @@ int main(int argc, char *argv[]) {
   IRPrinter::Print(IRContext, out);
   IRPrinter::Print(moduleBuilder.getIRs(), out);
   cout << out.str();
+  cout << "--------------------------------------------------------------------"
+          "------------\n";
 
-  std::ofstream mosesIR("/Users/wangliushuai/workspace/opensource/moses/test/main.mi");
+  // Set the output path.
+  // FIXME: Maybe we should allow user to provide a output path.
+  std::string OutputPath(argv[1]);
+  OutputPath = OutputPath.substr(0, OutputPath.size() - 2);
+  OutputPath += "mi";
+
+  std::ofstream mosesIR(OutputPath);
   mosesIR << out.str();
   mosesIR.close();
 
-  //=============================test=================================
   DominatorTree DomTree;
   std::vector<BBPtr> CFG;
   for (auto item : moduleBuilder.getIRs()) {
@@ -64,7 +71,6 @@ int main(int argc, char *argv[]) {
   DomTree.runOnCFG(CFG);
 
   DomTree.ComputeDomFrontierOnCFG(CFG);
-  //=================================================================
 
   // (5) Interpreter
   auto interpreter = Interpreter::create(moduleBuilder.getIRs(), IRContext);

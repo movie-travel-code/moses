@@ -37,6 +37,9 @@ void DominatorTree::printDomFrontier(std::ostream &out) const {
     }
     out << std::endl;
   }
+
+  std::cout << "---------------------------------------------------------------"
+               "-----------------\n";
 }
 
 void DominatorTree::runOnCFG(std::vector<BBPtr> &BBs) {

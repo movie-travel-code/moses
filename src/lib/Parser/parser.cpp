@@ -103,7 +103,9 @@ ASTPtr &Parser::parse() {
       AST.push_back(ParseFunctionDefinition());
       break;
     case TokenValue::FILE_EOF:
-      std::cout << "done!" << std::endl;
+      std::cout << "Parser done! \n";
+      std::cout << "-----------------------------------------------------------"
+                   "---------------------\n";
       goto DONE;
     default:
       // Handle syntax error.

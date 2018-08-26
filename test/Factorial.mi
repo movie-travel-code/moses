@@ -1,0 +1,36 @@
+ entry:
+%result.addr = alloca int        ; < int* >
+%0 = call int fac( int 10.000000)        ; < int>
+store int %0, int* %result.addr        ; < void >
+%1 = load int* %result.addr        ; < int >
+call mosesir.print( int %1)        ; 
+
+define int fac( int %parm.addr)
+{
+ entry:
+%retval = alloca int        ; < int* >
+%0 = alloca int        ; < int* >
+%result.addr = alloca int        ; < int* >
+store int %parm.addr, int* %0        ; < void >
+store int 1.000000, int* %result.addr        ; < void >
+br label %while.cond1
+ %while.cond1:
+%4 = load int* %0        ; < int >
+%gt.result5 = cmp gt int %4, int 1.000000        ; <  bool > 
+br bool %gt.result5, label %while.body3, label %while.end2
+ %while.body3:
+%6 = load int* %0        ; < int >
+%dec7 = add int %6, int -1        ; < int >
+store int %dec7, int* %0        ; < void >
+%8 = load int* %result.addr        ; < int >
+%mul.tmp9 = mul int %8, int %6        ; < int >
+store int %mul.tmp9, int* %result.addr        ; < void >
+%10 = load int* %result.addr        ; < int >
+br label %while.cond1
+ %while.end2:
+%11 = load int* %result.addr        ; < int >
+store int %11, int* %retval        ; < void >
+%12 = load int* %retval        ; < int >
+ret int %12
+}
+

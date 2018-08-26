@@ -40,8 +40,6 @@ AllocaInstPtr ModuleBuilder::EmitLocalVarAlloca(const VarDecl *var) {
   AllocaInstPtr allocInst =
       CreateAlloca(IRTy, LocalInstNamePrefix + var->getName() + ".addr");
 
-  print(allocInst);
-
   if (std::shared_ptr<VariableSymbol> varSym =
           std::dynamic_pointer_cast<VariableSymbol>(
               CurScope->Resolve(var->getName()))) {
@@ -69,7 +67,6 @@ void ModuleBuilder::EmitParmDecl(const VarDecl *VD, ValPtr Arg) {
     //		}
     Name = LocalInstNamePrefix + Name + ".addr";
     DeclPtr = CreateAlloca(Ty);
-    print(DeclPtr);
 
     // Store the intial value into the alloca.
     EmitStoreOfScalar(Arg, DeclPtr);
@@ -133,8 +130,6 @@ void ModuleBuilder::EmitFunctionDecl(const FunctionDecl *FD) {
   FinishFunction();
   CurFunc->CurFn = nullptr;
 
-  print(func);
-
   // (4) Switch the scope back.
   CurScope = CurScope->getParent();
 }
@@ -157,7 +152,6 @@ void ModuleBuilder::StartFunction(std::shared_ptr<CGFunctionInfo const> FnInfo,
     CurFunc->ReturnValue = nullptr;
   } else {
     CurFunc->ReturnValue = CreateAlloca(Types.ConvertType(RetTy), "%retval");
-    print(CurFunc->ReturnValue);
   }
   EmitFunctionPrologue(FnInfo, Fn);
 }

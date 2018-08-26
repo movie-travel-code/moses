@@ -17,6 +17,8 @@ call mosesir.memcpy( @struct.Node* %agg.tmp4, @struct.Node* %test.addr)        ;
 %9 = load int* %8        ; < int >
 %10 = call int add( int %7, int %9)        ; < int>
 store int %10, int* %result.addr        ; < void >
+%11 = load int* %result.addr        ; < int >
+call mosesir.print( int %11)        ; 
 
 define int add( int parm.0, int parm.1)
 {

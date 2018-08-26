@@ -13,3 +13,4 @@ var test:Node;
 test.m1 = 10;
 test.m2 = 20;
 var result = add(test);
+print(result);

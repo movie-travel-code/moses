@@ -73,7 +73,6 @@ void Interpreter::run() {
     else
       break;
   }
-  std::cout << "Done." << std::endl;
 }
 
 void Interpreter::visit(InstPtr I) {
@@ -204,8 +203,8 @@ void Interpreter::visitAllocaInst(AllocaInstPtr I) {
   unsigned TypeSize = ty->getSize();
 
   // Alloca enough memory to hold the type...
-  void *Memory = malloc(TypeSize);
-  GenericValue Result = PTOGV(Memory);
+  auto Memory = std::make_shared<char>(TypeSize);
+  GenericValue Result = PTOGV(Memory.get());
   SetGenericValue(I, Result, SF);
   ECStack.back().Allocas.add(Memory);
 }

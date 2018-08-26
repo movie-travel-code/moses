@@ -46,7 +46,6 @@ void ModuleBuilder::EmitAggregateCopy(ValPtr DestPtr, ValPtr SrcPtr,
   auto IRMemcpy = Context.getMemcpy();
   std::vector<ValPtr> Args = {DestPtr, SrcPtr};
   auto call = CreateIntrinsic(IRMemcpy, Args);
-  print(call);
 }
 
 /// ?

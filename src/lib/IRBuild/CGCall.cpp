@@ -143,7 +143,6 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
         std::string Name = Arg->getName();
         ValPtr Temp =
             CreateAlloca(ArgType, LocalInstNamePrefix + Name + ".addr");
-        print(Temp);
 
         std::vector<ValPtr> SubArgs;
         for (unsigned index = FirstIRArg; index < FirstIRArg + NumIRArgs;
@@ -174,7 +173,6 @@ void ModuleBuilder::EmitFunctionEpilogue(CGFuncInfoConstPtr CGFnInfo) {
   switch (RetInfo->getKind()) {
   case ArgABIInfo::Kind::Direct:
     RV = CreateLoad(CurFunc->ReturnValue);
-    print(RV);
     break;
   case ArgABIInfo::Kind::InDirect:
     EmitAggregateCopy(CurFunc->CurFn->getArg(0), CurFunc->ReturnValue,
@@ -188,10 +186,8 @@ void ModuleBuilder::EmitFunctionEpilogue(CGFuncInfoConstPtr CGFnInfo) {
 
   if (RV) {
     auto ret = CreateRet(RV);
-    print(ret);
   } else {
     auto ret = CreateRetVoid();
-    print(ret);
   }
 }
 
@@ -221,7 +217,6 @@ void ModuleBuilder::ExpandTypeToArgs(ASTTyPtr ASTTy, RValue Src,
   for (unsigned i = 0, size = ASTTy->MemberNum(); i < size; i++) {
     auto ty = Types.ConvertType((*ASTTy)[i].first);
     auto forPrint = CreateGEP(ty, Addr, i);
-    print(forPrint);
 
     auto LV = LValue::MakeAddr(forPrint);
 
@@ -242,9 +237,7 @@ void ModuleBuilder::CreateCoercedStore(ValPtr Src, ValPtr DestPtr) {
   //     DestPtr , 0, 0
   // (2) EmitStoreOfScalar()
   auto gep = CreateGEP(Src->getType(), DestPtr, 0);
-  print(gep);
   auto store = CreateStore(Src, gep);
-  print(store);
 }
 
 /// \brief EmitCall - Emit code for CallExpr.
@@ -277,7 +270,6 @@ RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
   if (RetInfo->getKind() == ArgABIInfo::Kind::InDirect) {
     auto forPrint = CreateAlloca(Types.ConvertType(RetInfo->getType()),
                                  getCurLocalName("ret.tmp"));
-    print(forPrint);
     Args.push_back(forPrint);
   }
 
@@ -313,13 +305,11 @@ RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
     if (FD->getFDName() == "print") {
       auto IRPrint = Context.getPrint();
       auto Call = CreateIntrinsic(IRPrint, Args);
-      print(Call);
       return RValue::get(0);
     }
   }
 
   auto CallRest = CreateCall(FuncAddr, Args);
-  print(CallRest);
   switch (RetInfo->getKind()) {
   case ArgABIInfo::Kind::InDirect:
     return RValue::getAggregate(Args[0]);
@@ -336,7 +326,6 @@ RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
   case ArgABIInfo::Kind::Ignore:
     break;
   }
-  print(CallRest);
   return RValue::get(0);
 }
 
@@ -348,7 +337,6 @@ void ModuleBuilder::EmitCallArgs(CallArgList &CallArgs,
     auto ty = Types.ConvertType(item->getType());
     if (ty->isAggregateType()) {
       auto AggTemp = CreateAlloca(ty, getCurLocalName("agg.tmp"));
-      print(AggTemp);
       EmitAggExpr(item.get(), AggTemp);
       V = AggTemp;
     } else {

@@ -46,9 +46,6 @@ void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock,
       BBPtr LHSTrue = CreateBasicBlock(getCurLocalName("and.lhs.true"));
       EmitBranchOnBoolExpr(CondBOp->getLHS(), LHSTrue, FalseBlock);
       EmitBlock(LHSTrue);
-
-      print(LHSTrue);
-
       EmitBranchOnBoolExpr(CondBOp->getRHS(), TrueBlock, FalseBlock);
       return;
     } else if (CondBOp->getOpcode() == "||") {
@@ -68,9 +65,6 @@ void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock,
       BBPtr LHSFalse = CreateBasicBlock(getCurLocalName("or.lhs.false"));
       EmitBranchOnBoolExpr(CondBOp->getLHS(), TrueBlock, LHSFalse);
       EmitBlock(LHSFalse);
-
-      print(LHSFalse);
-
       EmitBranchOnBoolExpr(CondBOp->getRHS(), TrueBlock, FalseBlock);
       return;
     }
@@ -85,7 +79,6 @@ void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock,
   // Emit the code with the fully general case.
   ValPtr CondV = Cond->Accept(this);
   auto ret = CreateCondBr(CondV, TrueBlock, FalseBlock);
-  print(ret);
 }
 
 ValPtr ModuleBuilder::EvaluateExprAsBool(ExprASTPtr E) { return 0; }
@@ -128,8 +121,6 @@ ValPtr ModuleBuilder::EmitAlgAndBooleanOp(const CGExpr::BinOpInfo &BInfo) {
     // return CreateCmpNE(BInfo.LHS, BInfo.RHS, "ne.result");
     ret = CreateCmpNE(BInfo.LHS, BInfo.RHS, getCurLocalName("ne.result"));
   }
-
-  print(ret);
 
   return ret;
   assert(0 && "Unreachable program point.");
@@ -280,7 +271,6 @@ LValue ModuleBuilder::EmitMemberExprLValue(const MemberExpr *ME) {
   auto idx = ME->getIdx();
   ValPtr MemberAddr =
       CreateGEP(Types.ConvertType(ME->getType()), BaseLValue.getAddress(), idx);
-  print(MemberAddr);
   return LValue::MakeAddr(MemberAddr);
 }
 
@@ -302,7 +292,6 @@ ValPtr ModuleBuilder::EmitLoadOfLValue(const Expr *E) {
 RValue ModuleBuilder::EmitLoadOfLValue(LValue LV) {
   ValPtr Ptr = LV.getAddress();
   auto V = CreateLoad(LV.getAddress());
-  print(V);
   return RValue::get(V);
 }
 
@@ -332,7 +321,6 @@ ValPtr ModuleBuilder::EmitUnaryExpr(const UnaryExpr *UE) {
   if (Opcode == "!") {
     ValPtr OperandV = UE->getSubExpr()->Accept(this);
     auto ret = CreateNot(OperandV, getCurLocalName("not"));
-    print(ret);
     return ret;
   }
   return nullptr;
@@ -367,7 +355,6 @@ ValPtr ModuleBuilder::EmitPrePostIncDec(const UnaryExpr *UE, bool isInc,
   NextVal = ConstantInt::get(Context, AmoutVal);
   NextVal->setName(std::to_string(AmoutVal));
   NextVal = CreateAdd(InVal, NextVal, getCurLocalName(isInc ? "inc" : "dec"));
-  print(NextVal);
 
   // (4) Save the ResultValue.
   EmitStoreThroughLValue(RValue::get(NextVal), LV);
@@ -485,5 +472,4 @@ void ModuleBuilder::EmitStoreThroughLValue(RValue Src, LValue Dst,
 /// \brief Handle the scalar expression.
 void ModuleBuilder::EmitStoreOfScalar(ValPtr Value, ValPtr Addr) {
   auto ret = CreateStore(Value, Addr);
-  print(ret);
 }

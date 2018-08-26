@@ -67,7 +67,6 @@ void ModuleBuilder::EmitBrach(BBPtr Target) {
   } else {
     // Otherwise, create a fall-through branch.
     auto ret = CreateBr(Target);
-    print(ret);
   }
   ClearInsertionPoint();
 }
@@ -146,7 +145,6 @@ void ModuleBuilder::EmitWhileStmt(const WhileStatement *whilestmt) {
   // As long as the conditon is true, go to the loop body.
   if (EmitBoolCondBranch) {
     auto ret = CreateCondBr(CondVal, LoopBody, ExitBlock);
-    print(ret);
   }
 
   // Emit the loop body.
@@ -263,7 +261,6 @@ void ModuleBuilder::EmitIfStmt(const IfStatement *ifstmt) {
   // Emit the 'then' code.
   EmitBlock(ThenBlock);
   ifstmt->getThen().get()->Accept(this);
-  print(ThenBlock);
 
   EmitBrach(ContBlock);
   // Emit the 'else' code if present.
@@ -271,7 +268,6 @@ void ModuleBuilder::EmitIfStmt(const IfStatement *ifstmt) {
     EmitBlock(ElseBlock);
 
     Else.get()->Accept(this);
-    print(ElseBlock);
 
     EmitBrach(ContBlock);
   }
@@ -309,7 +305,6 @@ ValPtr ModuleBuilder::EmitReturnStmt(const ReturnStatement *RS) {
   } else {
     ValPtr V = SubE->Accept(this);
     auto ret = CreateStore(V, CurFunc->ReturnValue);
-    print(ret);
   }
   EmitBrach(CurFunc->ReturnBlock);
   return nullptr;

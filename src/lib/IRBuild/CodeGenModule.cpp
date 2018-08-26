@@ -323,6 +323,5 @@ void ModuleBuilder::RestoreTopLevelCtxInfo() {
 }
 void print(ValPtr V) {
   std::ostringstream out;
-  V->Print(out);
   cout << out.str();
 }

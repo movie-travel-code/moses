@@ -29,17 +29,10 @@ using Opcode = Instruction::Opcode;
 /// AllocaHolder - Object to track all of the blocks of memory allocated by
 /// alloca. When the function returns, this object is "popped off" the execution
 /// stack, which causes the dtor to be run, which free all the alloca'd memory.
-class AllocaHolder {
-  std::vector<void *> Allocations;
+struct AllocaHolder {
+  std::vector<std::shared_ptr<char>> Allocations;
 
-public:
-  AllocaHolder() {}
-  ~AllocaHolder() {
-    for (auto item : Allocations)
-      free(item);
-  }
-
-  void add(void *Memory) { Allocations.push_back(Memory); }
+  void add(std::shared_ptr<char> Memory) { Allocations.push_back(Memory); }
 };
 
 /// ExecutionContext struct - This struct represents one stack frame currently

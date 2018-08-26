@@ -66,6 +66,5 @@ int main() {
   // (5) Interpreter
   auto interpreter = Interpreter::create(moduleBuilder.getIRs(), IRContext);
   interpreter->run();
-  system("pause");
   return 0;
 }

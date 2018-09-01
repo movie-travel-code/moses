@@ -201,7 +201,6 @@ public:
   ValPtr visit(const DeclRefExpr *DRE);
   ValPtr visit(const BoolLiteral *BL);
   ValPtr visit(const NumberExpr *NE);
-  ;
   ValPtr visit(const UnaryExpr *UE);
   ValPtr visit(const MemberExpr *ME);
   ValPtr visit(const Expr *E) { return nullptr; }
@@ -684,25 +683,26 @@ private:
   /// SimplifyForwardingBlocks - If the given basic block is only a branch to
   /// another basic block, simplify it. This assumes that no other code could
   /// potentially reference the basic block.
-  /// e.g.        ----------------  BB1
-  ///            |      include.       |
-  ///            |                |
-  ///             ----/-----------\
-			///                /             \
-			///    -----------/----  BB2     -\-----------  BB3
-  ///   | br label %BB4  |        |             |
-  ///    --------\-------          -------------
-  ///             \
-			///        ------\---------  BB4
-  ///       |                |
-  ///        ----------------
+  /// e.g.            ----------------  BB1
+  ///                |    include.    |
+  ///                |                |
+  ///                 ----/-----------\
+	///                    /             \
+	///        -----------/----  BB2     -\-----------  BB3
+  ///       | br label %BB4  |        |             |
+  ///        --------\-------          -------------
+  ///                 \
+	///            ------\---------  BB4
+  ///           |                |
+  ///            ----------------
   /// Note: BB2 is useless, we can eliminate it and replace all use of BB2 to
-  /// BB4. As shown below. e.g.        ----------------  BB1
-  ///            |      include.       |
+  /// BB4. As shown below. e.g.
+  ///             ----------------  BB1
+  ///            |   include.     |
   ///            |                |
   ///             ----/-----------\
-			///                /             \
-			///    -----------/----  BB4     -\-----------  BB3
+	///                /             \
+	///    -----------/----  BB4     -\-----------  BB3
   ///   |                |        |             |
   ///    ----------------          -------------
   void SimplifyForwardingBlocks(BBPtr BB);

@@ -38,29 +38,20 @@ private:
 
 private:
   void getNextChar();
-
   char peekChar();
-
   void addToBuffer(char c);
-
   void reduceBuffer();
-
-
   void makeToken(compiler::tok::TokenValue tv, const TokenLocation &loc,
                  std::string name);
-
   void makeToken(compiler::tok::TokenValue tv, const TokenLocation &loc,
                  long intValue, std::string name);
-
   void makeToken(compiler::tok::TokenValue tv, const TokenLocation &loc,
                  double realValue, std::string name);
-
   void handleEOFState();
   void handleIdentifierState();
   void handleNumberState();
   void handleStringState();
   void handleOperationState();
-
   void preprocess();
   void handleLineComment();
   // void handleBlockComment();
@@ -71,11 +62,8 @@ private:
 
   void handleDigit();
   void handleXDigit();
-
   void handleFraction();
-
   void handleExponent();
-
   bool isOperator();
 
 public:
@@ -85,9 +73,7 @@ public:
   Token getNextToken();
 
   static bool getErrorFlag() { return errorFlag; };
-
   void errorReport(const std::string &msg);
-
   static void setErrorFlag(bool flag) { errorFlag = flag; }
 };
 } // namespace parse

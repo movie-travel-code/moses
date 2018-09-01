@@ -35,17 +35,11 @@ public:
       : LineNumber(lineNumber), ColNumber(colNumber), FileName(fileName) {}
 
   void setTokenLineNumber(unsigned lineNumber) { LineNumber = lineNumber; }
-
   void setTokenColNumber(unsigned colNumber) { ColNumber = colNumber; }
-
   void setTokenFileName(unsigned fileName) { FileName = fileName; }
-
   unsigned getTokenLineNumber() const { return LineNumber; }
-
   unsigned getTokenColNumber() const { return ColNumber; }
-
   std::string getTokenFileName() const { return FileName; }
-
   std::string toString() {
     std::string LineStr = std::to_string(LineNumber);
     std::string ColStr = std::to_string(ColNumber);

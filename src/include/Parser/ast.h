@@ -180,7 +180,7 @@ public:
   virtual ~Expr() {}
 
   // Silly!
-  // If we have other visitors, we will get a "Accept" list!
+  // If we have other visitors, we should get a "Accept" list!
   virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
 };
 
@@ -328,7 +328,7 @@ public:
 
   ExprASTPtr getArg(unsigned index) const { return Args[index]; }
 
-  const std::vector<ExprASTPtr> getArgs() const { return Args; }
+  const std::vector<ExprASTPtr>& getArgs() const { return Args; }
 
   virtual ~CallExpr() {}
 

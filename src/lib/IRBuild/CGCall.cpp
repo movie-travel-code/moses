@@ -13,8 +13,8 @@ namespace {
 /// Encapsulates information about the way function from CGFunctionInfo should
 /// be passed to actual IR function.
 /// e.g.	[parm1, parm2, ..., parmn] -> ret
-///						||
-///					    \/
+///                ||
+///                \/
 ///			[sret ,type1, coerce-to-type2, ..., {flatten.1,
 ///flatten.2}] 	ASTToIRMapping is the key to generate function.
 class ASTToIRMapping {

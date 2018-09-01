@@ -1,6 +1,28 @@
+## What is moses for?
+moses is a simple project just for improving my compiler skills, including 
+
+ - 1.How to write a parser
+ - 2.How to apply semantic analysis
+ - 3.Code generation
+ - 4.Static program analysis 
+   - Optimization
+   - Symbolic execution
+   - Pointer analysis
+   - Type analysis
+   - Or any static analysis skills
+ - 5.How to write interpreter
+ - 6.How to write a linker, debugger etc
+ - 7. Garbage collection
+
+But so far, I just finished `1`, `2`, `3`, `5` in 2016.06. Current buggy implementation is very simple and have many places borrowed from llvm2.6, like the IR design.
+
+Another rule of moses is to improve my English writing skills :).
+
+*Note: The reason why it was named [moses][1] is that I am learning religious history when I am implementing this. Yea, this name is farfetched.*
+
 ## How to build
 
-```
+```Bash
 $ mkdir build
 $ cd build
 $ cmake ..
@@ -8,72 +30,62 @@ $ sudo make
 ```
 
 ## How to use
-虽然moses的功能非常不完善，但我们仍然能够通过编写简单的程序来进行简单的计算。
+Although moses's functionality is not perfect, we can still achieve our goals by writing some simple programs, such as calculating factorials. There is a sample program for calculating factorials, see `test/Factorial.mo`, the implementation is as follows:
 
-`$ ./moses ../test/main.mo`
-例如以上提供命令，可以得到如下的信息：
-
-
-如下所示，为了展示整个分析过程，暂时将分析得到的`token`, 以及得到的IR都打印了出来。最后将运行得到的结果打印出来。
-```
-class
-Node
-{
-var
-m1
-:
-int
-;
-var
-m2
-:
-int
-;
+```Swift
+func fac(parm:int) -> int {
+  var result = 1;
+  while(parm > 1) {
+    result *= parm--;
+  }
+  return result; 
 }
-;
+
+var result = fac(10);
+print(result);
+```
+
+We can use the command `$ ./moses ../test/Factorial.mo` to compute the factotial. In order to facilitate observation and debugging, we will print the tokens and IR by default. The ouput is as follows. As you can see, the `10!` is 3628800.
+
+```C
 func
-add
+fac
 (
 parm
 :
-Node
+int
 )
 ->
 int
 {
-return
-parm
-.
-m1
-+
-parm
-.
-m2
-;
-}
-var
-test
-:
-Node
-;
-test
-.
-m1
-=
-10
-;
-test
-.
-m2
-=
-20
-;
 var
 result
 =
-add
+1
+;
+while
 (
-test
+parm
+>
+1
+)
+{
+result
+*=
+parm
+--
+;
+}
+return
+result
+;
+}
+var
+result
+=
+fac
+(
+10
 )
 ;
 print
@@ -84,76 +96,79 @@ result
 FILE_EOF
 Parser done!
 --------------------------------------------------------------------------------
-@struct.Node = struct.type { int,  int }
-
  entry:
-%test.addr = alloca @struct.Node        ; < @struct.Node* >
 %result.addr = alloca int        ; < int* >
-%agg.tmp4 = alloca @struct.Node        ; < @struct.Node* >
-%0 = getelementptr @struct.Node* %test.addr, int 0, int 0
-store int 10.000000, int* %0        ; < void >
-%1 = load int* %0        ; < int >
-%2 = getelementptr @struct.Node* %test.addr, int 0, int 1
-store int 20.000000, int* %2        ; < void >
-%3 = load int* %2        ; < int >
-call mosesir.memcpy( @struct.Node* %agg.tmp4, @struct.Node* %test.addr)        ;
-%6 = getelementptr @struct.Node* %agg.tmp4, int 0, int 0
-%7 = load int* %6        ; < int >
-%8 = getelementptr @struct.Node* %agg.tmp4, int 0, int 1
-%9 = load int* %8        ; < int >
-%10 = call int add( int %7, int %9)        ; < int>
-store int %10, int* %result.addr        ; < void >
-%11 = load int* %result.addr        ; < int >
-call mosesir.print( int %11)        ;
+%0 = call int fac( int 10.000000)        ; < int>
+store int %0, int* %result.addr        ; < void >
+%1 = load int* %result.addr        ; < int >
+call mosesir.print( int %1)        ;
 
-define int add( int parm.0, int parm.1)
+define int fac( int %parm.addr)
 {
  entry:
 %retval = alloca int        ; < int* >
-parm = alloca @struct.Node        ; < @struct.Node* >
-%0 = getelementptr @struct.Node* parm, int 0, int 0
-store int parm.0, int* %0        ; < void >
-%1 = getelementptr @struct.Node* parm, int 0, int 1
-store int parm.1, int* %1        ; < void >
-%2 = getelementptr @struct.Node* parm, int 0, int 0
-%3 = load int* %2        ; < int >
-%4 = getelementptr @struct.Node* parm, int 0, int 1
-%5 = load int* %4        ; < int >
-%add.tmp6 = add int %3, int %5        ; < int >
-store int %add.tmp6, int* %retval        ; < void >
-%7 = load int* %retval        ; < int >
-ret int %7
+%0 = alloca int        ; < int* >
+%result.addr = alloca int        ; < int* >
+store int %parm.addr, int* %0        ; < void >
+store int 1.000000, int* %result.addr        ; < void >
+br label %while.cond1
+ %while.cond1:
+%4 = load int* %0        ; < int >
+%gt.result5 = cmp gt int %4, int 1.000000        ; <  bool >
+br bool %gt.result5, label %while.body3, label %while.end2
+ %while.body3:
+%6 = load int* %0        ; < int >
+%dec7 = add int %6, int -1        ; < int >
+store int %dec7, int* %0        ; < void >
+%8 = load int* %result.addr        ; < int >
+%mul.tmp9 = mul int %8, int %6        ; < int >
+store int %mul.tmp9, int* %result.addr        ; < void >
+%10 = load int* %result.addr        ; < int >
+br label %while.cond1
+ %while.end2:
+%11 = load int* %result.addr        ; < int >
+store int %11, int* %retval        ; < void >
+%12 = load int* %retval        ; < int >
+ret int %12
 }
 
 --------------------------------------------------------------------------------
 IDom(entry): entry
 --------------------------------------------------------------------------------
-30
+3628800
 ```
+
+## Internal implementation
+
+Visit the wiki for the internal implementation details.
 
 ----------
-## moses
-Moses是一门很简单的编程语言，参考了swift，但是比swift更简单。
+## What is moses?
+`moses` is a simple language, reference to swift, but simpler. 
 
-### 变量声明
-变量声明支持有类型的声明和无类型的声明。如下所示：
+### Variable declaration
+moses support the type declarations and no-type declarations. Like,
 
-```
+```Swift
 var num : int;
 var num = 10;
 ```
-以 **var** 关键字开头表示变量声明，后面可以跟 **:** 和类型名来显示指定变量类型，同时也使用表达式进行初始化，moses会通过初始化表达式推断出相应的类型。moses暂时支4种类型，**int**、**bool** 、**user defined type**、**anonymous type**。其中 **user defined type** 表示用户自定义类型，类似于C中的struct，而 **anonymous type** 表示通过匿名类型表达式（由'{' '}'指定）推断出来的匿名类型。
 
-对于匿名类型变量的初始化，如下代码所示：
+`moses` use the keyword `var` to start the variable declaration, we can explicitly specify the type of the variable by following with `:`. In addition, we can also use expression to initialize the variable and `moses` will infer the variable type by the initializer.
 
-```
+`moses` support four types temporarily, **int**, **bool**, **user defined type**, **anonymous type**. The **user defined type** is similar to `struct` in `C`. The **anonymous type** represent the types infered by the anonymous expression.
+
+Given the code below, the `{10, {!false, size}}` represent the anonymous expression, `moses` will infer the anonymous type through this anonymous expression. 
+
+```Swift
 var flag = false;
 var size = 500;
 var num = {10, {!false, size}}; // Anonymous type.
 ```
-第三行的 **{10, {!false, size}}** 表示匿名类型表达式，moses会根据该表达式推导出一个匿名类型附加在变量 **num** 上，其中num推导出的匿名类型如下所示：
 
-```
+The anonymous type of the variable `num` is shown below:
+
+```Swift
 class 
 {
   var : int;
@@ -164,18 +179,29 @@ class
 }
 ```
 
-为了语义的完整性，我们也可以在变量声明时使用匿名类型，同时对匿名类型的变量可以进行解包操作。如下所示：
+For the completeness of the language semantic, we can also use anonymous type in the variable declaration, and do the unpack operations for the variable with anonymous type. Given the code below, we can unpack `num` into three variables.
 
-```
+```Swift
 var num : {int, {int, bool}}; 
 num = {0, {0, true}};
 var num = {10, {!false, true}};
-var {a, {b, c}} = num; // 进行解包操作之后，a = 10, b = true, c = true
+var {a, {b, c}} = num; // After the unpack operation, a = 10, b = true, c = true
 ```
-解包操作有两种实现方式，第一种就是通过解包声明（unpack declaration）来进行解包，第二种就是通过用户自定义的类型变量来进行解包。解包声明的变量类型是const的，并且作用于就在当前的scope中,匿名类型变量只作为值的传递方式出现(有点儿类似于C++中的临时变量）。只能够对匿名类型变量和返回类型为匿名类型的函数调用表达式进行解包。
 
-```
-// (1) 通过用户自定义类型来进行解包(注： user defined type不能向anonymous type转换)
+There are two ways use the unpack operations:
+ - Use the `unpack declaration` to trigger the unpack operations
+ - Use the `user defined type` to trigger the unpack operations
+
+The variable use `unpack declaration` is const qualified, and can only passed by value. We can use `unpack operation` for the variable declaration and for the call expression whose type is anonymous type, e.g the call for the functions whose return type is anonymous.
+
+```Swift
+
+// (1) Use the `unpack declaration` to trigger the unpack operation.
+var num = {0, 1};
+var {start, end} = num;
+
+// (2) Use the `user defined type` to trigger the `unpack operation`
+// Note: `user defined type` can't convert to the `anonymous type`
 class base
 {
   var start : int;
@@ -183,110 +209,110 @@ class base
 };
 
 var num = {0, 1};
-base = num;
-
-// (2) 通过解包声明来进行解包
-var num = {0, 1};
-var {start, end} = num;
-
+base b = num;
 ```
 
-类似于swift，moses支持const变量，
+Like `swift`, moses support the const semantic too.
 
-```
-// 在moses中const类型不再需要必须初始化
-// 从这个角度上来看，moses中的const更类似于C#的readonly关键字
+```Swift
+// In `moses`, `const` variable do not necessarily have to be intialized.
 const num : int; 
-num = 10;
+num = 10; // `num` cannot reassigned
 ```
 
-### 类型
-moses内置类型暂时只有 **int** 和 **bool**，其中 **int** 是32位。关于用户自定义类型（也就是class），类似于C语言中的struct，默认数据成员都是public的。class的设计还很简陋，相当于类型的聚合，暂时不提供继承，访问控制等特性。
+### Type
+`moses` only have two builtin types, **int** and **bool**, the length of **int** is 32bits. For the `user defined type`, e.g. `class`, it's similar to the `struct` in `C`, the default access is `public`. However, `moses` doesn't support inheritance and access control for now.
 
-moses采用结构类型等价（structural type equivalence），不像C/C++或者Java采用名称等价，结构类型等价是和匿名类型相辅相成的。
-例如：
+`moses` adopts structural type equivalence, not like C/C++ or Java which adopt nominal type system, anonymous type and structural type system complement each other.
 
-```
+```Swift
 class base
 {
-	var start : int;
-	var end : int;
-	var flag : bool;
+  var start : int;
+  var end : int;
+  var flag : bool;
 };
 var b : base;
 var anony = {0, 0, true};
-b = anony; // 由于结构类型等价的存在，这样做在moses中是合法的
+b = anony; // Since the structural type equivalence, it is legal in `moses`
 ```
-上面提到moses暂时支持4种类型，**int**、**bool**、**user defined tpye**、**anonymous type**。从示例代码中我们可以看出moses支持 **anonymous type** 向 **user defined type** 的转换。
 
-### 函数
+From the sample code, we can see **anonymous type** and **user defined type**
+can converted to each other.
 
-函数定义如下：
-```
+### Function
+
+The function definition is as follows.
+```Swift
 func add(lhs : int, rhs : int) -> int  
 {  
 	return lhs + rhs;  
 }  
 ```
-以 **func** 关键字开头，表示函数定义，并在参数列表后面由 **->** 指明返回类型。关于形参列表，moses也支持const形参。
 
-```
+The function definition is started with `func`, and specify the return type by following the parameter list with `->`. The parameter can also be const qualified.
+
+```Swift
 func add(const lhs : int, const rhs : int) -> int
 {
 	return lhs + rhs;
 }
 ```
-为了与匿名类型兼容，function进行传参以及值返回时，支持匿名类型。匿名类型设计的初衷要比class简单，因为匿名类型推导时，无法获知class后面可以由用户添加的类似于 **public**（暂时还不支持） 的访问控制信息，如下代码所示：
 
-```
+In order to be compatible with anonymous type, we can also use anonymous type when passing parameters and returning values.
+
+```Swift
 var num = {0, 0, {true, 0}};
 func add(lhs : {int, int, {bool, int}}, rhs : int) -> {int, int}
 {
-  // 匿名类型的形参需要进行解包操作
   var {start, end, {flag, num}} = lhs;
   return {start, end};
 }
 ```
-函数支持匿名类型传参以及匿名类型的变量返回。
 
-另外目前moses只提供了一种简单的内置函数`print`。
+In addition, `moses` provide a simple builtin function `print`.
 
-### 值语义与引用语义
-moses仿照 java 中的设计，内置类型采用值语义，而用户自定义类型默认采用引用语义。moses不存在指针和引用，为了支持用户自定义类型默认引用语义，moses需要实现垃圾回收机制。
+### Value semantic and reference semantic
 
-```
-// 形参lhs默认采用的是引用语义，函数内部对其的修改会真切的应用到实参上
-// 所以moses支持const 形参
+`moses` imitates `JAVA`, the builtin type use `value semantic` and user defined type use `reference semantic`. `pointer` and `reference` are not supported for the time being. In order to support `reference semantic`, maybe we need to implement the garbage collection.
+
+``` Swift
+
+// Since user defined type use `reference semantic`, the modification of `parm` will reflected on the arguments.
 func add(parm : base) -> int
 {
   return base.num;
 }
 
-// 形参lhs是const类型
-func sub(const parm : base) -> int 
-{}
+func sub(const parm : base) -> int {}
 ```
-但是匿名类型形参在函数内部需要进行解包操作，这个操作就是一种值语义，需要将形参（所对应的实参）的值一一解包拷贝到函数的局部变量上。
 
-### 函数返回多值
-由于匿名类型的存在，我们可以通过匿名类型的机制来返回多值。
+For the parameter with anonymous type, we have to unpack the values into the local variables. When we unpack the parameter's value, `moses` use value semantic.
 
-```
+### Return Multiple Values.
+
+Since `moses` support anonymous types, we can return multiple values through anonymous types. In `C++`, we can use `user defined types` to return multiple values. In `moses`, we do not need to explicitly define `user defined type` for the multiple values return.
+
+```Swift
 func add() -> {int, int}
 {
   return {0, 0};
 }
 var num = add();
-// 匿名类型的返回可以由变量，但是变量没办法访问其内部的数据成员
-// 所以即使使用变量来接受匿名类型值的返回，但是仍然需要进行解包
+
+// For anonymous type, since we cannot visit the field declaration, we have to
+// unpack the anonymous types which used for the multiple values return.
 var {a, b} = num;
-// 当然最好是一步到位，直接对返回结果进行解包
+
+// Of course, the best manner is unpack the return value directly.
 var {start, end} = add();
 ```
-### 控制结构
-moses暂时支持两种控制结构，if-else和while-loop。
+### Control statements
 
-```
+`moses` support two control statements, `if else` and `while` loop.
+
+```Swift
+// Conditional expression does not need `(` and `)`.
 if lhs < rhs
 {
   //...
@@ -297,11 +323,10 @@ while flag
   // ...
 }
 ```
-条件表达式不需要使用 "(" 与")" 进行包裹。
 
-### 示例
-moses，如下代码所示：
-```
+### Sample code
+
+```Swift
 var number = 100;
 var sum : int;
 
@@ -324,8 +349,10 @@ else
   result = false;
 }
 ```
-生成的近SSA的IR如下，现在的IR很原始，有很多冗余而且没有任何优化可言。后面会将该IR提升到完全SSA形式，然后在其上应用相关优化算法。
-```
+
+The IR for SSA form is shown below, the IR is premitive, with lots of redundancy and no optimization. In the future, I will improve the IR and apply the optimization algorithms.
+
+```C
  entry:
 %number.addr = alloca int        ; < int* >
 %sum.addr = alloca int        ; < int* >
@@ -379,3 +406,5 @@ br label %if.end11
 
  %if.end11:
 ```
+
+[1]: https://en.wikipedia.org/wiki/Moses

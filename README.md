@@ -16,7 +16,7 @@ moses is a simple project just for improving my compiler skills, including
 
 But so far, I just finished `1`, `2`, `3`, `5` in june 2016. Current buggy implementation is very simple and have many places borrowed from llvm2.6, like the IR design.
 
-Another rule of moses is to improve my English writing skills :).
+Another role of moses is to improve my English writing skills :).
 
 *Note: The reason why it was named [moses][1] is that I am learning religious history when I am implementing this. Yea, this name is farfetched.*
 

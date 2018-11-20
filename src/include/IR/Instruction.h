@@ -128,7 +128,7 @@ public:
   bool mayHaveSideEffects() const { return mayWriteToMemory(); }
 
 public:
-  Instruction(TyPtr Ty, Opcode op, BBPtr parent, std::string Name = "");
+  Instruction(TyPtr Ty, Opcode op, BBPtr parent, const std::string &Name = "");
 };
 
 //===-------------------------------------------------------------===//
@@ -187,7 +187,7 @@ public:
 class BinaryOperator final : public Instruction {
 public:
   BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty, BBPtr parent,
-                 std::string Name = "");
+                 const std::string &Name = "");
   ~BinaryOperator() override;
   // BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty);
 
@@ -260,7 +260,7 @@ private:
 
 public:
   CmpInst(MosesIRContext &Ctx, InstPtr InsertBefore, Predicate pred, ValPtr LHS,
-          ValPtr RHS, BBPtr parent, std::string Name = "");
+          ValPtr RHS, BBPtr parent, const std::string &Name = "");
   // Out-of-line method.
   ~CmpInst() override;
 
@@ -269,11 +269,12 @@ public:
   /// instruction into a BasicBlock right before the specified instruction
   /// @brief Create a CmpInst
   static CmpInstPtr Create(MosesIRContext &Ctx, Predicate predicate, ValPtr S1,
-                           ValPtr S2, BBPtr parent, std::string name = "",
+                           ValPtr S2, BBPtr parent,
+                           const std::string &name = "",
                            InstPtr InsertBefore = nullptr);
 
   static CmpInstPtr Create(MosesIRContext &Ctx, Predicate predicate, ValPtr S1,
-                           ValPtr S2, BBPtr parent, std::string name,
+                           ValPtr S2, BBPtr parent, const std::string &name,
                            BBPtr InsertAtEnd);
 
   Predicate getPredicate() const { return predicate; }
@@ -299,11 +300,12 @@ class AllocaInst final : public UnaryOperator {
 public:
   // AllocaInst(TyPtr Ty,/* ValPtr ArraySize, */std::string Name = "", InstPtr
   // InsertBefore = nullptr);
-  explicit AllocaInst(TyPtr Ty, BBPtr parent, std::string Name = "",
+  explicit AllocaInst(TyPtr Ty, BBPtr parent, const std::string &Name = "",
                       BBPtr InsertAtEnd = nullptr);
   // Out-of-line method.
   ~AllocaInst() override;
-  static AllocaInstPtr Create(TyPtr Ty, BBPtr parent, std::string Name = "");
+  static AllocaInstPtr Create(TyPtr Ty, BBPtr parent,
+                              const std::string &Name = "");
 
   /// getAllocatedType - Return the type that is being allocated by the
   /// instruction.
@@ -327,21 +329,22 @@ public:
   /// Constructors - Create a getelementptr instruction with a base pointer and
   /// an list of indices.
   GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, std::vector<ValPtr> IdxList,
-                    BBPtr parent, std::string Name = "",
+                    BBPtr parent, const std::string &Name = "",
                     InstPtr InsertBefore = nullptr);
 
   /// Constructors - This constructions is convenience method because two
   /// index getelementptr instructions are so common.
   GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, ValPtr Idx0, ValPtr Idx1,
-                    BBPtr parent, std::string Name = "");
+                    BBPtr parent, const std::string &Name = "");
 
 public:
   static GEPInstPtr Create(TyPtr PointeeType, ValPtr Ptr,
                            std::vector<ValPtr> IdxList, BBPtr parent,
-                           std::string Name = "",
+                           const std::string &Name = "",
                            InstPtr InsertBefore = nullptr);
   static GEPInstPtr Create(TyPtr PointeeType, ValPtr Ptr, ValPtr Idx0,
-                           ValPtr Idx1, BBPtr parent, std::string Name = "",
+                           ValPtr Idx1, BBPtr parent,
+                           const std::string &Name = "",
                            InstPtr InsertBefore = nullptr);
 
   ValPtr getPointerOperand();
@@ -366,18 +369,17 @@ private:
 
 public:
   CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args, BBPtr parent,
-           std::string Name = "", BBPtr InsertAtEnd = nullptr);
+           const std::string &Name = "", BBPtr InsertAtEnd = nullptr);
   CallInst(IntrinsicPtr Intr, std::vector<ValPtr> Args, BBPtr parent,
-           std::string Name = "", InstPtr InsertBefore = nullptr);
+           const std::string &Name = "", InstPtr InsertBefore = nullptr);
 
   static CallInstPtr Create(ValPtr Func, std::vector<ValPtr> Args, BBPtr parent,
-                            std::string Name = "",
+                            const std::string &Name = "",
                             InstPtr InsertBefore = nullptr);
 
-  static CallInstPtr Create(IntrinsicPtr Intr,
-                                      std::vector<ValPtr> Args, BBPtr parent,
-                                      std::string Name = "",
-                                      InstPtr InsertBefore = nullptr);
+  static CallInstPtr Create(IntrinsicPtr Intr, std::vector<ValPtr> Args,
+                            BBPtr parent, const std::string &Name = "",
+                            InstPtr InsertBefore = nullptr);
 
   /*static CallInstPtr Create(FuncTypePtr *Ty, ValPtr Func, std::list<ValPtr>
      Args, std::string NameStr, InstPtr InsertBefore = nullptr);*/
@@ -457,14 +459,15 @@ public:
   ~ExtractValueInst() override;
 
   static EVInstPtr Create(ValPtr Agg, std::vector<unsigned> Idxs,
-                          std::string NameStr = "",
+                          const std::string &NameStr = "",
                           InstPtr InsertBefore = nullptr) {
     // return new ExtractValueInst(Agg, Idxs, NameStr, InsertBefore);
     return nullptr;
   }
 
   static EVInstPtr Create(ValPtr Agg, std::vector<unsigned> Idxs,
-                          std::string NameStr, BBPtr InsertAtEnd = nullptr) {
+                          const std::string &NameStr,
+                          BBPtr InsertAtEnd = nullptr) {
     // return new ExtractValueInst(Agg, Idxs, NameStr, InsertAtEnd);
     return nullptr;
   }
@@ -494,7 +497,8 @@ private:
                   }*/
 
   explicit PHINode(TyPtr Ty, unsigned NumReservedValues, BBPtr parent,
-                   std::string NameStr = "", InstPtr InsertBefore = nullptr)
+                   const std::string &NameStr = "",
+                   InstPtr InsertBefore = nullptr)
       : Instruction(Ty, Instruction::Opcode::PHI, parent) {}
 
 protected:
@@ -507,13 +511,13 @@ public:
   // Constructors - NumReservedValues is a hint for the number of incoming
   // edges that this phi node will have(use 0 if you really have no idea).
   static PHINodePtr Create(TyPtr Ty, unsigned NumReservedValues,
-                           std::string NameStr = "",
+                           const std::string &NameStr = "",
                            InstPtr InsertBefore = nullptr) {
     return nullptr;
   }
 
   static PHINodePtr Create(TyPtr Ty, unsigned NumReservedValues,
-                           std::string NameStr, BBPtr InsertAtEnd) {
+                           const std::string &NameStr, BBPtr InsertAtEnd) {
     return nullptr;
   }
   // Block iterator interface. This provides access to the list of incoming
@@ -610,13 +614,14 @@ class BranchInst : public TerminatorInst {
 
   // BranchInst(BB *B)							- 'br B'
   // BranchInst(BB* T, BB *F, Value *C)			- 'br C, T, F'
-  // BranchInst(BB *B, Inst *I)					- 'br B'		insert before
+  // BranchInst(BB *B, Inst *I)					- 'br B'		insert
+  // before
   // I
   // BranchInst(BB *T, BB *F, Value *C, Inst *I)	- 'br C, T, F'	insert
   // before I
-  // BranchINst(BB *B, BB *I)						- 'br B'		insert at
-  // end BranchhInst(BB *T, BB *F, Value *C, BB *I)	- 'br C, T, F'
-  // insert at end
+  // BranchINst(BB *B, BB *I)						- 'br B'		insert
+  // at end BranchhInst(BB *T, BB *F, Value *C, BB *I)	- 'br C, T, F' insert at
+  // end
 public:
   BranchInst(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr parent,
              BBPtr InsertAtEnd = nullptr);
@@ -655,9 +660,9 @@ public:
 
 //===----------------------------------------------------------------===//
 // LoadInst - an instruction for reading from memory.
-class LoadInst : public UnaryOperator {
+class LoadInst final : public UnaryOperator {
 public:
-  LoadInst(ValPtr Ptr, BBPtr parent, std::string Name = "",
+  LoadInst(ValPtr Ptr, BBPtr parent, const std::string &Name = "",
            BBPtr InsertAtEnd = nullptr);
   ~LoadInst() override;
   static LoadInstPtr Create(ValPtr Ptr, BBPtr parent);
@@ -678,7 +683,7 @@ public:
 
 //===----------------------------------------------------------------===//
 // StoreInst - an instruction for storing to memory.
-class StoreInst : public Instruction {
+class StoreInst final : public Instruction {
   void init(ValPtr Val, ValPtr Ptr);
 
 public:

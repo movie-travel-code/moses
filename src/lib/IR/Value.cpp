@@ -5,7 +5,7 @@
 //===---------------------------------------------------------------------===//
 #include "include/IR/Value.h"
 using namespace compiler::IR;
-Value::Value(std::shared_ptr<Type> ty, ValueTy vty, std::string name)
+Value::Value(std::shared_ptr<Type> ty, ValueTy vty, const std::string &name)
     : Name(name), VTy(vty), Ty(ty) {}
 
 bool Value::hasOneUse() const {

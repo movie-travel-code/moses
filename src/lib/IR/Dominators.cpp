@@ -30,7 +30,7 @@ void DominatorTree::printIDoms(std::ostream &out) const {
 }
 
 void DominatorTree::printDomFrontier(std::ostream &out) const {
-  for (auto item : DominanceFrontier) {
+  for (const auto &item : DominanceFrontier) {
     out << "DF(" << item.first->getBlock()->getName() << "): ";
     for (auto frontier : item.second) {
       out << frontier->getBlock()->getName() << " ";
@@ -43,7 +43,7 @@ void DominatorTree::printDomFrontier(std::ostream &out) const {
 }
 
 void DominatorTree::runOnCFG(std::vector<BBPtr> &BBs) {
-  for (auto item : BBs)
+  for (const auto &item : BBs)
     Vertex.push_back(item);
   computeDomTree(BBs[0]);
 }
@@ -55,7 +55,7 @@ void DominatorTree::runOnFunction(FuncPtr F) {
 
 // compute the DomTree.
 void DominatorTree::computeDomTree(BBPtr EntryBlock) {
-  for (auto item : Vertex) {
+  for (const auto &item : Vertex) {
     DomTreeNodes.insert({item, std::make_shared<DomTreeNode>(item)});
   }
 
@@ -98,7 +98,7 @@ void DominatorTree::DFS(DomTreeNodePtr Node) {
     SuccNodes.push_back(getDomTreeNode(TermiInst->getSuccessor(i)));
   }
 
-  for (auto item : SuccNodes) {
+  for (const auto &item : SuccNodes) {
     if (item->getVisitColor() == color::WHITE) {
       item->setDFSFather(Node);
       DFS(item);
@@ -111,14 +111,14 @@ void DominatorTree::DFS(DomTreeNodePtr Node) {
 
 // To Do: optimization
 void DominatorTree::getPostOrder() {
-  for (auto item : DomTreeNodes)
+  for (const auto &item : DomTreeNodes)
     item.second->setVisitColor(color::WHITE);
 
-  for (unsigned i = 0, size = DomTreeNodes.size(); i < size; ++i) {
+  for (std::size_t i = 0, size = DomTreeNodes.size(); i < size; ++i) {
     int flag = DomTreeNodes.size();
     DomTreeNodePtr tmp = nullptr;
 
-    for (auto item : DomTreeNodes) {
+    for (const auto &item : DomTreeNodes) {
       if (item.second->getPostOrder() < flag &&
           item.second->getVisitColor() != color::BLACK) {
         flag = item.second->getPostOrder();
@@ -149,7 +149,7 @@ DominatorTree::getDomNodePredsFromCFG(DomTreeNodePtr Node) {
   auto BB = Node->getBlock();
   auto Preds = BB->getPredecessors();
 
-  for (auto pred : Preds)
+  for (const auto &pred : Preds)
     PredDomTreeNode.push_back(getDomTreeNode(pred));
   if (Preds.size() > 1)
     JoinNodes.push_back(Node);
@@ -180,7 +180,7 @@ void DominatorTree::Calcuate() {
 
   while (changed) {
     changed = false;
-    for (auto CurNode : ReversePostOrder) {
+    for (const auto &CurNode : ReversePostOrder) {
       if (CurNode == RootNode)
         continue;
 
@@ -201,7 +201,7 @@ void DominatorTree::Calcuate() {
       DomTreeNodePtr NewIDom = AvailiablePred;
 
       // (2) Traverse other predecessors.
-      for (auto pred : PredDomNodeFromCFG) {
+      for (const auto &pred : PredDomNodeFromCFG) {
         if (pred == NewIDom)
           continue;
         if (pred->getIDom() != nullptr)
@@ -234,7 +234,7 @@ void DominatorTree::InsertFrontier(DomTreeNodePtr Node,
 void DominatorTree::ComputeDomFrontier() {
   DomTreeNodePtr runner = nullptr;
   // Just compute the join points.
-  for (auto Node : JoinNodes) {
+  for (const auto &Node : JoinNodes) {
     auto preds = getDomNodePredsFromCFG(Node);
     for (auto pred : preds) {
       runner = pred;

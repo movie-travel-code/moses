@@ -12,15 +12,14 @@ template <typename ValueT, typename ValueInfoT> class TypeSet {
   std::vector<ValueT> Buckets;
 
 public:
-  typedef ValueT key_type;
-  typedef ValueT value_type;
-  typedef unsigned size_type;
+  using key_type = ValueT;
+  using value_type = ValueT;
 
   explicit TypeSet(unsigned NumInit = 0) {}
 
   bool empty() const { return Buckets.empty(); }
 
-  size_type size() const { return Buckets.size(); }
+  std::size_t size() const { return Buckets.size(); }
 
   bool isIn(const ValueT &V) const {
     if (lookup(V))

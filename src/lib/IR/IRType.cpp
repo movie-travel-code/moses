@@ -12,18 +12,18 @@ using StructTyPtr = std::shared_ptr<StructType>;
 // Implements class Type.
 unsigned Type::getSize() const {
   switch (ID) {
-  case compiler::IR::Type::VoidTy:
+  case Type::VoidTy:
     return 0;
-  case compiler::IR::Type::IntegerTy:
+  case Type::IntegerTy:
     return sizeof(int);
-  case compiler::IR::Type::BoolTy:
+  case Type::BoolTy:
     return sizeof(int);
-  case compiler::IR::Type::PointerTy:
+  case Type::PointerTy:
     return sizeof(void *);
-  case compiler::IR::Type::LabelTy:
-  case compiler::IR::Type::FunctionTy:
-  case compiler::IR::Type::StructTy:
-  case compiler::IR::Type::AnonyTy:
+  case Type::LabelTy:
+  case Type::FunctionTy:
+  case Type::StructTy:
+  case Type::AnonyTy:
     break;
   default:
     break;
@@ -34,19 +34,19 @@ unsigned Type::getSize() const {
 /// \brief Print the Type info, i32 bool void and so on.
 void Type::Print(std::ostringstream &out) {
   switch (ID) {
-  case compiler::IR::Type::VoidTy:
+  case Type::VoidTy:
     out << " void";
     break;
-  case compiler::IR::Type::LabelTy:
+  case Type::LabelTy:
     out << " label";
     break;
-  case compiler::IR::Type::IntegerTy:
+  case Type::IntegerTy:
     out << " int";
     break;
-  case compiler::IR::Type::BoolTy:
+  case Type::BoolTy:
     out << " bool";
     break;
-  case compiler::IR::Type::FunctionTy:
+  case Type::FunctionTy:
     // oops. Have no idea to handle the funciton type's name.
     out << " function.type";
     break;
@@ -118,13 +118,11 @@ FunctionType::ConvertParmTypeToIRType(MosesIRContext &Ctx,
 ///	e.g.	int (*call)(int);
 ///			call = add;
 ///
-///			%call = alloca i32 (i32)*					; <i32
-///(i32)**>
-///					~~~~~~~~~~~~~~~~		--------> Funcition type
-///<i32 (i32)> 			store i32 (i32)* @add, i32 (i32)** %call
+///			%call = alloca i32 (i32)*					; <i32 (i32)**>
+///					~~~~~~~~~~~~~~~~		--------> Funcition type<i32 (i32)> 			
+///     store i32 (i32)* @add, i32 (i32)** %call
 ///					...
-///			%1 = load i32 (i32)** %call					; <i32
-///(i32)*>
+///			%1 = load i32 (i32)** %call					; <i32 (i32)*>
 ///					...
 ///			%4 = call i32 %2(i32 %3)
 void FunctionType::Print(std::ostringstream &out) {

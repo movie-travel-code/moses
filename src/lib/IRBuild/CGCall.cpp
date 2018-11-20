@@ -410,7 +410,7 @@ AAIPtr CGFunctionInfo::classifyReturnTye(MosesIRContext &Ctx, ASTTyPtr RetTy) {
 ///			struct{int/bool, int/bool,,,}	----> Indirect(hidden
 ///pointer)
 AAIPtr CGFunctionInfo::classifyArgumentType(MosesIRContext &Ctx, ASTTyPtr ArgTy,
-                                            std::string Name) {
+                                            const std::string &Name) {
   if (ArgTy->getKind() == TypeKind::VOID)
     return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Ignore, Name);
 

@@ -9,7 +9,7 @@ using namespace compiler::IR;
 
 //===---------------------------------------------------------------------===//
 // Implement class Argument.
-Argument::Argument(TyPtr Ty, std::string Name, FuncPtr F)
+Argument::Argument(TyPtr Ty, const std::string &Name, FuncPtr F)
     : Value(Ty, ValueTy::ArgumentVal, Name), Parent(F) {}
 
 void Argument::Print(std::ostringstream &out) {
@@ -18,7 +18,7 @@ void Argument::Print(std::ostringstream &out) {
 }
 //===---------------------------------------------------------------------===//
 // Implement class function.
-Function::Function(FuncTypePtr Ty, std::string Name,
+Function::Function(FuncTypePtr Ty, const std::string &Name,
                    std::vector<std::string> Names)
     : GlobalValue(PointerType::get(Ty), Value::ValueTy::FunctionVal, Name),
       ReturnType(Ty->getReturnType()), FunctionTy(Ty) {
@@ -37,14 +37,14 @@ ArgPtr Function::operator[](unsigned index) const {
 }
 
 /// \brief Set argument info.
-void Function::setArgumentInfo(unsigned index, std::string name) {
+void Function::setArgumentInfo(unsigned index, const std::string &name) {
   assert(index < Arguments.size() &&
          "Index out of range when set Argument(IR) name.");
   Arguments[index]->setName(name);
 }
 
 /// \brief Create a new function.
-FuncPtr Function::create(FuncTypePtr Ty, std::string Name,
+FuncPtr Function::create(FuncTypePtr Ty, const std::string &Name,
                          std::vector<std::string> Names) {
   auto func = std::make_shared<Function>(Ty, Name, Names);
   return func;

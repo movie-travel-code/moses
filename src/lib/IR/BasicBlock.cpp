@@ -10,12 +10,14 @@
 
 using namespace compiler::IR;
 
-BasicBlock::BasicBlock(std::string Name, FuncPtr Parent, BBPtr InsertBefore)
+BasicBlock::BasicBlock(const std::string &Name, FuncPtr Parent,
+                       BBPtr InsertBefore)
     : Value(std::make_shared<Type>(Type::TypeID::LabelTy),
             Value::ValueTy::BasicBlockVal, Name),
       Parent(Parent) {}
 
-BBPtr BasicBlock::Create(std::string Name, FuncPtr Parent, BBPtr InsertBefore) {
+BBPtr BasicBlock::Create(const std::string &Name, FuncPtr Parent,
+                         BBPtr InsertBefore) {
   return std::make_shared<BasicBlock>(Name, Parent, InsertBefore);
 }
 
@@ -26,7 +28,7 @@ std::vector<BBPtr> BasicBlock::getPredecessors() const {
   auto Uses = getUses();
 
   // (2) get the use's father
-  for (auto item : Uses) {
+  for (const auto &item : Uses) {
     auto user = item->getUser();
     const Instruction *InstUser = dynamic_cast<const Instruction *>(user);
     assert(InstUser && "The user of BasicBlock must be Instruction.");
@@ -104,7 +106,7 @@ BBPtr BasicBlock::splitBasicBlock(unsigned index, std::string BBName) {
 ///				%tmp3 = load i32* %num
 void BasicBlock::Print(std::ostringstream &out) {
   out << " " << Name << ":\n";
-  for (auto item : InstList) {
+  for (const auto &item : InstList) {
     item->Print(out);
   }
 }

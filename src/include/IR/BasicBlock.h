@@ -18,7 +18,6 @@
 #include <memory>
 #include <string>
 
-
 namespace compiler {
 namespace IR {
 class TerminatorInst;
@@ -40,7 +39,8 @@ private:
 public:
   /// BasicBlock ctor - If the function parameter is specified, the basic block
   /// is automatically inserted at the end of the function.
-  BasicBlock(std::string Name, FuncPtr Parent, BBPtr InsertBefore = nullptr);
+  BasicBlock(const std::string &Name, FuncPtr Parent,
+             BBPtr InsertBefore = nullptr);
   ~BasicBlock() {}
 
   /// \brief Creates a new BasicBlock.
@@ -48,7 +48,7 @@ public:
   /// If the Parent parameter is specified, the basic block is automatically
   /// inserted at either the end of the function (if InsertBefore is 0), or
   /// before the specified basic block.
-  static BBPtr Create(std::string Name, FuncPtr, BBPtr = nullptr);
+  static BBPtr Create(const std::string &Name, FuncPtr, BBPtr = nullptr);
   bool RemoveInst(const Value *val);
   void setParent(FuncPtr parent) { Parent = parent; }
   // Specialize setName to take care of symbol table majik

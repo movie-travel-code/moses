@@ -35,8 +35,8 @@ public:
 
   virtual TyPtr const_remove() const;
   // Shit code!
-  virtual unsigned long size() const { return 0; }
-  virtual unsigned MemberNum() const { return 1; }
+  virtual std::size_t size() const { return 0; }
+  virtual std::size_t MemberNum() const { return 1; }
   virtual std::pair<TyPtr, std::string> operator[](unsigned idx) const {
     assert(0 && "There is no chance to call this function.");
     return std::make_pair(nullptr, "");
@@ -77,10 +77,10 @@ class UserDefinedType final : public Type {
   std::vector<std::pair<TyPtr, std::string>> subTypes;
 
 public:
-  UserDefinedType(TypeKind kind, std::string TypeName)
+  UserDefinedType(TypeKind kind, const std::string &TypeName)
       : Type(kind), TypeName(TypeName) {}
 
-  UserDefinedType(TypeKind kind, std::string TypeName,
+  UserDefinedType(TypeKind kind, const std::string &TypeName,
                   std::vector<std::pair<TyPtr, std::string>> subTypes)
       : Type(kind), TypeName(TypeName) {}
 
@@ -95,12 +95,12 @@ public:
   //			};
   TyPtr StripOffShell() const;
 
-  bool HaveMember(std::string name) const;
+  bool HaveMember(const std::string &name) const;
   bool operator==(const Type &rhs) const;
-  TyPtr getMemberType(std::string name) const;
-  int getIdx(std::string name) const;
-  unsigned long size() const;
-  virtual unsigned MemberNum() const { return subTypes.size(); }
+  TyPtr getMemberType(const std::string &name) const;
+  int getIdx(const std::string &name) const;
+  std::size_t size() const;
+  virtual std::size_t MemberNum() const { return subTypes.size(); }
 
   std::pair<TyPtr, std::string> operator[](unsigned index) const {
     return subTypes[index];
@@ -135,11 +135,11 @@ public:
 
   std::vector<TyPtr> getSubTypes() const { return subTypes; }
   TyPtr StripOffShell() const;
-  unsigned getSubTypesNum() const { return subTypes.size(); };
+  std::size_t getSubTypesNum() const { return subTypes.size(); };
   void getTypes(std::vector<TyPtr> &types) const;
 
-  unsigned long size() const;
-  virtual unsigned MemberNum() const { return subTypes.size(); }
+  std::size_t size() const;
+  virtual std::size_t MemberNum() const { return subTypes.size(); }
 };
 
 namespace TypeKeyInfo {

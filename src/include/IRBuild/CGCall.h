@@ -122,7 +122,7 @@ public:
   // Generate ArgABIInfo for return type.
   static AAIPtr classifyReturnTye(MosesIRContext &Ctx, ASTTyPtr RetTy);
   static AAIPtr classifyArgumentType(MosesIRContext &Ctx, ASTTyPtr ArgTy,
-                                     std::string Name);
+                                     const std::string &Name);
 };
 } // namespace IRBuild
 } // namespace compiler

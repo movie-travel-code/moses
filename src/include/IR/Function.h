@@ -33,7 +33,7 @@ class Argument : public Value {
 public:
   /// Argument ctor - If Function argument is specified, this argument is
   /// inserted at the end of the argument list for the function.
-  Argument(TyPtr Ty, std::string Name = "", FuncPtr F = nullptr);
+  Argument(TyPtr Ty, const std::string &Name = "", FuncPtr F = nullptr);
   void setType(TyPtr ty) { this->Ty = Ty; }
   FuncPtr getParent() { return Parent; }
   static bool classof(ValPtr V) {
@@ -53,13 +53,13 @@ private:
   std::vector<ArgPtr> Arguments;
 
 public:
-  Function(FuncTypePtr Ty, std::string Name, std::vector<std::string> Names);
+  Function(FuncTypePtr Ty, const std::string &Name, std::vector<std::string> Names);
 
-  static FuncPtr create(FuncTypePtr Ty, std::string Name,
+  static FuncPtr create(FuncTypePtr Ty, const std::string &Name,
                         std::vector<std::string> Names);
   ArgPtr operator[](unsigned index) const;
   /// \brief Set argument name and type.
-  void setArgumentInfo(unsigned index, std::string name);
+  void setArgumentInfo(unsigned index, const std::string &name);
 
   void addBB(BBPtr B) { BasicBlocks.push_back(B); }
 

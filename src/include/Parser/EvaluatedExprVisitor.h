@@ -11,7 +11,6 @@
 #include <typeinfo>
 #include <utility>
 
-
 namespace compiler {
 namespace ast {
 struct EvalStatus {
@@ -75,10 +74,10 @@ public:
   std::vector<std::pair<int, unsigned>> ActiveBookingInfo;
 
 public:
-  typedef EvalStatus::ValueKind ValueKind;
-  typedef EvalStatus::Result Result;
+  using ValueKind = EvalStatus::ValueKind;
+  using Result = EvalStatus::Result;
 
-  typedef EvalInfo::EvaluationMode EvaluationMode;
+  using EvaluationMode = EvalInfo::EvaluationMode;
 
 public:
   virtual bool Evaluate(ExprASTPtr expr, EvalInfo &info);

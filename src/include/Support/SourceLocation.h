@@ -11,8 +11,8 @@ namespace lex {
 /// SourceLocation is same as TokenLocation
 class SourceLocation {
   std::string FileName;
-  unsigned long line;
-  unsigned long column;
+  std::size_t line;
+  std::size_t column;
 
 public:
   SourceLocation() : FileName(""), line(0), column(0) {}
@@ -20,9 +20,9 @@ public:
       : FileName(tokLoc.getTokenFileName()), line(tokLoc.getTokenLineNumber()),
         column(tokLoc.getTokenColNumber()) {}
 
-  unsigned long getLineNumber() const { return line; }
-  unsigned long getColumnNumber() const { return column; }
-  std::string getFileName() const { return FileName; }
+  std::size_t getLineNumber() const { return line; }
+  std::size_t getColumnNumber() const { return column; }
+  const std::string& getFileName() const { return FileName; }
 
   void setLineNumber(unsigned long line) { this->line = line; }
   void setColumnNumber(unsigned long column) { this->column = column; }

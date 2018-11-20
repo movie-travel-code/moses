@@ -122,7 +122,7 @@ protected:
 public:
   // 'Type' stands for Value's type, like integer, void or FunctionType.
   // 'ValueTy' stands for category, like Instruction, ConstantInt or Function.
-  Value(std::shared_ptr<Type> Ty, ValueTy vty, std::string name = "");
+  Value(std::shared_ptr<Type> Ty, ValueTy vty, const std::string &name = "");
   virtual ~Value();
 
   // All values are typed, get the type of this value.

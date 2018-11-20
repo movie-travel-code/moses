@@ -7,9 +7,9 @@
 
 #ifndef AST_INCLUDE
 #define AST_INCLUDE
+#include "Type.h"
 #include "include/IR/Value.h"
 #include "include/Support/SourceLocation.h"
-#include "Type.h"
 #include <cassert>
 #include <memory>
 #include <string>
@@ -250,7 +250,8 @@ class DeclRefExpr final : public Expr {
 
 public:
   DeclRefExpr(SourceLocation start, SourceLocation end,
-              std::shared_ptr<Type> type, std::string name, VarDeclPtr var)
+              std::shared_ptr<Type> type, const std::string &name,
+              VarDeclPtr var)
       : Expr(start, end, type, ExprValueKind::VK_LValue, true), Name(name),
         var(var) {}
 
@@ -264,7 +265,7 @@ public:
 };
 
 /// @brief BinaryExpr - Expression class for a binary operator.
-class BinaryExpr : public Expr {
+class BinaryExpr final : public Expr {
   std::string OpName;
   ExprASTPtr LHS, RHS;
 
@@ -279,7 +280,7 @@ public:
 
   ExprASTPtr getRHS() const { return RHS; }
 
-  std::string getOpcode() const { return OpName; }
+  const std::string &getOpcode() const { return OpName; }
 
   virtual ~BinaryExpr() {}
 
@@ -322,13 +323,13 @@ public:
       : Expr(start, end, type, vk, canDoEvaluate), CalleeName(Callee),
         FuncDecl(FD), Args(Args) {}
 
-  unsigned getArgsNum() const { return Args.size(); }
+  std::size_t getArgsNum() const { return Args.size(); }
 
   FunctionDeclPtr getFuncDecl() const { return FuncDecl; }
 
   ExprASTPtr getArg(unsigned index) const { return Args[index]; }
 
-  const std::vector<ExprASTPtr>& getArgs() const { return Args; }
+  const std::vector<ExprASTPtr> &getArgs() const { return Args; }
 
   virtual ~CallExpr() {}
 
@@ -346,20 +347,20 @@ class MemberExpr final : public Expr {
   // e.g.	class O{ var a:int; var b:int;}; var o:O;
   // o.a; -----> idx = 0;
   // o.b; -----> idx = 1;
-  int idx;
+  std::size_t idx;
 
 public:
   MemberExpr(SourceLocation start, SourceLocation end,
              std::shared_ptr<Type> type, std::shared_ptr<Expr> base,
-             SourceLocation operatorloc, std::string name, bool canDoEvaluate,
-             int idx)
+             SourceLocation operatorloc, const std::string &name,
+             bool canDoEvaluate, std::size_t idx)
       : Expr(start, end, type, ExprValueKind::VK_LValue, canDoEvaluate),
         Base(base), MemberName(name), OperatorLoc(operatorloc), idx(idx) {}
 
   void setBase(ExprASTPtr E) { Base = E; }
-  std::string getMemberName() const { return MemberName; }
+  const std::string &getMemberName() const { return MemberName; }
   ExprASTPtr getBase() const { return Base; }
-  int getIdx() const { return idx; }
+  std::size_t getIdx() const { return idx; }
   virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
 };
 
@@ -396,11 +397,11 @@ public:
 
   void addSubStmt(StmtASTPtr stmt);
 
-  StmtASTPtr getSubStmt(unsigned index) const;
+  StmtASTPtr getSubStmt(std::size_t index) const;
 
-  StmtASTPtr operator[](unsigned index) const;
+  StmtASTPtr operator[](std::size_t index) const;
 
-  unsigned getSize() const { return SubStmts.size(); }
+  std::size_t getSize() const { return SubStmts.size(); }
 
   virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
 };
@@ -559,11 +560,11 @@ class VarDecl : public DeclStatement {
   ExprASTPtr InitExpr;
 
 public:
-  VarDecl(SourceLocation start, SourceLocation end, std::string name,
+  VarDecl(SourceLocation start, SourceLocation end, const std::string &name,
           std::shared_ptr<Type> type, bool isConst, ExprASTPtr init)
       : DeclStatement(start, end, type), IsConst(isConst), name(name),
         InitExpr(init) {}
-  std::string getName() const { return name; }
+  const std::string &getName() const { return name; }
 
   std::shared_ptr<Type> getDeclType() const { return declType; }
 
@@ -586,7 +587,7 @@ public:
                 bool isConst, std::shared_ptr<Type> type)
       : VarDecl(start, end, name, type, isConst, nullptr) {}
 
-  std::string getParmName() const { return VarDecl::getName(); }
+  const std::string &getParmName() const { return VarDecl::getName(); }
 
   virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
 };
@@ -606,9 +607,9 @@ public:
   // To Do: Shit code!
   void setCorrespondingType(std::shared_ptr<Type> type);
 
-  unsigned getDeclNumber() const { return decls.size(); };
+  std::size_t getDeclNumber() const { return decls.size(); };
 
-  std::vector<VarDeclPtr> operator[](unsigned index) const;
+  std::vector<VarDeclPtr> operator[](std::size_t index) const;
 
   void getDecls(std::vector<VarDeclPtr> &names) const;
 
@@ -622,7 +623,7 @@ public:
 class FunctionDecl : public DeclStatement {
   std::string FDName;
   std::vector<ParmDeclPtr> parameters;
-  unsigned paraNum;
+  std::size_t paraNum;
   StmtASTPtr funcBody;
   std::shared_ptr<Type> returnType;
   // For now, we just have builtin function `print()`.
@@ -638,13 +639,13 @@ public:
         IsBuiltin(IsBuiltin) {}
 
   virtual ~FunctionDecl() {}
-  unsigned getParaNum() const { return paraNum; }
+  std::size_t getParaNum() const { return paraNum; }
   std::vector<ParmDeclPtr> getParms() const { return parameters; }
-  std::string getParmName(unsigned index) const {
+  const std::string &getParmName(std::size_t index) const {
     return parameters[index].get()->getParmName();
   }
   std::shared_ptr<Type> getReturnType() const { return returnType; }
-  std::string getFDName() const { return FDName; }
+  const std::string &getFDName() const { return FDName; }
   ParmDeclPtr getParmDecl(unsigned index) const { return (*this)[index]; }
   ParmDeclPtr operator[](unsigned index) const {
     assert(index <= paraNum - 1 &&

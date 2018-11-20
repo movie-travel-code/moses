@@ -18,7 +18,7 @@ using AnonTyPtr = std::shared_ptr<AnonymousType>;
 
 // Lookup the symbol with specified 'name' in the scope chain. If not found,
 // return nullptr.
-std::shared_ptr<Symbol> Scope::Resolve(std::string name) const {
+std::shared_ptr<Symbol> Scope::Resolve(const std::string &name) const {
   // Look up the name in current scope.
   for (auto item : SymbolTable)
     if (item->getLexem() == name)
@@ -38,7 +38,7 @@ void Sema::ActOnTranslationUnitStart() {
 
 /// \brief ActOnFunctionDecl - Mainly for checking function name and recording
 /// function name.
-void Sema::ActOnFunctionDeclStart(std::string name) {
+void Sema::ActOnFunctionDeclStart(const std::string &name) {
   // Check function name.
   // Note: moses doesn't support function overload now.
   if (CurScope->Resolve(name)) {
@@ -63,7 +63,7 @@ void Sema::ActOnFunctionDeclStart(std::string name) {
 }
 
 /// \brief ActOnFunctionDecl - Set return type and create new scope.
-void Sema::ActOnFunctionDecl(std::string name,
+void Sema::ActOnFunctionDecl(const std::string &name,
                              std::shared_ptr<Type> returnType) {
   getFunctionStackTop()->setReturnType(returnType);
 
@@ -106,7 +106,7 @@ void Sema::ActOnCompoundStmt() {
 /// \brief Actions routines about unpack decl.
 /// var {num, mem} = anony;
 /// Mainly check redefintion.
-bool Sema::ActOnUnpackDeclElement(std::string name) {
+bool Sema::ActOnUnpackDeclElement(const std::string &name) {
   if (CurScope->CheckWhetherInCurScope(name)) {
     errorReport("Error occured in unpack decl.  Variable " + name +
                 " redefinition.");
@@ -134,7 +134,7 @@ std::shared_ptr<Type> Sema::ActOnReturnType(const std::string &name) const {
   }
 }
 
-void Sema::ActOnParmDecl(std::string name, ParmDeclPtr parm) {
+void Sema::ActOnParmDecl(const std::string &name, ParmDeclPtr parm) {
   // Check redefinition.
   if (CurScope->CheckWhetherInCurScope(name)) {
     errorReport("Parameter redefinition.");
@@ -147,7 +147,7 @@ void Sema::ActOnParmDecl(std::string name, ParmDeclPtr parm) {
   getFunctionStackTop()->addParmVariableSymbol(vsym);
 }
 
-void Sema::ActOnClassDeclStart(std::string name) {
+void Sema::ActOnClassDeclStart(const std::string &name) {
   // check class redefinition.
   if (CurScope->CheckWhetherInCurScope(name)) {
     errorReport("Class redefinition.");
@@ -172,7 +172,7 @@ void Sema::ActOnClassDeclStart(std::string name) {
 
 /// \brief Create new variable symbol.
 void Sema::ActOnVarDecl(
-    std::string name,
+    const std::string &name,
     VarDeclPtr VD /*, std::shared_ptr<Type> declType, ExprASTPtr InitExpr*/) {
   ExprASTPtr Init = VD->getInitExpr();
   auto declType = VD->getDeclType();
@@ -223,7 +223,7 @@ bool Sema::ActOnReturnStmt(std::shared_ptr<Type> type) const {
 
 /// \brief Act on declaration reference.
 /// Perferm name lookup and type checking.
-VarDeclPtr Sema::ActOnDeclRefExpr(std::string name) {
+VarDeclPtr Sema::ActOnDeclRefExpr(const std::string &name) {
   if (VarSymPtr vsym =
           std::dynamic_pointer_cast<VariableSymbol>(CurScope->Resolve(name))) {
     return vsym->getDecl();
@@ -239,7 +239,7 @@ VarDeclPtr Sema::ActOnDeclRefExpr(std::string name) {
 /// \brief Act on Call Expr.
 /// Perform name lookup and parm type checking.
 std::shared_ptr<Type>
-Sema::ActOnCallExpr(std::string name, std::vector<std::shared_ptr<Type>> args,
+Sema::ActOnCallExpr(const std::string &name, std::vector<std::shared_ptr<Type>> args,
                     FunctionDeclPtr &FD) {
   std::shared_ptr<Type> ReturnType = nullptr;
 
@@ -583,7 +583,7 @@ void Sema::PopScope() {
 }
 
 /// \brief Look up name for current scope.
-std::shared_ptr<Symbol> Scope::CheckWhetherInCurScope(std::string name) {
+std::shared_ptr<Symbol> Scope::CheckWhetherInCurScope(const std::string &name) {
 
   for (auto item : SymbolTable) {
     if (item->getLexem() == name) {

@@ -6,7 +6,7 @@
 #include "include/Lexer/Token.h"
 using namespace compiler::lex;
 
-Token::Token(TokenValue tv, std::string tokenName)
+Token::Token(TokenValue tv, const std::string &tokenName)
     : value(tv), lexem(tokenName) {}
 
 Token::Token()
@@ -14,7 +14,7 @@ Token::Token()
       realValue(0), lexem(""), strValue("") {}
 
 // identifier and keyword
-Token::Token(TokenValue tv, const TokenLocation &location, std::string name)
+Token::Token(TokenValue tv, const TokenLocation &location, const std::string &name)
     : value(tv), loc(location), intValue(0), realValue(0), lexem(name),
       strValue(name) {}
 
@@ -26,11 +26,11 @@ Token::Token(TokenValue tv, const TokenLocation &location, std::string name)
 // name(name){}
 // int
 Token::Token(TokenValue tv, const TokenLocation &location, long intvalue,
-             std::string name)
+             const std::string &name)
     : value(tv), loc(location), intValue(intvalue), realValue(0), lexem(name),
       strValue("") {}
 // real
 Token::Token(TokenValue tv, const TokenLocation &location, double realvalue,
-             std::string name)
+             const std::string &name)
     : value(tv), loc(location), intValue(0), realValue(realvalue), lexem(name),
       strValue("") {}

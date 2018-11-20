@@ -14,11 +14,11 @@ void CompoundStmt::addSubStmt(StmtASTPtr stmt) {
     SubStmts.push_back(std::move(stmt));
 }
 
-StmtASTPtr CompoundStmt::getSubStmt(unsigned index) const {
+StmtASTPtr CompoundStmt::getSubStmt(std::size_t index) const {
   return SubStmts[index];
 }
 
-StmtASTPtr CompoundStmt::operator[](unsigned index) const {
+StmtASTPtr CompoundStmt::operator[](std::size_t index) const {
   assert(index < SubStmts.size() && "Index out of range!");
   return SubStmts[index];
 }
@@ -49,7 +49,7 @@ bool UnpackDecl::TypeCheckingAndTypeSetting(AnonTyPtr type) {
   return true;
 }
 
-std::vector<VarDeclPtr> UnpackDecl::operator[](unsigned index) const {
+std::vector<VarDeclPtr> UnpackDecl::operator[](std::size_t index) const {
   std::vector<VarDeclPtr> SubDecls;
   if (UnpackDeclPtr unpackd =
           std::dynamic_pointer_cast<UnpackDecl>(decls[index])) {

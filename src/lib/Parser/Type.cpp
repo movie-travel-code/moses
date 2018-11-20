@@ -48,7 +48,8 @@ bool Type::operator==(const Type &rhs) const {
 
 //===---------------------------------------------------------------------===//
 // Implement class UserDefinedType.
-std::shared_ptr<Type> UserDefinedType::getMemberType(std::string name) const {
+std::shared_ptr<Type>
+UserDefinedType::getMemberType(const std::string &name) const {
   auto getType = [&]() -> TyPtr {
     for (auto item : subTypes) {
       if (name == item.second) {
@@ -60,7 +61,7 @@ std::shared_ptr<Type> UserDefinedType::getMemberType(std::string name) const {
   return getType();
 }
 
-bool UserDefinedType::HaveMember(std::string name) const {
+bool UserDefinedType::HaveMember(const std::string &name) const {
   for (auto item : subTypes) {
     if (item.second == name)
       return true;
@@ -68,7 +69,7 @@ bool UserDefinedType::HaveMember(std::string name) const {
   return false;
 }
 
-int UserDefinedType::getIdx(std::string name) const {
+int UserDefinedType::getIdx(const std::string &name) const {
   for (unsigned i = 0; i < subTypes.size(); i++) {
     if (subTypes[i].second == name)
       return i;

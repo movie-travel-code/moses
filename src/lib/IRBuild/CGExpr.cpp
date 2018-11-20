@@ -156,13 +156,14 @@ ValPtr ModuleBuilder::EmitBinAssignOp(const BinaryExpr *B) {
 }
 
 /// \brief Handle the compound assign operation, include '*=' '/=' '%=' '+='
-/// '-='
-///	'&&=' '||='.
+/// '-=' '&&=' '||='.
 ///	e.g.		mem += num;		---->
-///----------------------------- 										| %tmp = load i32* %num		| 										|
-///%tmp1 = load i32* %mme	| 										| %add = i32 %tmp, i32 %tmp1|
-///| 										| store i32 %add, i32* %mem	|
-///										-------------------------
+///  -----------------------------
+/// |    %tmp = load i32* %num    |
+/// |    %tmp1 = load i32* %mme	  | 										
+/// | %add = i32 %tmp, i32 %tmp1  |
+/// | store i32 %add, i32* %mem	  |
+///	------------------------------
 ValPtr ModuleBuilder::EmitCompoundAssignOp(const BinaryExpr *BE) {
   // (1) Emit the RHS first.
   ValPtr RHSV = BE->getRHS()->Accept(this);

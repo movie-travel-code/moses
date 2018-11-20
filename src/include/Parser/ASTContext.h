@@ -16,8 +16,8 @@ namespace ast {
 /// the semantic analysis of a file.
 class ASTContext {
 private:
-  typedef TypeKeyInfo::UserDefinedTypeKeyInfo UDKeyInfo;
-  typedef TypeKeyInfo::AnonTypeKeyInfo AnonTypeKeyInfo;
+  using UDKeyInfo = TypeKeyInfo::UserDefinedTypeKeyInfo;
+  using AnonTypeKeyInfo = TypeKeyInfo::AnonTypeKeyInfo;
 
 public:
   ASTContext()

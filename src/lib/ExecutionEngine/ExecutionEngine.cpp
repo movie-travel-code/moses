@@ -11,13 +11,13 @@ Interpreter::Interpreter(const std::list<ValPtr> &Insts,
                          const MosesIRContext &Ctx)
     : Insts(Insts), Ctx(Ctx) {
   // Initialize the top-level-frame.
-  ECStack.push_back(ExecutionContext());
+  ECStack.emplace_back(ExecutionContext());
 
   ExecutionContext &SF = ECStack.back();
   // nullptr means top-level-frame.
   SF.CurFunction = nullptr;
   // Get the first BasicBlock to execute.
-  for (auto val : Insts) {
+  for (auto &val : Insts) {
     if (BBPtr BB = std::dynamic_pointer_cast<BasicBlock>(val)) {
       SF.CurBB = BB;
       break;
@@ -372,7 +372,7 @@ void Interpreter::callFunction(FuncPtr Function,
 
   // This is the most interesting part.
   // Handle the argument passing.
-  for (unsigned i = 0, size = Function->getArgumentList().size(); i < size; i++)
+  for (std::size_t i = 0, size = Function->getArgumentList().size(); i < size; i++)
     SetGenericValue(Function->getArg(i), ArgVals[i], SF);
 }
 
@@ -386,7 +386,7 @@ void Interpreter::callIntrinsic(CallInstPtr I) {
     auto PTy = std::dynamic_pointer_cast<IR::PointerType>(Ty);
     assert(PTy && "The operand of mosesir.memcpy must have pointer type.");
     auto ElementTy = PTy->getElementTy();
-    unsigned size = ElementTy->getSize();
+    std::size_t size = ElementTy->getSize();
 
     memcpy((char *)GVTOP(DestAddr), (char *)GVTOP(SrcAddr), size);
   } else if (I->getOperand(0).get()->getName() == "mosesir.print") {

@@ -51,7 +51,7 @@ class GlobalValue : public User {
 
 protected:
   TyPtr ValTy;
-  GlobalValue(TyPtr Ty, ValueTy vty, std::string name = "");
+  GlobalValue(TyPtr Ty, ValueTy vty, const std::string &name = "");
 
 public:
   TyPtr getType() const { return Ty; }

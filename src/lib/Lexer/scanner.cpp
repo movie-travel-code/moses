@@ -59,7 +59,7 @@ void Scanner::makeToken(TokenValue tv, const TokenLocation &loc, long intvalue,
 
 void Scanner::makeToken(TokenValue tv, const TokenLocation &loc,
                         double realvalue, std::string name) {
-  std::cout << name << std::endl;
+  std::cout << name << '\n';
   LastTok = Tok;
   Tok = Token(tv, loc, realvalue, name);
   buffer.clear();
@@ -100,7 +100,6 @@ void Scanner::handleLineComment() {
     }
 
     if (!input.eof()) {
-      // \r
       getNextChar();
     }
   }
@@ -142,25 +141,25 @@ Token Scanner::getNextToken() {
     }
 
     switch (state) {
-    case Scanner::State::NONE:
+    case State::NONE:
       getNextChar();
       break;
-    case Scanner::State::END_OF_FILE:
+    case State::END_OF_FILE:
       handleEOFState();
       LastTok = Tok;
       Tok = Token();
       return Tok;
       break;
-    case Scanner::State::IDENTIFIER:
+    case State::IDENTIFIER:
       handleIdentifierState();
       break;
-    case Scanner::State::NUMBER:
+    case State::NUMBER:
       handleNumberState();
       break;
-    case Scanner::State::STRING:
+    case State::STRING:
       handleStringState();
       break;
-    case Scanner::State::OPERATION:
+    case State::OPERATION:
       handleOperationState();
       break;
     default:
@@ -320,7 +319,7 @@ void Scanner::handleOperationState() {
   }
 
   if (tokenKind == TokenValue::UNKNOWN) {
-    std::cerr << "Bad Token!" << std::endl;
+    std::cerr << "Bad Token!\n";
     exit(1);
   }
 

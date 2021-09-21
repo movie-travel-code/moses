@@ -3,14 +3,14 @@
 // 2016.3.7
 //
 //===-------------------------------------------------------------------------===//
-#include "include/Parser/constant-evaluator.h"
-#include "include/ExecutionEngine/ExecutionEngine.h"
-#include "include/IR/Dominators.h"
-#include "include/IR/Support/IRPrinter.h"
-#include "include/IRBuild/IRBuilder.h"
-#include "include/Lexer/scanner.h"
-#include "include/Parser/ASTContext.h"
-#include "include/Parser/parser.h"
+#include "Parser/constant-evaluator.h"
+#include "ExecutionEngine/ExecutionEngine.h"
+#include "IR/Dominators.h"
+#include "IR/Support/IRPrinter.h"
+#include "IRBuild/IRBuilder.h"
+#include "Lexer/scanner.h"
+#include "Parser/ASTContext.h"
+#include "Parser/parser.h"
 #include <iostream>
 #include <sstream>
 

@@ -3,7 +3,7 @@
 // This contains code to emit Decl nodes.
 //
 //===---------------------------------------------------------------------===//
-#include "include/IRBuild/IRBuilder.h"
+#include "IRBuild/IRBuilder.h"
 using namespace ast;
 using namespace IR;
 using namespace IRBuild;
@@ -87,8 +87,9 @@ void ModuleBuilder::EmitParmDecl(const VarDecl *VD, ValPtr Arg) {
   }
 }
 
-void ModuleBuilder::EmitScalarInit(const Expr *init, const VarDecl *D,
-                                   LValue lvalue) {}
+void ModuleBuilder::EmitScalarInit([[maybe_unused]] const Expr *init,
+                                   [[maybe_unused]] const VarDecl *D,
+                                   [[maybe_unused]] LValue lvalue) {}
 
 //===---------------------------------------------------------------------===//
 // Generate code for function declaration.
@@ -189,4 +190,6 @@ ValPtr ModuleBuilder::visit(const FunctionDecl *FD) {
   return nullptr;
 }
 
-ValPtr ModuleBuilder::visit(const UnpackDecl *UD) { return nullptr; }
+ValPtr ModuleBuilder::visit([[maybe_unused]] const UnpackDecl *UD) {
+  return nullptr;
+}

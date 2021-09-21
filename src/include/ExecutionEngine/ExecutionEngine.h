@@ -5,12 +5,12 @@
 //===---------------------------------------------------------------------===//
 #pragma once
 
-#include "include/IR/BasicBlock.h"
-#include "include/IR/Function.h"
-#include "include/IR/IRType.h"
-#include "include/IR/Instruction.h"
-#include "include/IR/User.h"
-#include "include/IR/Value.h"
+#include "IR/BasicBlock.h"
+#include "IR/Function.h"
+#include "IR/IRType.h"
+#include "IR/Instruction.h"
+#include "IR/User.h"
+#include "IR/Value.h"
 #include "GenericValue.h"
 #include <iostream>
 #include <map>

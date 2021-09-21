@@ -4,10 +4,10 @@
 // 
 //===---------------------------------------------------------------------===//
 #pragma once
-#include "include/IR/Instruction.h"
-#include "include/IRBuild/CGCall.h"
-#include "include/Parser/Type.h"
-#include "include/Parser/ast.h"
+#include "IR/Instruction.h"
+#include "IRBuild/CGCall.h"
+#include "Parser/Type.h"
+#include "Parser/ast.h"
 #include <memory>
 #include <string>
 
@@ -151,7 +151,7 @@ class ParmDeclSymbol final : public Symbol {
 
 public:
   ParmDeclSymbol(const std::string &lexem, ScopePtr beongTo,
-                 std::shared_ptr<Type> type, bool initial, ParmDeclPtr pd)
+                 std::shared_ptr<Type> type, [[maybe_unused]] bool initial, ParmDeclPtr pd)
       : Symbol(lexem, beongTo, type), PD(pd) {}
 
   ParmDeclPtr getDecl() const { return PD; }

@@ -8,7 +8,7 @@
 // dominator tree.
 //
 //===---------------------------------------------------------------------===//
-#include "include/IR/Dominators.h"
+#include "IR/Dominators.h"
 using namespace IR;
 using color = DomTreeNode::color;
 
@@ -115,7 +115,7 @@ void DominatorTree::getPostOrder() {
     item.second->setVisitColor(color::WHITE);
 
   for (std::size_t i = 0, size = DomTreeNodes.size(); i < size; ++i) {
-    int flag = DomTreeNodes.size();
+    size_t flag = DomTreeNodes.size();
     DomTreeNodePtr tmp = nullptr;
 
     for (const auto &item : DomTreeNodes) {

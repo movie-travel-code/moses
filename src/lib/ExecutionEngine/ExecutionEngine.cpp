@@ -3,7 +3,7 @@
 // Impletes the class ExecutionEngine.
 //
 //===---------------------------------------------------------------------===//
-#include "include/ExecutionEngine/ExecutionEngine.h"
+#include "ExecutionEngine/ExecutionEngine.h"
 
 using namespace Execution;
 extern void print(std::shared_ptr<IR::Value> V);
@@ -340,7 +340,7 @@ GenericValue Interpreter::getConstantValue(ConstantPtr C) {
   return Result;
 }
 
-GenericValue Interpreter::getOperandValue(ValPtr V, ExecutionContext &SF) {
+GenericValue Interpreter::getOperandValue(ValPtr V, [[maybe_unused]] ExecutionContext &SF) {
   if (ConstantPtr CPV = std::dynamic_pointer_cast<Constant>(V))
     return getConstantValue(CPV);
   return getLocalAndGlobalGV(V);

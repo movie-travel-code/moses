@@ -3,8 +3,8 @@
 // This file wrap the information about a call or function definition.
 //
 //===---------------------------------------------------------------------===//
-#include "include/IRBuild/CodeGenTypes.h"
-#include "include/IRBuild/IRBuilder.h"
+#include "IRBuild/CodeGenTypes.h"
+#include "IRBuild/IRBuilder.h"
 
 using namespace IR;
 using namespace IRBuild;
@@ -455,7 +455,7 @@ const ASTTyPtr CGFunctionInfo::getParm(unsigned index) const {
   return ArgInfos[index]->getType();
 }
 
-const ArgABIInfo::Kind CGFunctionInfo::getKind(unsigned index) const {
+ArgABIInfo::Kind CGFunctionInfo::getKind(unsigned index) const {
   assert(index <= getArgNums() - 1 &&
          "Index out of range when we get FunctionInfo.");
   return ArgInfos[index]->getKind();

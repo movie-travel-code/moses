@@ -6,8 +6,8 @@
 //===-----------------------------------------------------------------------===//
 #pragma once
 #include "Type.h"
-#include "include/IR/Value.h"
-#include "include/Support/SourceLocation.h"
+#include "IR/Value.h"
+#include "Support/SourceLocation.h"
 #include <cassert>
 #include <memory>
 #include <string>
@@ -119,8 +119,8 @@ public:
 
   SourceLocation getLocStart() const { return LocStart; }
   SourceLocation getLocEnd() const { return LocEnd; }
-  void setLocStart(unsigned long line, unsigned long number) {}
-  void setLocEnd(unsigned long line, unsigned long number) {}
+  void setLocStart([[maybe_unused]] unsigned long line, [[maybe_unused]] unsigned long number) {}
+  void setLocEnd([[maybe_unused]] unsigned long line, [[maybe_unused]] unsigned long number) {}
   // virtual
 };
 

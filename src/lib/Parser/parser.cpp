@@ -3,7 +3,7 @@
 // This file is used to implement the parser.
 //
 //===---------------------------------------------------------------------===//
-#include "include/Parser/parser.h"
+#include "Parser/parser.h"
 using namespace parse;
 using namespace parse::OperatorPrec;
 using namespace lex;

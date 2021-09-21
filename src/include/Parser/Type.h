@@ -4,10 +4,10 @@
 //
 //===---------------------------------------------------------------------===//
 #pragma once
-#include "include/Lexer/TokenKinds.h"
-#include "include/Support/Hasing.h"
-#include "include/Support/TypeSet.h"
-#include "include/Support/error.h"
+#include "Lexer/TokenKinds.h"
+#include "Support/Hasing.h"
+#include "Support/TypeSet.h"
+#include "Support/error.h"
 #include <algorithm>
 #include <cassert>
 #include <memory>
@@ -28,14 +28,14 @@ protected:
   TypeKind Kind;
 
 public:
-  Type(TypeKind kind, bool isConst) : Kind(kind) {}
+  Type(TypeKind kind, [[maybe_unused]] bool isConst) : Kind(kind) {}
   Type(TypeKind kind) : Kind(kind) {}
 
   virtual TyPtr const_remove() const;
   // Shit code!
   virtual std::size_t size() const { return 0; }
   virtual std::size_t MemberNum() const { return 1; }
-  virtual std::pair<TyPtr, std::string> operator[](unsigned idx) const {
+  virtual std::pair<TyPtr, std::string> operator[]([[maybe_unused]] unsigned idx) const {
     assert(0 && "There is no chance to call this function.");
     return std::make_pair(nullptr, "");
   }
@@ -79,7 +79,7 @@ public:
       : Type(kind), TypeName(TypeName) {}
 
   UserDefinedType(TypeKind kind, const std::string &TypeName,
-                  std::vector<std::pair<TyPtr, std::string>> subTypes)
+                  [[maybe_unused]] std::vector<std::pair<TyPtr, std::string>> subTypes)
       : Type(kind), TypeName(TypeName) {}
 
   // StripOffShell

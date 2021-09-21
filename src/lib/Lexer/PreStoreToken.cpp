@@ -3,7 +3,7 @@
 // IdentifierTable Implemention
 //
 //===---------------------------------------------------------------------===//
-#include "include/Lexer/PreStoreToken.h"
+#include "Lexer/PreStoreToken.h"
 using namespace lex;
 using namespace tok;
 

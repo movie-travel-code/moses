@@ -18,6 +18,13 @@ public:
     FileName = TL.FileName;
   }
 
+  TokenLocation& operator=(const TokenLocation &TL) {
+    LineNumber = TL.LineNumber;
+    ColNumber = TL.ColNumber;
+    FileName = TL.FileName;
+    return *this;
+  }
+
   bool operator==(const TokenLocation &tokenLoc) const {
     if (LineNumber == tokenLoc.LineNumber && ColNumber == tokenLoc.ColNumber &&
         FileName == tokenLoc.FileName)

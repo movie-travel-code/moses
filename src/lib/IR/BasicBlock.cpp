@@ -3,15 +3,15 @@
 // This file implements the BasicBlock class for the IR library.
 //
 //===----------------------------------------------------------------------===//
-#include "include/IR/BasicBlock.h"
-#include "include/IR/ConstantAndGlobal.h"
-#include "include/IR/IRType.h"
-#include "include/IR/Instruction.h"
+#include "IR/BasicBlock.h"
+#include "IR/ConstantAndGlobal.h"
+#include "IR/IRType.h"
+#include "IR/Instruction.h"
 
 using namespace IR;
 
 BasicBlock::BasicBlock(const std::string &Name, FuncPtr Parent,
-                       BBPtr InsertBefore)
+                       [[maybe_unused]] BBPtr InsertBefore)
     : Value(std::make_shared<Type>(Type::TypeID::LabelTy),
             Value::ValueTy::BasicBlockVal, Name),
       Parent(Parent) {}
@@ -88,11 +88,12 @@ BBPtr BasicBlock::removeFromParent() {
   return nullptr;
 }
 
-void BasicBlock::removePredecessor(BBPtr Pred) {}
+void BasicBlock::removePredecessor([[maybe_unused]] BBPtr Pred) {}
 
 /// \brief slpitBasicBlock - This splits a basic block into two at the specified
 /// instruction.
-BBPtr BasicBlock::splitBasicBlock(unsigned index, std::string BBName) {
+BBPtr BasicBlock::splitBasicBlock([[maybe_unused]] unsigned index,
+                                  [[maybe_unused]] std::string BBName) {
   return nullptr;
 }
 

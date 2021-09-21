@@ -3,7 +3,7 @@
 // This contains code to emit Expr nodes.
 //
 //===---------------------------------------------------------------------===//
-#include "include/IRBuild/IRBuilder.h"
+#include "IRBuild/IRBuilder.h"
 using namespace IR;
 using namespace IRBuild;
 extern void print(std::shared_ptr<IR::Value> V);
@@ -81,7 +81,7 @@ void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock,
   auto ret = CreateCondBr(CondV, TrueBlock, FalseBlock);
 }
 
-ValPtr ModuleBuilder::EvaluateExprAsBool(ExprASTPtr E) { return 0; }
+ValPtr ModuleBuilder::EvaluateExprAsBool([[maybe_unused]] ExprASTPtr E) { return 0; }
 
 /// \brief Handle the algebraic and boolean operation, include '+' '-' '*' '/'
 /// '%'
@@ -327,7 +327,7 @@ ValPtr ModuleBuilder::EmitUnaryExpr(const UnaryExpr *UE) {
   return nullptr;
 }
 
-ValPtr ModuleBuilder::EmitMemberExpr(const MemberExpr *ME) { return nullptr; }
+ValPtr ModuleBuilder::EmitMemberExpr([[maybe_unused]] const MemberExpr *ME) { return nullptr; }
 
 /// \brief EmitPrePostIncDec - Generate code for inc and dec.
 /// e.g.  ++num(pre-inc)  ------>	  -----------------------------
@@ -466,7 +466,7 @@ ValPtr ModuleBuilder::EmitScalarExpr(const Expr *E) { return E->Accept(this); }
 /// EmitStoreThroughLValue - Store the specified rvalue into the specified
 /// lvalue, where both are guaranteed to the have the same type.
 void ModuleBuilder::EmitStoreThroughLValue(RValue Src, LValue Dst,
-                                           bool isInit) {
+                                           [[maybe_unused]] bool isInit) {
   EmitStoreOfScalar(Src.getScalarVal(), Dst.getAddress());
 }
 

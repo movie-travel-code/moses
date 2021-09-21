@@ -6,7 +6,7 @@
 #pragma once
 #include "ASTContext.h"
 #include "ast.h"
-#include "include/Lexer/scanner.h"
+#include "Lexer/scanner.h"
 #include "sema.h"
 #include <algorithm>
 

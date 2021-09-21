@@ -27,10 +27,10 @@
 
 #pragma once
 #include "ASTContext.h"
-#include "include/Lexer/scanner.h"
-#include "include/Support/Hasing.h"
-#include "include/Support/SymbolTable.h"
-#include "include/Parser/Type.h"
+#include "Lexer/scanner.h"
+#include "Support/Hasing.h"
+#include "Support/SymbolTable.h"
+#include "Parser/Type.h"
 #include <memory>
 #include <string>
 

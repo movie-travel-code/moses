@@ -1,9 +1,9 @@
 //===--------------------------Instruction.cpp----------------------------===//
 // This file implements moses IR instructions.
 //===---------------------------------------------------------------------===//
-#include "include/IR/Instruction.h"
-#include "include/IR/IRType.h"
-#include "include/IR/MosesIRContext.h"
+#include "IR/Instruction.h"
+#include "IR/IRType.h"
+#include "IR/MosesIRContext.h"
 
 using namespace IR;
 //===---------------------------------------------------------------------===//
@@ -33,8 +33,9 @@ bool Instruction::mayWriteToMemory() const {
 
 //===---------------------------------------------------------------------===//
 // Implements CmpInst.
-CmpInst::CmpInst(MosesIRContext &Ctx, InstPtr InsertBefore, Predicate pred,
-                 ValPtr LHS, ValPtr RHS, BBPtr parent, const std::string &Name)
+CmpInst::CmpInst(MosesIRContext &Ctx, [[maybe_unused]] InstPtr InsertBefore,
+                 Predicate pred, ValPtr LHS, ValPtr RHS, BBPtr parent,
+                 const std::string &Name)
     : Instruction(Type::getBoolType(Ctx), Opcode::Cmp, parent, Name),
       predicate(pred) {
   // Operands.resize(2);
@@ -47,14 +48,14 @@ CmpInst::~CmpInst() {}
 
 CmpInstPtr CmpInst::Create(MosesIRContext &Ctx, Predicate predicate, ValPtr S1,
                            ValPtr S2, BBPtr parent, const std::string &name,
-                           InstPtr InsertBefore) {
+                           [[maybe_unused]] InstPtr InsertBefore) {
   return std::make_shared<CmpInst>(Ctx, nullptr, predicate, S1, S2, parent,
                                    name);
 }
 
 CmpInstPtr CmpInst::Create(MosesIRContext &Ctx, Predicate predicate, ValPtr S1,
                            ValPtr S2, BBPtr parent, const std::string &name,
-                           BBPtr InsertAtEnd) {
+                           [[maybe_unused]] BBPtr InsertAtEnd) {
   return std::make_shared<CmpInst>(Ctx, nullptr, predicate, S1, S2, parent,
                                    name);
 }
@@ -102,7 +103,8 @@ void CmpInst::Print(std::ostringstream &out) {
 //===---------------------------------------------------------------------===//
 // Implements BinaryOperator Instructions.
 BinaryOperator::BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty,
-                               BBPtr parent, const std::string &Name)
+                               BBPtr parent,
+                               [[maybe_unused]] const std::string &Name)
     : Instruction(Ty, op, parent) {
   // Operands.resize(2);
   Operands.push_back(Use(S1, this));
@@ -113,14 +115,14 @@ BinaryOperator::BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty,
 BinaryOperator::~BinaryOperator() {}
 
 BOInstPtr BinaryOperator::Create(Opcode op, ValPtr S1, ValPtr S2, BBPtr parent,
-                                 BBPtr InsertAtEnd) {
+                                 [[maybe_unused]] BBPtr InsertAtEnd) {
   assert(S1->getType() == S2->getType() &&
          "Cannot create binary operator with two operands of differing type!");
   return std::make_shared<BinaryOperator>(op, S1, S2, S1->getType(), parent);
 }
 
 BOInstPtr BinaryOperator::Create(Opcode op, ValPtr S1, ValPtr S2, BBPtr parent,
-                                 InstPtr InsertBefore) {
+                                 [[maybe_unused]] InstPtr InsertBefore) {
   return std::make_shared<BinaryOperator>(op, S1, S2, S1->getType(), parent);
 }
 
@@ -199,7 +201,7 @@ void BinaryOperator::Print(std::ostringstream &out) {
 //===---------------------------------------------------------------------===//
 // StoreInst Implementation
 StoreInst::StoreInst(MosesIRContext &Ctx, ValPtr Val, ValPtr Ptr, BBPtr parent,
-                     BBPtr InsertAtEnd)
+                     [[maybe_unused]] BBPtr InsertAtEnd)
     : Instruction(Type::getVoidType(Ctx), Opcode::Store, parent) {
   // Operands.resize(2);
   Operands.push_back(Use(Val, this));
@@ -241,8 +243,9 @@ void StoreInst::Print(std::ostringstream &out) {
 
 //===---------------------------------------------------------------------===//
 // Implements AllocInst.
-AllocaInst::AllocaInst(TyPtr Ty, BBPtr parent, const std::string &Name,
-                       BBPtr InsertAtEnd)
+AllocaInst::AllocaInst(TyPtr Ty, BBPtr parent,
+                       [[maybe_unused]] const std::string &Name,
+                       [[maybe_unused]] BBPtr InsertAtEnd)
     : UnaryOperator(PointerType::get(Ty), Opcode::Alloca, nullptr, parent),
       AllocatedType(Ty) {}
 
@@ -281,8 +284,8 @@ void GetElementPtrInst::init(ValPtr Ptr, ValPtr Idx0, ValPtr Idx1) {
 
 GetElementPtrInst::GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr,
                                      std::vector<ValPtr> IdxList, BBPtr parent,
-                                     const std::string &Name,
-                                     InstPtr InsertBefore)
+                                     [[maybe_unused]] const std::string &Name,
+                                     [[maybe_unused]] InstPtr InsertBefore)
     : Instruction(PointerType::get(PointeeType), Opcode::GetElementPtr,
                   parent) {
   init(Ptr, IdxList);
@@ -290,7 +293,7 @@ GetElementPtrInst::GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr,
 
 GetElementPtrInst::GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, ValPtr Idx0,
                                      ValPtr Idx1, BBPtr parent,
-                                     const std::string &Name)
+                                     [[maybe_unused]] const std::string &Name)
     : Instruction(PointerType::get(PointeeType), Opcode::GetElementPtr,
                   parent) {
   init(Ptr, Idx0, Idx1);
@@ -299,7 +302,7 @@ GetElementPtrInst::GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, ValPtr Idx0,
 GEPInstPtr GetElementPtrInst::Create(TyPtr PointeeType, ValPtr Ptr, ValPtr Idx0,
                                      ValPtr Idx1, BBPtr parent,
                                      const std::string &Name,
-                                     InstPtr InsertBefore) {
+                                     [[maybe_unused]] InstPtr InsertBefore) {
   return std::make_shared<GetElementPtrInst>(PointeeType, Ptr, Idx0, Idx1,
                                              parent, Name);
 }
@@ -307,7 +310,7 @@ GEPInstPtr GetElementPtrInst::Create(TyPtr PointeeType, ValPtr Ptr, ValPtr Idx0,
 GEPInstPtr GetElementPtrInst::Create(TyPtr PointeeType, ValPtr Ptr,
                                      std::vector<ValPtr> IdxList, BBPtr parent,
                                      const std::string &Name,
-                                     InstPtr InsertBefore) {
+                                     [[maybe_unused]] InstPtr InsertBefore) {
   return std::make_shared<GetElementPtrInst>(PointeeType, Ptr, IdxList, parent,
                                              Name);
 }
@@ -327,7 +330,8 @@ TerminatorInst::~TerminatorInst() {}
 //===---------------------------------------------------------------------===//
 // Implements CallInst.
 CallInst::CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args,
-                   BBPtr parent, const std::string &Name, BBPtr InsertAtEnd)
+                   BBPtr parent, [[maybe_unused]] const std::string &Name,
+                   [[maybe_unused]] BBPtr InsertAtEnd)
     : Instruction(FTy->getReturnType(), Opcode::Call, parent), FTy(FTy),
       IsIntrisicCall(false) {
   // Operands.resize(1 + Args.size());
@@ -340,7 +344,8 @@ CallInst::CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args,
 }
 
 CallInst::CallInst(IntrinsicPtr Intr, std::vector<ValPtr> Args, BBPtr parent,
-                   const std::string &Name, InstPtr InsertBefore)
+                   [[maybe_unused]] const std::string &Name,
+                   [[maybe_unused]] InstPtr InsertBefore)
     : Instruction(nullptr, Opcode::Call, parent), IsIntrisicCall(true) {
   Operands.push_back(Use(Intr, this));
   for (unsigned i = 0, size = Args.size(); i < size; i++)
@@ -351,7 +356,7 @@ CallInst::~CallInst() {}
 
 CallInstPtr CallInst::Create(ValPtr Func, std::vector<ValPtr> Args,
                              BBPtr parent, const std::string &Name,
-                             InstPtr InsertBefore) {
+                             [[maybe_unused]] InstPtr InsertBefore) {
   auto func = std::dynamic_pointer_cast<Function>(Func);
   assert(func && "The Value must be the 'Function'!");
   auto functy =
@@ -362,7 +367,7 @@ CallInstPtr CallInst::Create(ValPtr Func, std::vector<ValPtr> Args,
 
 CallInstPtr CallInst::Create(IntrinsicPtr Intr, std::vector<ValPtr> Args,
                              BBPtr parent, const std::string &Name,
-                             InstPtr InsertBefore) {
+                             [[maybe_unused]] InstPtr InsertBefore) {
   return std::make_shared<CallInst>(Intr, Args, parent, Name);
 }
 ValPtr CallInst::getArgOperand(unsigned i) const {
@@ -428,7 +433,8 @@ void CallInst::Print(std::ostringstream &out) {
 }
 //===---------------------------------------------------------------------===//
 // Implements ReturnInst.
-ReturnInst::ReturnInst(BBPtr parent, ValPtr retVal, BBPtr InsertAtEnd)
+ReturnInst::ReturnInst(BBPtr parent, ValPtr retVal,
+                       [[maybe_unused]] BBPtr InsertAtEnd)
     : TerminatorInst(retVal->getType(), Opcode::Ret, parent) {
   // Operands.resize(1);
   if (retVal) {
@@ -445,7 +451,8 @@ ReturnInst::~ReturnInst() {}
 
 // Out-of-line ReturnInst method, put here so the c++ compiler can
 // choose to emit the vtable for the class in this translation unit :).
-void ReturnInst::setSuccessor(unsigned idx, BBPtr B) {
+void ReturnInst::setSuccessor([[maybe_unused]] unsigned idx,
+                              [[maybe_unused]] BBPtr B) {
   assert(0 && "has no successors!");
 }
 
@@ -468,7 +475,7 @@ void ReturnInst::Print(std::ostringstream &out) {
 //===---------------------------------------------------------------------===//
 // Implements the BranchInst class.
 BranchInst::BranchInst(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr parent,
-                       BBPtr InsertAtEnd)
+                       [[maybe_unused]] BBPtr InsertAtEnd)
     : TerminatorInst(Type::getVoidType(Ctx), Opcode::Br, parent) {
   assert(IfTrue && "Dest basic block may not be null!");
   // Operands.resize(1);
@@ -476,7 +483,8 @@ BranchInst::BranchInst(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr parent,
 }
 
 BranchInst::BranchInst(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr IfFalse,
-                       ValPtr CondV, BBPtr parent, BBPtr InsertAtEnd)
+                       ValPtr CondV, BBPtr parent,
+                       [[maybe_unused]] BBPtr InsertAtEnd)
     : TerminatorInst(Type::getVoidType(Ctx), Opcode::Br, parent) {
   assert(IfTrue && IfFalse && "Dest basic blocks may not be null!");
   assert(CondV->getType()->isBoolTy() &&
@@ -530,8 +538,9 @@ void BranchInst::Print(std::ostringstream &out) {
 }
 //===---------------------------------------------------------------------===//
 // Implements the Load instruciton.
-LoadInst::LoadInst(ValPtr Addr, BBPtr parent, const std::string &Name,
-                   BBPtr InsertAtEnd)
+LoadInst::LoadInst(ValPtr Addr, BBPtr parent,
+                   [[maybe_unused]] const std::string &Name,
+                   [[maybe_unused]] BBPtr InsertAtEnd)
     : UnaryOperator(nullptr, Opcode::Load, Addr, parent) {
   auto PointerTy = std::dynamic_pointer_cast<PointerType>(Addr->getType());
   assert(PointerTy && "Addr must have pointer type.");

@@ -31,7 +31,7 @@ public:
   /// Argument ctor - If Function argument is specified, this argument is
   /// inserted at the end of the argument list for the function.
   Argument(TyPtr Ty, const std::string &Name = "", FuncPtr F = nullptr);
-  void setType(TyPtr ty) { this->Ty = Ty; }
+  void setType(TyPtr Ty) { this->Ty = Ty; }
   FuncPtr getParent() { return Parent; }
   static bool classof(ValPtr V) {
     return V->getValueType() == Value::ValueTy::ArgumentVal;
@@ -75,10 +75,10 @@ public:
   /// indirectly.
   bool doesNotRecurse() const { return true; }
   void dropAllReferences() {}
-  bool doesNotAccessMemory(unsigned n) const { return true; }
-  void setDoseNotAccessMemory(unsigned n) {}
-  bool onlyReadsMemory(unsigned n) const { return true; }
-  void setOnlyReadsMemory(unsigned n) {}
+  bool doesNotAccessMemory([[maybe_unused]] unsigned n) const { return true; }
+  void setDoseNotAccessMemory([[maybe_unused]] unsigned n) {}
+  bool onlyReadsMemory([[maybe_unused]] unsigned n) const { return true; }
+  void setOnlyReadsMemory([[maybe_unused]] unsigned n) {}
   /// Optimize this function for minimum size (-Oz).
   bool optForMinSize() const { return true; }
   /// Optimize this function for size (-Os) or minimum size (-Oz).

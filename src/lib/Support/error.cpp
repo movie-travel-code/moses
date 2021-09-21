@@ -3,7 +3,7 @@
 // This file impletments error mechanism.
 //
 //===-----------------------------------------------------------------------------------===//
-#include "include/Support/error.h"
+#include "Support/error.h"
 #include <iostream>
 
 void errorOption(const std::string &msg) {

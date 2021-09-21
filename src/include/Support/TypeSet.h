@@ -14,7 +14,7 @@ public:
   using key_type = ValueT;
   using value_type = ValueT;
 
-  explicit TypeSet(unsigned NumInit = 0) {}
+  explicit TypeSet([[maybe_unused]] unsigned NumInit = 0) {}
 
   bool empty() const { return Buckets.empty(); }
 
@@ -28,7 +28,7 @@ public:
 
   std::vector<ValueT> getBuckets() const { return Buckets; }
 
-  ValueT lookup(const ValueT &V) const {
+  ValueT lookup([[maybe_unused]] const ValueT &V) const {
     for (auto item : Buckets) {
       // auto item_hash = ValueInfoT::getHashValue(item);
       // auto v_hash = ValueInfoT::getHashValue(item);

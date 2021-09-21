@@ -1,5 +1,5 @@
 //===--------------------------CodeGenMo
-#include "include/IRBuild/IRBuilder.h"
+#include "IRBuild/IRBuilder.h"
 using namespace IRBuild;
 using namespace IR;
 
@@ -53,8 +53,8 @@ ReturnInstPtr ModuleBuilder::CreateRet(ValPtr V) {
   return InsertHelper(ReturnInst::Create(CurBB, V));
 }
 
-ReturnInstPtr ModuleBuilder::CreateAggregateRet(std::vector<ValPtr> retVals,
-                                                unsigned N) {
+ReturnInstPtr ModuleBuilder::CreateAggregateRet([[maybe_unused]] std::vector<ValPtr> retVals,
+                                                [[maybe_unused]] unsigned N) {
   return nullptr;
 }
 
@@ -197,9 +197,9 @@ StoreInstPtr ModuleBuilder::CreateStore(ValPtr Val, ValPtr Ptr) {
   return InsertHelper(StoreInst::Create(Context, Val, Ptr, CurBB), "");
 }
 
-GEPInstPtr ModuleBuilder::CreateGEP(TyPtr Ty, ValPtr Ptr,
+GEPInstPtr ModuleBuilder::CreateGEP([[maybe_unused]] TyPtr Ty, [[maybe_unused]] ValPtr Ptr,
                                     std::vector<unsigned> IdxList,
-                                    std::string Name) {
+                                    [[maybe_unused]] std::string Name) {
   std::vector<ValPtr> ValPtrIdxList;
   // compute the ValPtr of Indices.
   for (auto item : IdxList) {
@@ -282,14 +282,14 @@ EVInstPtr ModuleBuilder::CreateExtractValueValue(ValPtr Agg,
 
 //===-----------------------------------------------------------------===//
 // Utility creation methods.
-ValPtr ModuleBuilder::CreateIsNull(ValPtr Arg, std::string Name) {
+ValPtr ModuleBuilder::CreateIsNull([[maybe_unused]] ValPtr Arg, [[maybe_unused]] std::string Name) {
   // To Do:
   // return CreateCmpEQ(Arg, ), Name);
   return nullptr;
 }
 
 /// \brief Return an i1 value testing if \p Arg is not null.
-ValPtr ModuleBuilder::CreateIsNotNull(ValPtr Arg, std::string Name) {
+ValPtr ModuleBuilder::CreateIsNotNull([[maybe_unused]] ValPtr Arg, [[maybe_unused]] std::string Name) {
   // return CreateCmpNE(Arg, Constant::getNullValue(Arg->getType()), Name);
   return nullptr;
 }
@@ -321,7 +321,7 @@ void ModuleBuilder::RestoreTopLevelCtxInfo() {
       CurFunc->TopLevelIsAllocaInsertPointSetByNormalInsert;
   TempCounter = CurFunc->TopLevelTempCounter;
 }
-void print(ValPtr V) {
+void print([[maybe_unused]] ValPtr V) {
   std::ostringstream out;
   cout << out.str();
 }

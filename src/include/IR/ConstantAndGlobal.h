@@ -54,7 +54,7 @@ protected:
 public:
   TyPtr getType() const { return Ty; }
   TyPtr getValType() const { return ValTy; }
-  static bool classof(const GlobalValue *T) { return true; }
+  static bool classof([[maybe_unused]] const GlobalValue *T) { return true; }
   static bool classof(const Value *V) {
     return V->getValueType() == Value::ValueTy::FunctionVal ||
            V->getValueType() == Value::ValueTy::GlobalVariableVal;
@@ -73,10 +73,10 @@ protected:
 
 public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const ConstantIntegral *) { return true; }
+  static bool classof([[maybe_unused]] const ConstantIntegral *) { return true; }
   static bool classof(const Constant *CPV); // defined in Constants.cpp
   // To Do:
-  static bool classof(const Value *V) { return true; }
+  static bool classof([[maybe_unused]] const Value *V) { return true; }
 };
 
 //===----------------------------------------------------------------===//

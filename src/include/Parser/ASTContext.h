@@ -4,8 +4,8 @@
 //
 //===---------------------------------------------------------------------===//
 #pragma once
-#include "include/Support/Hasing.h"
-#include "include/Support/TypeSet.h"
+#include "Support/Hasing.h"
+#include "Support/TypeSet.h"
 #include "Type.h"
 
 using namespace SupportStructure;

@@ -3,9 +3,9 @@
 // This file is used to implement sema.
 //
 //===---------------------------------------------------------------------===//
-#include "include/Parser/sema.h"
-#include "include/Support/error.h"
-#include "include/Parser/Type.h"
+#include "Parser/sema.h"
+#include "Support/error.h"
+#include "Parser/Type.h"
 using namespace sema;
 using namespace lex;
 
@@ -63,7 +63,7 @@ void Sema::ActOnFunctionDeclStart(const std::string &name) {
 }
 
 /// \brief ActOnFunctionDecl - Set return type and create new scope.
-void Sema::ActOnFunctionDecl(const std::string &name,
+void Sema::ActOnFunctionDecl([[maybe_unused]] const std::string &name,
                              std::shared_ptr<Type> returnType) {
   getFunctionStackTop()->setReturnType(returnType);
 

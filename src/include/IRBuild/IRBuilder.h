@@ -11,17 +11,17 @@
 // -------------------------------------------------------------------------
 
 #pragma once
-#include "include/IR/BasicBlock.h"
-#include "include/IR/ConstantAndGlobal.h"
-#include "include/IR/ConstantFolder.h"
-#include "include/IR/Function.h"
-#include "include/IR/Instruction.h"
-#include "include/IR/MosesIRContext.h"
-#include "include/IR/Value.h"
-#include "include/IRBuild/CGCall.h"
-#include "include/Parser/ast.h"
-#include "include/Parser/constant-evaluator.h"
-#include "include/Parser/sema.h"
+#include "IR/BasicBlock.h"
+#include "IR/ConstantAndGlobal.h"
+#include "IR/ConstantFolder.h"
+#include "IR/Function.h"
+#include "IR/Instruction.h"
+#include "IR/MosesIRContext.h"
+#include "IR/Value.h"
+#include "IRBuild/CGCall.h"
+#include "Parser/ast.h"
+#include "Parser/constant-evaluator.h"
+#include "Parser/sema.h"
 #include "CGValue.h"
 #include "CodeGenTypes.h"
 #include <cassert>
@@ -179,20 +179,20 @@ public:
   void VisitChildren(std::vector<std::shared_ptr<StatementAST>> AST);
 
   // Note: We only need to consider the type of AST leaf node.
-  ValPtr visit(const StatementAST *stmt) { return nullptr; }
-  ValPtr visit(const ExprStatement *exprstmt) { return nullptr; }
+  ValPtr visit([[maybe_unused]] const StatementAST *stmt) { return nullptr; }
+  ValPtr visit([[maybe_unused]] const ExprStatement *exprstmt) { return nullptr; }
   ValPtr visit(const CompoundStmt *comstmt);
   ValPtr visit(const IfStatement *ifstmt);
   ValPtr visit(const WhileStatement *whilestmt);
   ValPtr visit(const ReturnStatement *retstmt);
-  ValPtr visit(const DeclStatement *declstmt) { return nullptr; }
+  ValPtr visit([[maybe_unused]] const DeclStatement *declstmt) { return nullptr; }
   ValPtr visit(const BreakStatement *BS);
   ValPtr visit(const ContinueStatement *CS);
   ValPtr visit(const VarDecl *VD);
-  ValPtr visit(const ParameterDecl *PD) { return nullptr; }
-  ValPtr visit(const ClassDecl *CD) { return nullptr; }
+  ValPtr visit([[maybe_unused]] const ParameterDecl *PD) { return nullptr; }
+  ValPtr visit([[maybe_unused]] const ClassDecl *CD) { return nullptr; }
   ValPtr visit(const FunctionDecl *FD);
-  ValPtr visit(const UnpackDecl *UD);
+  ValPtr visit([[maybe_unused]] const UnpackDecl *UD);
   ValPtr visit(const BinaryExpr *B);
   ValPtr visit(const CallExpr *Call);
   ValPtr visit(const DeclRefExpr *DRE);
@@ -200,7 +200,7 @@ public:
   ValPtr visit(const NumberExpr *NE);
   ValPtr visit(const UnaryExpr *UE);
   ValPtr visit(const MemberExpr *ME);
-  ValPtr visit(const Expr *E) { return nullptr; }
+  ValPtr visit([[maybe_unused]] const Expr *E) { return nullptr; }
 
   const std::list<ValPtr> &getIRs() const { return IRs; };
 
@@ -516,8 +516,8 @@ private:
   void EmitIfStmt(const IfStatement *IS);
   void EmitConBrHints();
   void EmitWhileStmt(const WhileStatement *WS);
-  void EmitBreakStmt(const BreakStatement *BS);
-  void EmitContinueStmt(const ContinueStatement *CS);
+  void EmitBreakStmt([[maybe_unused]] const BreakStatement *BS);
+  void EmitContinueStmt([[maybe_unused]] const ContinueStatement *CS);
 
   /// \brief EmitReturnStmt - Generate code for return statement.
   /// ----------------Clang/CGStmt.cpp/EmitReturnStmt()--------------
@@ -594,7 +594,7 @@ private:
   /// \brief EmitPrePostIncDec - Emit code for '--' '++'.
   ValPtr EmitPrePostIncDec(const UnaryExpr *UE, bool isInc, bool isPre);
 
-  ValPtr EmitMemberExpr(const MemberExpr *ME);
+  ValPtr EmitMemberExpr([[maybe_unused]] const MemberExpr *ME);
 
   /// \brief Handle the algebraic and boolean operation, include '+' '-' '*' '/'
   /// '%'
@@ -637,7 +637,7 @@ private:
   ///
   /// At the end of the 'EmitBinaryExpr()', we need handle the assignment(
   ///	load from mem and store to the num).
-  void EmitStoreThroughLValue(RValue Src, LValue Dst, bool isInit = false);
+  void EmitStoreThroughLValue(RValue Src, LValue Dst, [[maybe_unused]] bool isInit = false);
 
   //===-----------------------------------------------------------------------===//
   // Aggregate Expr stuff.

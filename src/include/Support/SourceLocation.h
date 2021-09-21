@@ -1,5 +1,5 @@
 #pragma once
-#include "include/Lexer/Token.h"
+#include "Lexer/Token.h"
 #include <iostream>
 #include <string>
 

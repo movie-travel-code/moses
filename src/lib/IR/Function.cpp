@@ -3,8 +3,8 @@
 // This file implements the class function.
 //
 //===---------------------------------------------------------------------===//
-#include "include/IR/Function.h"
-#include "include/IR/BasicBlock.h"
+#include "IR/Function.h"
+#include "IR/BasicBlock.h"
 using namespace IR;
 
 //===---------------------------------------------------------------------===//
@@ -82,4 +82,4 @@ void Function::Print(std::ostringstream &out) {
   out << "}\n";
 }
 
-void Intrinsic::Print(std::ostringstream &out) {}
+void Intrinsic::Print([[maybe_unused]] std::ostringstream &out) {}

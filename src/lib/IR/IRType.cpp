@@ -3,7 +3,7 @@
 // This file implements type class.
 //
 //===---------------------------------------------------------------------===//
-#include "include/IR/IRType.h"
+#include "IR/IRType.h"
 using namespace IR;
 using TyPtr = std::shared_ptr<Type>;
 using StructTyPtr = std::shared_ptr<StructType>;
@@ -118,11 +118,14 @@ FunctionType::ConvertParmTypeToIRType(MosesIRContext &Ctx,
 ///	e.g.	int (*call)(int);
 ///			call = add;
 ///
-///			%call = alloca i32 (i32)*					; <i32 (i32)**>
-///					~~~~~~~~~~~~~~~~		--------> Funcition type<i32 (i32)> 			
+///			%call = alloca i32 (i32)*					; <i32
+///(i32)**>
+///					~~~~~~~~~~~~~~~~		--------> Funcition
+///type<i32 (i32)>
 ///     store i32 (i32)* @add, i32 (i32)** %call
 ///					...
-///			%1 = load i32 (i32)** %call					; <i32 (i32)*>
+///			%1 = load i32 (i32)** %call					; <i32
+///(i32)*>
 ///					...
 ///			%4 = call i32 %2(i32 %3)
 void FunctionType::Print(std::ostringstream &out) {
@@ -143,8 +146,8 @@ void FunctionType::Print(std::ostringstream &out) {
 // Implements class StructType.
 /// ����identified struct.
 
-StructType::StructType(std::vector<IRTyPtr> members, std::string Name,
-                       bool isliteral)
+StructType::StructType(std::vector<IRTyPtr> members,
+                       [[maybe_unused]] std::string Name, bool isliteral)
     : Type(TypeID::StructTy), Literal(isliteral), ContainedTys(members),
       NumContainedTys(members.size()) {}
 

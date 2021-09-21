@@ -3,7 +3,7 @@
 // This contains code to emit Stmt nodes as LLVM code.
 //
 //===---------------------------------------------------------------------===//
-#include "include/IRBuild/IRBuilder.h"
+#include "IRBuild/IRBuilder.h"
 
 using namespace IR;
 using namespace IRBuild;
@@ -23,13 +23,13 @@ ValPtr ModuleBuilder::visit(const ContinueStatement *CS) {
   return nullptr;
 }
 
-void ModuleBuilder::EmitBreakStmt(const BreakStatement *BS) {
+void ModuleBuilder::EmitBreakStmt([[maybe_unused]] const BreakStatement *BS) {
   assert(!BreakContinueStack.empty() && "break statement not in a loop!");
   BBPtr Block = BreakContinueStack.back().BreakBlock;
   EmitBrach(Block);
 }
 
-void ModuleBuilder::EmitContinueStmt(const ContinueStatement *CS) {
+void ModuleBuilder::EmitContinueStmt([[maybe_unused]] const ContinueStatement *CS) {
   assert(!BreakContinueStack.empty() && "continue statement not in a loop!");
   BBPtr Block = BreakContinueStack.back().ContinueBlock;
   EmitBrach(Block);

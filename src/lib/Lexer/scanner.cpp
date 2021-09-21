@@ -3,7 +3,7 @@
 // This file is used to implements scanner.
 //
 //===------------------------------------------------------------------------===//
-#include "include/Lexer/scanner.h"
+#include "Lexer/scanner.h"
 using namespace parse;
 using namespace lex;
 using namespace tok;

@@ -5,9 +5,9 @@
 //
 //===---------------------------------------------------------------------===//
 #pragma once
-#include "include/IR/IRType.h"
-#include "include/IR/Value.h"
-#include "include/Parser/Type.h"
+#include "IR/IRType.h"
+#include "IR/Value.h"
+#include "Parser/Type.h"
 #include <cassert>
 
 namespace CodeGen {

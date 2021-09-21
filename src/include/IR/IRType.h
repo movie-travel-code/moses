@@ -4,7 +4,7 @@
 //
 //===---------------------------------------------------------------------===//
 #pragma once
-#include "include/Parser/Type.h"
+#include "Parser/Type.h"
 #include <cassert>
 #include <iostream>
 #include <memory>

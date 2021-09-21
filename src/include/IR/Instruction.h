@@ -135,7 +135,7 @@ public:
 class UnaryOperator : public Instruction {
 protected:
   UnaryOperator(TyPtr Ty, Opcode op, ValPtr V, BBPtr parent,
-                InstPtr IB = nullptr)
+                [[maybe_unused]] InstPtr IB = nullptr)
       : Instruction(Ty, op, parent) {
     // Operands.resize(1);
     Operands.push_back(Use(V, this));
@@ -157,7 +157,7 @@ public:
 class TerminatorInst : public Instruction {
 protected:
   TerminatorInst(TyPtr Ty, Instruction::Opcode op, BBPtr parent,
-                 BBPtr InsertAtEnd = nullptr)
+                 [[maybe_unused]] BBPtr InsertAtEnd = nullptr)
       : Instruction(Ty, op, parent) {}
   // Out of line virtual method, so the vtable, etc has a home.
   ~TerminatorInst() override;
@@ -400,8 +400,8 @@ public:
   bool isTailCall() const { return true; }
   bool isMustTailCall() const { return true; }
   bool isNoTailCall() const { return true; }
-  void setTailCall(bool isTC = true) {}
-  void setTailCallKind(TailCallKind TCK) {}
+  void setTailCall([[maybe_unused]] bool isTC = true) {}
+  void setTailCallKind([[maybe_unused]] TailCallKind TCK) {}
 
   /// getNumArgOperands - Return the number of call arguments.
   unsigned getNumArgOperands() const { return getNumOperands() - 1; }
@@ -456,16 +456,18 @@ public:
   // Out-of-line method.
   ~ExtractValueInst() override;
 
-  static EVInstPtr Create(ValPtr Agg, std::vector<unsigned> Idxs,
-                          const std::string &NameStr = "",
-                          InstPtr InsertBefore = nullptr) {
+  static EVInstPtr Create([[maybe_unused]] ValPtr Agg,
+                          [[maybe_unused]] std::vector<unsigned> Idxs,
+                          [[maybe_unused]] const std::string &NameStr = "",
+                          [[maybe_unused]] InstPtr InsertBefore = nullptr) {
     // return new ExtractValueInst(Agg, Idxs, NameStr, InsertBefore);
     return nullptr;
   }
 
-  static EVInstPtr Create(ValPtr Agg, std::vector<unsigned> Idxs,
-                          const std::string &NameStr,
-                          BBPtr InsertAtEnd = nullptr) {
+  static EVInstPtr Create([[maybe_unused]] ValPtr Agg,
+                          [[maybe_unused]] std::vector<unsigned> Idxs,
+                          [[maybe_unused]] const std::string &NameStr,
+                          [[maybe_unused]] BBPtr InsertAtEnd = nullptr) {
     // return new ExtractValueInst(Agg, Idxs, NameStr, InsertAtEnd);
     return nullptr;
   }
@@ -494,28 +496,32 @@ private:
                           return User::operator new(s);
                   }*/
 
-  explicit PHINode(TyPtr Ty, unsigned NumReservedValues, BBPtr parent,
-                   const std::string &NameStr = "",
-                   InstPtr InsertBefore = nullptr)
+  explicit PHINode(TyPtr Ty, [[maybe_unused]] unsigned NumReservedValues,
+                   BBPtr parent,
+                   [[maybe_unused]] const std::string &NameStr = "",
+                   [[maybe_unused]] InstPtr InsertBefore = nullptr)
       : Instruction(Ty, Instruction::Opcode::PHI, parent) {}
 
 protected:
   // allocHungoffUses - this is moew complicated than the generic
   // User::allocHungoffUses, because we have to allocate Uses for the incoming
   // values and pointers to the incoming blocks, all in one allocation.
-  void allocHungoffUses(unsigned N) {}
+  void allocHungoffUses([[maybe_unused]] unsigned N) {}
 
 public:
   // Constructors - NumReservedValues is a hint for the number of incoming
   // edges that this phi node will have(use 0 if you really have no idea).
-  static PHINodePtr Create(TyPtr Ty, unsigned NumReservedValues,
-                           const std::string &NameStr = "",
-                           InstPtr InsertBefore = nullptr) {
+  static PHINodePtr Create([[maybe_unused]] TyPtr Ty,
+                           [[maybe_unused]] unsigned NumReservedValues,
+                           [[maybe_unused]] const std::string &NameStr = "",
+                           [[maybe_unused]] InstPtr InsertBefore = nullptr) {
     return nullptr;
   }
 
-  static PHINodePtr Create(TyPtr Ty, unsigned NumReservedValues,
-                           const std::string &NameStr, BBPtr InsertAtEnd) {
+  static PHINodePtr Create([[maybe_unused]] TyPtr Ty,
+                           [[maybe_unused]] unsigned NumReservedValues,
+                           [[maybe_unused]] const std::string &NameStr,
+                           [[maybe_unused]] BBPtr InsertAtEnd) {
     return nullptr;
   }
   // Block iterator interface. This provides access to the list of incoming
@@ -525,17 +531,21 @@ public:
   unsigned getNumIncomingValues() const { return getNumOperands(); }
 
   // getIncomingValue - Return incoming value number x
-  ValPtr getIncomingValue(unsigned i) const { return nullptr; }
-  void setIncomingValue(unsigned i, ValPtr V) {}
+  ValPtr getIncomingValue([[maybe_unused]] unsigned i) const { return nullptr; }
+  void setIncomingValue([[maybe_unused]] unsigned i,
+                        [[maybe_unused]] ValPtr V) {}
   /// getIncomingBlock - Return incoming basic block number @p i.
-  BBPtr getIncomingBlock(unsigned i) const { return nullptr; }
+  BBPtr getIncomingBlock([[maybe_unused]] unsigned i) const { return nullptr; }
 
   /// getIncomingBlock - Return incoming basic block corresponding
   // to an operand of the PHI.
-  BBPtr getIncomingBlock(const Use &U) const { return nullptr; }
-  void setIncomingBlock(unsigned i, BBPtr BB) {}
+  BBPtr getIncomingBlock([[maybe_unused]] const Use &U) const {
+    return nullptr;
+  }
+  void setIncomingBlock([[maybe_unused]] unsigned i,
+                        [[maybe_unused]] BBPtr BB) {}
   /// addIncoming - Add an incoming value to the end of the PHI list.
-  void addIncoming(ValPtr V, BBPtr BB) {}
+  void addIncoming([[maybe_unused]] ValPtr V, [[maybe_unused]] BBPtr BB) {}
 
   /// removeIncomingValue - Remove an incoming value. This is useful if a
   /// predecessor basic block is deleted. The value removed is returned.
@@ -543,9 +553,11 @@ public:
 
   // getBasicBlockIdx - Return the first index of the specified basic block
   // in the value list for this PHI. Returns -1 if no instance.
-  int getBasicBlockIndex(BBPtr BB) const { return 0; }
+  int getBasicBlockIndex([[maybe_unused]] BBPtr BB) const { return 0; }
 
-  ValPtr getIncomingValueForBlock(BBPtr BB) const { return nullptr; }
+  ValPtr getIncomingValueForBlock([[maybe_unused]] BBPtr BB) const {
+    return nullptr;
+  }
 
   /// hasConstantValue - If the specified PHI node always merges together the
   /// same value, return the value, otherwise return null.
@@ -583,7 +595,7 @@ public:
     return Operands.empty() ? nullptr : Operands[0].get();
   }
 
-  BBPtr getSuccessor(unsigned index) const override {
+  BBPtr getSuccessor([[maybe_unused]] unsigned index) const override {
     assert(0 && "ReturnInst has no successor!");
     return 0;
   }
@@ -612,14 +624,14 @@ class BranchInst : public TerminatorInst {
 
   // BranchInst(BB *B)							- 'br B'
   // BranchInst(BB* T, BB *F, Value *C)			- 'br C, T, F'
-  // BranchInst(BB *B, Inst *I)					- 'br B'		insert
-  // before
+  // BranchInst(BB *B, Inst *I)					- 'br B'
+  // insert before
   // I
   // BranchInst(BB *T, BB *F, Value *C, Inst *I)	- 'br C, T, F'	insert
   // before I
-  // BranchINst(BB *B, BB *I)						- 'br B'		insert
-  // at end BranchhInst(BB *T, BB *F, Value *C, BB *I)	- 'br C, T, F' insert at
-  // end
+  // BranchINst(BB *B, BB *I)						- 'br B'
+  // insert at end BranchhInst(BB *T, BB *F, Value *C, BB *I)	- 'br C, T, F'
+  // insert at end
 public:
   BranchInst(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr parent,
              BBPtr InsertAtEnd = nullptr);

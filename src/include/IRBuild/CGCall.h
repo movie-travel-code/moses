@@ -4,8 +4,8 @@
 //
 //===---------------------------------------------------------------------===//
 #pragma once
-#include "include/IR/IRType.h"
-#include "include/Parser/Type.h"
+#include "IR/IRType.h"
+#include "Parser/Type.h"
 #include <string>
 #include <vector>
 
@@ -109,7 +109,7 @@ public:
   unsigned getArgNums() const { return ArgInfos.size(); }
   const std::vector<AAIPtr> &getArgsInfo() const { return ArgInfos; }
   const ASTTyPtr getParm(unsigned index) const;
-  const ArgABIInfo::Kind getKind(unsigned index) const;
+  ArgABIInfo::Kind getKind(unsigned index) const;
   const AAIPtr getArgABIInfo(unsigned index) const;
   AAIPtr getReturnInfo() const { return ReturnInfo; }
 

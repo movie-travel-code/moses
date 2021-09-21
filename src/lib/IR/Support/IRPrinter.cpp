@@ -3,7 +3,7 @@
 // This file implements the functionality of class *Printer.
 //
 //===---------------------------------------------------------------------===//
-#include "include/IR/Support/IRPrinter.h"
+#include "IR/Support/IRPrinter.h"
 using namespace IR;
 
 void IRPrinter::Print(const MosesIRContext &Ctx, std::ostringstream &out) {

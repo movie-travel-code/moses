@@ -3,7 +3,7 @@
 // This file is used to implement class Token.
 //
 //===---------------------------------------------------------------------===//
-#include "include/Lexer/Token.h"
+#include "Lexer/Token.h"
 using namespace lex;
 
 Token::Token(TokenValue tv, const std::string &tokenName)

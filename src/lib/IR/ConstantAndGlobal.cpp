@@ -6,7 +6,7 @@
 #include "include/IR/ConstantAndGlobal.h"
 #include "include/IR/MosesIRContext.h"
 
-using namespace compiler::IR;
+using namespace IR;
 //===-----------------------------------------------------------===//
 // Implements the GlobalValue.
 GlobalValue::GlobalValue(TyPtr Ty, ValueTy vty, const std::string &name)

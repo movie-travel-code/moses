@@ -11,7 +11,6 @@
 #include "include/Parser/Type.h"
 #include <cassert>
 
-namespace compiler {
 namespace CodeGen {
 /// RValue - This trivial value class is used to represent the result of an
 /// expression that is evaluated.
@@ -60,6 +59,5 @@ public:
   }
 };
 } // namespace CodeGen
-} // namespace compiler
 
 #endif

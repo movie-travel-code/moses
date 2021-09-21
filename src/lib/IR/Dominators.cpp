@@ -9,7 +9,7 @@
 //
 //===---------------------------------------------------------------------===//
 #include "include/IR/Dominators.h"
-using namespace compiler::IR;
+using namespace IR;
 using color = DomTreeNode::color;
 
 //===---------------------------------------------------------------------===//

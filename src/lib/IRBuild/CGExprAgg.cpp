@@ -4,10 +4,10 @@
 //
 //===---------------------------------------------------------------------===//
 #include "include/IRBuild/IRBuilder.h"
-using namespace compiler::IR;
-using namespace compiler::IRBuild;
-using namespace compiler::CodeGen;
-extern void print(std::shared_ptr<compiler::IR::Value> V);
+using namespace IR;
+using namespace IRBuild;
+using namespace CodeGen;
+extern void print(std::shared_ptr<IR::Value> V);
 /// \brief EmitAggExpr -  Emit the computation of the specified expression of
 /// aggregate type
 void ModuleBuilder::EmitAggExpr(const Expr *E, ValPtr DestPtr) {

@@ -15,7 +15,6 @@
 #include "EvaluatedExprVisitor.h"
 #include "ast.h"
 
-namespace compiler {
 namespace ast {
 /// constant-evaluator
 /// func add(lhs : int, rhs : int) -> int
@@ -49,5 +48,4 @@ public:
   bool HasSideEffects(const Expr *Exp) const;
 };
 } // namespace ast
-} // namespace compiler
 #endif

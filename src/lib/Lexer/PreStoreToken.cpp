@@ -4,11 +4,11 @@
 //
 //===---------------------------------------------------------------------===//
 #include "include/Lexer/PreStoreToken.h"
-using namespace compiler::lex;
-using namespace compiler::tok;
+using namespace lex;
+using namespace tok;
 
 #define INSERT(KEYWORD, STR)                                                   \
-  Token II_##KEYWORD(compiler::TokenValue::##KEYWORD, STR);                    \
+  Token II_##KEYWORD(TokenValue::##KEYWORD, STR);                    \
   tokenTable.push_back(II_##KEYWORD)
 
 TokenValue PreStoreToken::isKeyword(const std::string &lexem) const {

@@ -4,7 +4,7 @@
 //
 //===---------------------------------------------------------------------===//
 #include "include/IR/Value.h"
-using namespace compiler::IR;
+using namespace IR;
 Value::Value(std::shared_ptr<Type> ty, ValueTy vty, const std::string &name)
     : Name(name), VTy(vty), Ty(ty) {}
 

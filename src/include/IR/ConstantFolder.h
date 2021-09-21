@@ -11,8 +11,6 @@
 #include "ConstantAndGlobal.h"
 #include "Instruction.h"
 
-
-namespace compiler {
 namespace IR {
 /// ConstantFolder - Create constants with minimum, target independent, folding.
 class ConstantFolder {
@@ -25,19 +23,19 @@ public:
                                          ConstantIntPtr LHS,
                                          ConstantIntPtr RHS) {
     switch (Op) {
-    case compiler::IR::Instruction::Opcode::Add:
+    case IR::Instruction::Opcode::Add:
       return std::make_shared<ConstantInt>(Ctx, LHS->getVal() + RHS->getVal());
-    case compiler::IR::Instruction::Opcode::Sub:
+    case IR::Instruction::Opcode::Sub:
       return std::make_shared<ConstantInt>(Ctx, LHS->getVal() - RHS->getVal());
-    case compiler::IR::Instruction::Opcode::Mul:
+    case IR::Instruction::Opcode::Mul:
       return std::make_shared<ConstantInt>(Ctx, LHS->getVal() * RHS->getVal());
-    case compiler::IR::Instruction::Opcode::Div:
+    case IR::Instruction::Opcode::Div:
       return std::make_shared<ConstantInt>(Ctx, LHS->getVal() / RHS->getVal());
-    case compiler::IR::Instruction::Opcode::Rem:
+    case IR::Instruction::Opcode::Rem:
       return std::make_shared<ConstantInt>(Ctx, LHS->getVal() % RHS->getVal());
-    case compiler::IR::Instruction::Opcode::Shl:
+    case IR::Instruction::Opcode::Shl:
       return std::make_shared<ConstantInt>(Ctx, LHS->getVal() << RHS->getVal());
-    case compiler::IR::Instruction::Opcode::Shr:
+    case IR::Instruction::Opcode::Shr:
       return std::make_shared<ConstantInt>(Ctx, LHS->getVal() >> RHS->getVal());
     default:
       return nullptr;
@@ -52,10 +50,10 @@ public:
                                        ConstantBoolPtr LHS,
                                        ConstantBoolPtr RHS) {
     switch (Op) {
-    case compiler::IR::Instruction::Opcode::And:
+    case IR::Instruction::Opcode::And:
       return std::make_shared<ConstantBool>(Ctx,
                                             LHS->getVal() && RHS->getVal());
-    case compiler::IR::Instruction::Opcode::Or:
+    case IR::Instruction::Opcode::Or:
       return std::make_shared<ConstantBool>(Ctx,
                                             LHS->getVal() || RHS->getVal());
     default:
@@ -66,20 +64,20 @@ public:
   static ConstantBoolPtr CreateCmp(MosesIRContext &Ctx, CmpInst::Predicate P,
                                    ConstantIntPtr LHS, ConstantIntPtr RHS) {
     switch (P) {
-    case compiler::IR::CmpInst::CMP_EQ:
+    case IR::CmpInst::CMP_EQ:
       return std::make_shared<ConstantBool>(Ctx,
                                             LHS->getVal() == RHS->getVal());
-    case compiler::IR::CmpInst::CMP_NE:
+    case IR::CmpInst::CMP_NE:
       return std::make_shared<ConstantBool>(Ctx,
                                             LHS->getVal() != RHS->getVal());
-    case compiler::IR::CmpInst::CMP_GT:
+    case IR::CmpInst::CMP_GT:
       return std::make_shared<ConstantBool>(Ctx, LHS->getVal() > RHS->getVal());
-    case compiler::IR::CmpInst::CMP_GE:
+    case IR::CmpInst::CMP_GE:
       return std::make_shared<ConstantBool>(Ctx,
                                             LHS->getVal() >= RHS->getVal());
-    case compiler::IR::CmpInst::CMP_LT:
+    case IR::CmpInst::CMP_LT:
       return std::make_shared<ConstantBool>(Ctx, LHS->getVal() < RHS->getVal());
-    case compiler::IR::CmpInst::CMP_LE:
+    case IR::CmpInst::CMP_LE:
       return std::make_shared<ConstantBool>(Ctx,
                                             LHS->getVal() <= RHS->getVal());
     default:
@@ -90,10 +88,10 @@ public:
   static ConstantBoolPtr CreateCmp(MosesIRContext &Ctx, CmpInst::Predicate P,
                                    ConstantBoolPtr LHS, ConstantBoolPtr RHS) {
     switch (P) {
-    case compiler::IR::CmpInst::CMP_EQ:
+    case IR::CmpInst::CMP_EQ:
       return std::make_shared<ConstantBool>(Ctx,
                                             LHS->getVal() == RHS->getVal());
-    case compiler::IR::CmpInst::CMP_NE:
+    case IR::CmpInst::CMP_NE:
       return std::make_shared<ConstantBool>(Ctx,
                                             LHS->getVal() != RHS->getVal());
     default:
@@ -113,6 +111,5 @@ public:
   }
 };
 } // namespace IR
-} // namespace compiler
 
 #endif

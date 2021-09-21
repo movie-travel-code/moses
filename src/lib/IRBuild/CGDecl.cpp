@@ -4,11 +4,11 @@
 //
 //===---------------------------------------------------------------------===//
 #include "include/IRBuild/IRBuilder.h"
-using namespace compiler::ast;
-using namespace compiler::IR;
-using namespace compiler::IRBuild;
-using namespace compiler::CodeGen;
-extern void print(std::shared_ptr<compiler::IR::Value> V);
+using namespace ast;
+using namespace IR;
+using namespace IRBuild;
+using namespace CodeGen;
+extern void print(std::shared_ptr<IR::Value> V);
 /// EmitVarDecl - This method handles emission of variable declaration inside
 /// a function.  Emit code and set the symbol table entry about this var.
 ///		func add() -> int

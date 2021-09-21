@@ -11,7 +11,6 @@
 #include <iostream>
 #include <vector>
 
-namespace compiler {
 namespace IR {
 /// \brief The base class of BBPrinter and FunctionPrinter
 class IRPrinter {
@@ -20,4 +19,3 @@ public:
   static void Print(const std::list<ValPtr> &IR, std::ostringstream &out);
 };
 } // namespace IR
-} // namespace compiler

@@ -29,8 +29,6 @@
 #include <list>
 #include <memory>
 
-
-namespace compiler {
 namespace IRBuild {
 using namespace ast;
 using namespace sema;
@@ -38,7 +36,7 @@ using namespace IR;
 using namespace CodeGen;
 
 using Opcode = BinaryOperator::Opcode;
-using CallArgList = std::vector<std::pair<RValue, compiler::IRBuild::ASTTyPtr>>;
+using CallArgList = std::vector<std::pair<RValue, IRBuild::ASTTyPtr>>;
 
 namespace CGStmt {
 // BreakContinueStack - This keeps track of where break and continue
@@ -54,7 +52,7 @@ namespace CGExpr {
 struct BinOpInfo {
   ValPtr LHS;
   ValPtr RHS;
-  compiler::IRBuild::ASTTyPtr Ty;
+  IRBuild::ASTTyPtr Ty;
   const BinaryExpr *BE;
 };
 } // namespace CGExpr
@@ -256,7 +254,7 @@ private:
                   ValPtr FuncAddr, CallArgList CallArgs);
 
   /// EmitCallArg - Emit a single call argument.
-  void EmitCallArg(const Expr *E, compiler::IRBuild::ASTTyPtr ArgType);
+  void EmitCallArg(const Expr *E, IRBuild::ASTTyPtr ArgType);
 
   /// EmitCallArgs - Emit call arguments for a function.
   void EmitCallArgs(CallArgList &CallArgs,
@@ -716,5 +714,4 @@ private:
   ValPtr EvaluateExprAsBool(ExprASTPtr E);
 };
 } // namespace IRBuild
-} // namespace compiler
 #endif

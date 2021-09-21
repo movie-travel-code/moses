@@ -1,7 +1,7 @@
 //===--------------------------CodeGenMo
 #include "include/IRBuild/IRBuilder.h"
-using namespace compiler::IRBuild;
-using namespace compiler::IR;
+using namespace IRBuild;
+using namespace IR;
 
 //===---------------------------------------------------------------------===//
 // Implements class ModuleBuilder.

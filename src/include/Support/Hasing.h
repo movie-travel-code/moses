@@ -15,7 +15,6 @@
 #include <type_traits>
 #include <utility>
 
-namespace compiler {
 namespace Hashing {
 template <typename T> void hash_combine(size_t &seed, const T &val) {
   std::hash<T> hasher;
@@ -50,5 +49,4 @@ size_t hash_combine_range(size_t seed, ValueT begin, ValueT end) {
   return seed;
 }
 } // namespace Hashing
-} // namespace compiler
 #endif

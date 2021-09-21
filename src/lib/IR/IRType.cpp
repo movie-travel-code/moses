@@ -4,7 +4,7 @@
 //
 //===---------------------------------------------------------------------===//
 #include "include/IR/IRType.h"
-using namespace compiler::IR;
+using namespace IR;
 using TyPtr = std::shared_ptr<Type>;
 using StructTyPtr = std::shared_ptr<StructType>;
 

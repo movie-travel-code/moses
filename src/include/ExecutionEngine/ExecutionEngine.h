@@ -21,8 +21,7 @@
 #include <vector>
 
 
-namespace compiler {
-namespace Interpreter {
+namespace Execution {
 using namespace IR;
 using Opcode = Instruction::Opcode;
 
@@ -155,7 +154,6 @@ public:
   /// callFunction - Switch the context info and create a new stack frame.
   void callFunction(FuncPtr Function, std::vector<GenericValue> ArgVals);
 };
-} // namespace Interpreter
-} // namespace compiler
+} // namespace Execution
 
 #endif

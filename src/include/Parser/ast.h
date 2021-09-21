@@ -15,10 +15,8 @@
 #include <string>
 #include <vector>
 
-
-namespace compiler {
 namespace ast {
-using namespace compiler::lex;
+using namespace lex;
 
 class Expr;
 class NumberExpr;
@@ -687,5 +685,4 @@ public:
   virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
 };
 } // namespace ast
-} // namespace compiler
 #endif

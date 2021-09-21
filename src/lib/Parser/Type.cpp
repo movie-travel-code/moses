@@ -4,8 +4,8 @@
 //
 //===---------------------------------------------------------------------===//
 #include "include/Parser/Type.h"
-using namespace compiler::ast;
-using namespace compiler::tok;
+using namespace ast;
+using namespace tok;
 typedef std::shared_ptr<Type> TyPtr;
 
 //===---------------------------------------------------------------------===//

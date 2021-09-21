@@ -12,7 +12,6 @@
 #include <sstream>
 #include <vector>
 
-namespace compiler {
 namespace IR {
 class Type;
 class StructType;
@@ -20,13 +19,13 @@ class FunctionType;
 class PointerType;
 class MosesIRContext;
 
-using ASTType = compiler::ast::Type;
+using ASTType = ast::Type;
 using ASTTyPtr = std::shared_ptr<ASTType>;
-using ASTBuiltinTy = compiler::ast::BuiltinType;
-using ASTUDTy = compiler::ast::UserDefinedType;
+using ASTBuiltinTy = ast::BuiltinType;
+using ASTUDTy = ast::UserDefinedType;
 using ASTUDTyPtr = std::shared_ptr<ASTUDTy>;
-using ASTTyKind = compiler::ast::TypeKind;
-using ASTAnonyTy = compiler::ast::AnonymousType;
+using ASTTyKind = ast::TypeKind;
+using ASTAnonyTy = ast::AnonymousType;
 using IRTyPtr = std::shared_ptr<Type>;
 using IRStructTyPtr = std::shared_ptr<StructType>;
 using IRFuncTyPtr = std::shared_ptr<FunctionType>;
@@ -53,6 +52,7 @@ private:
 
 public:
   Type(TypeID id) : ID(id) {}
+  virtual ~Type() {}
   //===-----------------------------------------------------===//
   // Accessors for working with types.
   TypeID getTypeID() const { return ID; }
@@ -187,7 +187,7 @@ public:
 };
 
 /// PointerType - Class to represent pointers
-class PointerType : public compiler::IR::Type {
+class PointerType : public IR::Type {
   IRTyPtr ElementTy;
 
 public:
@@ -200,6 +200,5 @@ public:
   void Print(std::ostringstream &out) override;
 };
 } // namespace IR
-} // namespace compiler
 
 #endif

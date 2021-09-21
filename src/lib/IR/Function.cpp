@@ -5,7 +5,7 @@
 //===---------------------------------------------------------------------===//
 #include "include/IR/Function.h"
 #include "include/IR/BasicBlock.h"
-using namespace compiler::IR;
+using namespace IR;
 
 //===---------------------------------------------------------------------===//
 // Implement class Argument.

@@ -6,8 +6,8 @@
 #include "include/Parser/sema.h"
 #include "include/Support/error.h"
 #include "include/Parser/Type.h"
-using namespace compiler::sema;
-using namespace compiler::lex;
+using namespace sema;
+using namespace lex;
 
 using VarSymPtr = std::shared_ptr<VariableSymbol>;
 using ParmSymPtr = std::shared_ptr<ParmDeclSymbol>;

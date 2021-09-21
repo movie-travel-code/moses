@@ -11,7 +11,6 @@
 #define MOSES_IR_CONSTANT_AND_GLOBAL_H
 #include "User.h"
 
-namespace compiler {
 namespace IR {
 class ArrayType;
 class StructType;
@@ -71,7 +70,7 @@ class ConstantIntegral : public Constant {
   ConstantIntegral(const ConstantIntegral &) = delete;
 
 protected:
-  ConstantIntegral(TyPtr ty) : Constant(ty) {}
+  explicit ConstantIntegral(TyPtr ty) : Constant(ty) {}
 
 public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
@@ -173,6 +172,5 @@ public:
   void Print(std::ostringstream &out) override;
 };
 } // namespace IR
-} // namespace compiler
 
 #endif

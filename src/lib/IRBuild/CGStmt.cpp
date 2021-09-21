@@ -4,10 +4,10 @@
 //
 //===---------------------------------------------------------------------===//
 #include "include/IRBuild/IRBuilder.h"
-using namespace compiler::ast;
-using namespace compiler::IR;
-using namespace compiler::IRBuild;
-extern void print(std::shared_ptr<compiler::IR::Value> V);
+
+using namespace IR;
+using namespace IRBuild;
+extern void print(std::shared_ptr<IR::Value> V);
 ValPtr ModuleBuilder::visit(const IfStatement *IS) {
   EmitIfStmt(IS);
   return nullptr;
@@ -105,10 +105,10 @@ void ModuleBuilder::EmitReturnBlock() {
 ///                             -------------------------------------------------
 ///
 ///                             ----------------------------- ---> while.body
-///                             | %tmp2 = load i32* %lhs	|
-///                             | %add = add i32 %tmp2, 2	|
+///                             | %tmp2 = load i32* %lhs	  |
+///                             | %add = add i32 %tmp2, 2	  |
 ///                             | store i32 %add, i32* %lhs	|
-///                             | br label %while.cond		|
+///                             | br label %while.cond		  |
 ///                             -----------------------------
 ///
 ///                             ----------------------------- ---> while.end
@@ -137,8 +137,9 @@ void ModuleBuilder::EmitWhileStmt(const WhileStatement *whilestmt) {
   // break/continue though.
   bool EmitBoolCondBranch = true;
   if (ConstantBoolPtr CB = std::dynamic_pointer_cast<ConstantBool>(CondVal)) {
-    if (CB->getVal())
+    if (CB->getVal()) {
       EmitBoolCondBranch = false;
+    }
     // To Do: if CB->getVal() == false, optimize
   }
 
@@ -159,15 +160,15 @@ void ModuleBuilder::EmitWhileStmt(const WhileStatement *whilestmt) {
   // The LoopHeader typically is just a branch (when we EmitBlock(LoopBody),
   // will generate a unconditional branch to LoopBody.) if we skipped emitting a
   // branch, try to erase it.
-  if (!EmitBoolCondBranch)
+  if (!EmitBoolCondBranch) {
     SimplifyForwardingBlocks(LoopHeader);
+  }
 }
 
 /// If the given basic block is only a branch to another basic block, simplify
 /// it.
 void ModuleBuilder::SimplifyForwardingBlocks(BBPtr BB) {
-  if (BB->getInstList().size() != 1)
-    return;
+  if (BB->getInstList().size() != 1) { return ; }
   BrInstPtr BI = std::dynamic_pointer_cast<BranchInst>(BB->getTerminator());
   if (!BI || !BI->isUncoditional())
     return;

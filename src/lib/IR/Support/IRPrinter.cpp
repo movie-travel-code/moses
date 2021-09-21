@@ -4,7 +4,7 @@
 //
 //===---------------------------------------------------------------------===//
 #include "include/IR/Support/IRPrinter.h"
-using namespace compiler::IR;
+using namespace IR;
 
 void IRPrinter::Print(const MosesIRContext &Ctx, std::ostringstream &out) {
   // (1) Print the anonymous structure type.

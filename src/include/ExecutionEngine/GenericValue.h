@@ -6,8 +6,8 @@
 //===---------------------------------------------------------------------===//
 #ifndef GENERIC_VALUE_H
 #define GENERIC_VALUE_H
-namespace compiler {
-namespace Interpreter {
+
+namespace Execution {
 using PointerTy = void *;
 struct GenericValue {
   union {
@@ -21,6 +21,5 @@ struct GenericValue {
 // PTOGV - PointerToGenericValue
 inline GenericValue PTOGV(void *P) { return GenericValue(P); }
 inline void *GVTOP(const GenericValue &GV) { return GV.PointerVal; }
-} // namespace Interpreter
-} // namespace compiler
+} // namespace Execution
 #endif

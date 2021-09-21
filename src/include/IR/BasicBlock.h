@@ -18,7 +18,6 @@
 #include <memory>
 #include <string>
 
-namespace compiler {
 namespace IR {
 class TerminatorInst;
 /// \brief moses IR(LLVM) Basic Block Representation
@@ -100,5 +99,4 @@ public:
   void Print(std::ostringstream &out) override;
 };
 } // namespace IR
-} // namespace compiler
 #endif

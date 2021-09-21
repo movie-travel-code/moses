@@ -9,8 +9,7 @@
 #include "include/Support/TypeSet.h"
 #include "Type.h"
 
-using namespace compiler::SupportStructure;
-namespace compiler {
+using namespace SupportStructure;
 namespace ast {
 /// ASTContext - This class holds types that can be referred to thorought
 /// the semantic analysis of a file.
@@ -36,5 +35,4 @@ public:
   bool isParseOrSemaSuccess;
 };
 } // namespace ast
-} // namespace compiler
 #endif

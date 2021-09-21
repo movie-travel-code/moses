@@ -16,7 +16,6 @@
 #include <string>
 #include <vector>
 
-namespace compiler {
 namespace IR {
 using namespace std;
 using namespace Hashing;
@@ -170,5 +169,4 @@ public:
   }
 };
 } // namespace IR
-} // namespace compiler
 #endif

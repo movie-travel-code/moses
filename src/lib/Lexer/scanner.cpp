@@ -4,9 +4,9 @@
 //
 //===------------------------------------------------------------------------===//
 #include "include/Lexer/scanner.h"
-using namespace compiler::parse;
-using namespace compiler::lex;
-using namespace compiler::tok;
+using namespace parse;
+using namespace lex;
+using namespace tok;
 
 bool Scanner::errorFlag = false;
 

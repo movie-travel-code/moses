@@ -12,10 +12,9 @@
 #include <memory>
 #include <string>
 
-namespace compiler {
 namespace Support {
-using IRType = compiler::IR::Type;
-using namespace compiler::ast;
+using IRType = IR::Type;
+using namespace ast;
 
 class Symbol;
 class VariableSymbol;
@@ -246,5 +245,4 @@ public:
   std::shared_ptr<Scope> getScope() const { return scope; }
 };
 } // namespace Support
-} // namespace compiler
 #endif

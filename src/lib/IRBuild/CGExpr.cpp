@@ -4,9 +4,9 @@
 //
 //===---------------------------------------------------------------------===//
 #include "include/IRBuild/IRBuilder.h"
-using namespace compiler::IR;
-using namespace compiler::IRBuild;
-extern void print(std::shared_ptr<compiler::IR::Value> V);
+using namespace IR;
+using namespace IRBuild;
+extern void print(std::shared_ptr<IR::Value> V);
 /// \brief Emit branch condition.
 void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock,
                                          BBPtr FalseBlock) {
@@ -347,7 +347,7 @@ ValPtr ModuleBuilder::EmitPrePostIncDec(const UnaryExpr *UE, bool isInc,
   ValPtr NextVal;
   // (1) Get the sub expression's address.
   LValue LV = EmitLValue(UE->getSubExpr().get());
-  compiler::IRBuild::ASTTyPtr ValTy = UE->getSubExpr()->getType();
+  IRBuild::ASTTyPtr ValTy = UE->getSubExpr()->getType();
 
   // (2) Get the sub expression's value.
   ValPtr InVal = EmitLoadOfLValue(LV).getScalarVal();

@@ -8,7 +8,7 @@
 #include "include/IR/IRType.h"
 #include "include/IR/Instruction.h"
 
-using namespace compiler::IR;
+using namespace IR;
 
 BasicBlock::BasicBlock(const std::string &Name, FuncPtr Parent,
                        BBPtr InsertBefore)
@@ -23,17 +23,17 @@ BBPtr BasicBlock::Create(const std::string &Name, FuncPtr Parent,
 
 // Get the predecessors of this basic block.
 std::vector<BBPtr> BasicBlock::getPredecessors() const {
-  std::vector<BBPtr> Predecessors;
   // (1) get the use list.
   auto Uses = getUses();
-
+  std::vector<BBPtr> Predecessors;
+  Predecessors.reserve(Uses.size());
   // (2) get the use's father
   for (const auto &item : Uses) {
-    auto user = item->getUser();
+    const auto *user = item->getUser();
     const Instruction *InstUser = dynamic_cast<const Instruction *>(user);
     assert(InstUser && "The user of BasicBlock must be Instruction.");
     auto Parent = InstUser->getParent();
-    Predecessors.push_back(Parent);
+    Predecessors.emplace_back(Parent);
   }
   return Predecessors;
 }

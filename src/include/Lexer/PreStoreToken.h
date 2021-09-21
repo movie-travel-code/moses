@@ -13,9 +13,8 @@
 #include <utility>
 #include <vector>
 
-using namespace compiler::tok;
+using namespace tok;
 
-namespace compiler {
 namespace lex {
 class PreStoreToken {
   std::vector<Token> tokenTable{
@@ -75,6 +74,5 @@ public:
   [[nodiscard]] tok::TokenValue isOperator(const std::string &lexem) const;
 };
 } // namespace lex
-} // namespace compiler
 
 #endif

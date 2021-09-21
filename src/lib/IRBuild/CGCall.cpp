@@ -6,9 +6,9 @@
 #include "include/IRBuild/CodeGenTypes.h"
 #include "include/IRBuild/IRBuilder.h"
 
-using namespace compiler::IR;
-using namespace compiler::IRBuild;
-extern void print(std::shared_ptr<compiler::IR::Value> V);
+using namespace IR;
+using namespace IRBuild;
+extern void print(std::shared_ptr<IR::Value> V);
 namespace {
 /// Encapsulates information about the way function from CGFunctionInfo should
 /// be passed to actual IR function.

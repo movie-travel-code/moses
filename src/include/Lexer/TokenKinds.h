@@ -6,7 +6,6 @@
 //===---------------------------------------------------------------------===//
 #ifndef TOKENKINDS_INCLUDE
 #define TOKENKINDS_INCLUDE
-namespace compiler {
 namespace tok {
 enum class TokenValue : unsigned short {
   IDENTIFIER,
@@ -75,5 +74,4 @@ enum class TokenValue : unsigned short {
   UNKNOWN
 };
 }
-} // namespace compiler
 #endif

@@ -4,7 +4,7 @@
 //
 //===---------------------------------------------------------------------===//
 #include "include/Parser/EvaluatedExprVisitor.h"
-using namespace compiler::ast;
+using namespace ast;
 
 //===-----------------------------------------------------------------------------------===//
 // EvaluatedExprVisitorBase's Impletation

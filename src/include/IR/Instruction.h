@@ -14,7 +14,6 @@
 #include <string>
 #include <vector>
 
-namespace compiler {
 namespace IR {
 class MosesIRContext;
 class Instruction : public User {
@@ -100,10 +99,10 @@ public:
   bool isCommutative() const {
     /*switch (op)
                     {
-                    case compiler::IR::Instruction::Opcode::Add:
-                    case compiler::IR::Instruction::Opcode::Mul:
-                    case compiler::IR::Instruction::Opcode::Or:
-                    case compiler::IR::Instruction::Opcode::Xor:
+                    case IR::Instruction::Opcode::Add:
+                    case IR::Instruction::Opcode::Mul:
+                    case IR::Instruction::Opcode::Or:
+                    case IR::Instruction::Opcode::Xor:
                             return true;
                     default:
                             return false;
@@ -702,6 +701,5 @@ public:
   void Print(std::ostringstream &out);
 };
 } // namespace IR
-} // namespace compiler
 
 #endif

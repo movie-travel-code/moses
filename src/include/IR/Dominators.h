@@ -14,7 +14,6 @@
 #include <map>
 #include <set>
 
-namespace compiler {
 namespace IR {
 class DomTreeNode;
 using DomTreeNodePtr = std::shared_ptr<DomTreeNode>;
@@ -44,6 +43,7 @@ private:
   // node reach B3 when the depth-first searching.
   DomTreeNodePtr Father;
 
+  std::vector<DomTreeNodePtr> Predecessors;
 public:
   DomTreeNode(BBPtr BB = nullptr)
       : TheBB(BB), PostNumber(-1), DFSInNum(-1), DFSOutNum(-1), IDom(nullptr),
@@ -59,7 +59,6 @@ public:
     return Child;
   }
 
-  std::vector<DomTreeNodePtr> Predecessors;
   unsigned getDFSNumIn() const { return DFSInNum; }
   unsigned getDFSNumOut() const { return DFSOutNum; }
   unsigned getPostOrder() const { return PostNumber; }
@@ -155,5 +154,4 @@ public:
   bool dominates(InstPtr A, InstPtr B) const;
 };
 } // namespace IR
-} // namespace compiler
 #endif

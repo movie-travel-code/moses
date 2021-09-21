@@ -6,7 +6,7 @@
 #ifndef TYPE_SET_H
 #define TYPE_SET_H
 #include <vector>
-namespace compiler {
+
 namespace SupportStructure {
 template <typename ValueT, typename ValueInfoT> class TypeSet {
   std::vector<ValueT> Buckets;
@@ -46,5 +46,4 @@ public:
   }
 };
 } // namespace SupportStructure
-} // namespace compiler
 #endif

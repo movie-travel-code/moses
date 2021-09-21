@@ -5,7 +5,6 @@
 #include <string>
 
 
-namespace compiler {
 namespace lex {
 /// @brief SourceLocation - This class represents source location.
 /// SourceLocation is same as TokenLocation
@@ -35,5 +34,4 @@ public:
   bool operator!=(const SourceLocation &loc) const { return !operator==(loc); }
 };
 } // namespace lex
-} // namespace compiler
 #endif

@@ -26,7 +26,7 @@
 /// Every value has a "use list" that keeps track of which other Values are
 /// using this value.
 /// -------------------------------------------------------------------------
-namespace compiler {
+
 namespace IR {
 class Type;
 class Constant;
@@ -195,5 +195,4 @@ public:
   bool operator==(const Use &use);
 };
 } // namespace IR
-} // namespace compiler
 #endif

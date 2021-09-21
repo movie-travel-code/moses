@@ -10,7 +10,6 @@
 #include <string>
 #include <vector>
 
-namespace compiler {
 namespace IRBuild {
 class ArgABIInfo;
 using namespace ast;
@@ -125,6 +124,5 @@ public:
                                      const std::string &Name);
 };
 } // namespace IRBuild
-} // namespace compiler
 
 #endif

@@ -4,7 +4,7 @@
 //
 //===---------------------------------------------------------------------===//
 #include "include/Parser/constant-evaluator.h"
-using namespace compiler::ast;
+using namespace ast;
 bool ConstantEvaluator::EvaluateAsRValue(ExprASTPtr Exp,
                                          EvalInfo &Result) const {
   if (FastEvaluateAsRValue(Exp, Result))

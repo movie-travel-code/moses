@@ -17,7 +17,6 @@
 #include <vector>
 
 
-namespace compiler {
 namespace ast {
 class FunctionDecl;
 enum class TypeKind : unsigned char { INT, BOOL, VOID, USERDEFIED, ANONYMOUS };
@@ -56,11 +55,11 @@ public:
   BuiltinType(TypeKind kind) : Type(kind) {}
   virtual unsigned long size() const {
     switch (Kind) {
-    case compiler::ast::TypeKind::INT:
+    case ast::TypeKind::INT:
       return 32;
-    case compiler::ast::TypeKind::BOOL:
+    case ast::TypeKind::BOOL:
       return 32;
-    case compiler::ast::TypeKind::VOID:
+    case ast::TypeKind::VOID:
       return 0;
     default:
       assert(0 && "Unreachable code!");
@@ -243,5 +242,4 @@ struct TypeKeyInfo {
 };
 }; // namespace TypeKeyInfo
 } // namespace ast
-} // namespace compiler
 #endif

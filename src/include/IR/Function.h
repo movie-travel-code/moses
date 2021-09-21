@@ -14,8 +14,6 @@
 #include <list>
 #include <string>
 
-
-namespace compiler {
 namespace IR {
 class BasickBlock;
 /// \brief moses IR(LLVM) Argument representation.
@@ -107,6 +105,5 @@ public:
   void Print(std::ostringstream &out);
 };
 } // namespace IR
-} // namespace compiler
 
 #endif

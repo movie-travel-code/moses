@@ -4,10 +4,10 @@
 //
 //===---------------------------------------------------------------------===//
 #include "include/Parser/parser.h"
-using namespace compiler::parse;
-using namespace compiler::parse::OperatorPrec;
-using namespace compiler::lex;
-using namespace compiler::tok;
+using namespace parse;
+using namespace parse::OperatorPrec;
+using namespace lex;
+using namespace tok;
 
 /// \brief
 static Level getBinOpPrecedence(TokenValue Kind) {
@@ -738,11 +738,11 @@ ExprASTPtr Parser::ParsePrimaryExpr() {
   case TokenValue::INTEGER_LITERAL:
     return ParseNumberExpr();
     // now moses0.1 only have int and bool
-    // case compiler::TokenValue::REAL_LITERAL:
+    // case TokenValue::REAL_LITERAL:
     //	return ParseNumberExpr();
-    // case compiler::TokenValue::CHAR_LITERAL:
+    // case TokenValue::CHAR_LITERAL:
     //	return ParseCharLiteral();
-    // case compiler::TokenValue::STRING_LITERAL:
+    // case TokenValue::STRING_LITERAL:
     //	return ParseStringLitreal();
   case TokenValue::BOOL_TRUE:
     return ParseBoolLiteral(true);

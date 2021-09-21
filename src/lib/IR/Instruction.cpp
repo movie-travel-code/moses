@@ -5,7 +5,7 @@
 #include "include/IR/IRType.h"
 #include "include/IR/MosesIRContext.h"
 
-using namespace compiler::IR;
+using namespace IR;
 //===---------------------------------------------------------------------===//
 // Implements Instruction.
 Instruction::Instruction(TyPtr Ty, Opcode op, BBPtr parent,
@@ -155,34 +155,34 @@ BOInstPtr BinaryOperator::CreateNot(MosesIRContext &Ctx, ValPtr Operand,
 void BinaryOperator::Print(std::ostringstream &out) {
   out << Name << " =";
   switch (op) {
-  case compiler::IR::Instruction::Opcode::Add:
+  case IR::Instruction::Opcode::Add:
     out << " add";
     break;
-  case compiler::IR::Instruction::Opcode::Sub:
+  case IR::Instruction::Opcode::Sub:
     out << " sub";
     break;
-  case compiler::IR::Instruction::Opcode::Mul:
+  case IR::Instruction::Opcode::Mul:
     out << " mul";
     break;
-  case compiler::IR::Instruction::Opcode::Div:
+  case IR::Instruction::Opcode::Div:
     out << " div";
     break;
-  case compiler::IR::Instruction::Opcode::Rem:
+  case IR::Instruction::Opcode::Rem:
     out << " rem";
     break;
-  case compiler::IR::Instruction::Opcode::Shl:
+  case IR::Instruction::Opcode::Shl:
     out << " shl";
     break;
-  case compiler::IR::Instruction::Opcode::Shr:
+  case IR::Instruction::Opcode::Shr:
     out << " shr";
     break;
-  case compiler::IR::Instruction::Opcode::And:
+  case IR::Instruction::Opcode::And:
     out << " and";
     break;
-  case compiler::IR::Instruction::Opcode::Or:
+  case IR::Instruction::Opcode::Or:
     out << " or";
     break;
-  case compiler::IR::Instruction::Opcode::Xor:
+  case IR::Instruction::Opcode::Xor:
     out << " xor";
     break;
   default:

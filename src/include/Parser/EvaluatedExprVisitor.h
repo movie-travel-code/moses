@@ -11,7 +11,6 @@
 #include <typeinfo>
 #include <utility>
 
-namespace compiler {
 namespace ast {
 struct EvalStatus {
   enum ValueKind { IntKind, BoolKind, AnonymousKind };
@@ -122,6 +121,5 @@ public:
   bool EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) override;
 };
 } // namespace ast
-} // namespace compiler
 
 #endif

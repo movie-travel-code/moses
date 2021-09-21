@@ -35,13 +35,11 @@
 #include <memory>
 #include <string>
 
-
-namespace compiler {
 namespace sema {
-using namespace compiler::ast;
-using namespace compiler::lex;
-using namespace compiler::Hashing;
-using namespace compiler::Support;
+using namespace ast;
+using namespace lex;
+using namespace Hashing;
+using namespace Support;
 
 /// sema - This implements sematic analysis and AST building for moses.
 class Sema {
@@ -191,5 +189,4 @@ private:
                                        std::shared_ptr<Type> initType) const;
 };
 } // namespace sema
-} // namespace compiler
 #endif

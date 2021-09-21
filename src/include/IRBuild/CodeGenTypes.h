@@ -15,14 +15,13 @@
 #include <set>
 #include <utility>
 
-namespace compiler {
 namespace IRBuild {
-using namespace compiler::IR;
+using namespace IR;
 class ModuleBuilder;
 
-using IRType = compiler::IR::Type;
-using IRStructTy = compiler::IR::StructType;
-using IRFuncTy = compiler::IR::FunctionType;
+using IRType = IR::Type;
+using IRStructTy = IR::StructType;
+using IRFuncTy = IR::FunctionType;
 using IRTyPtr = std::shared_ptr<IRType>;
 using IRFuncTyPtr = std::shared_ptr<IRFuncTy>;
 using CGFuncInfoConstPtr = std::shared_ptr<CGFunctionInfo const>;
@@ -66,5 +65,4 @@ public:
   std::string getAnonyName();
 };
 } // namespace IRBuild
-} // namespace compiler
 #endif

@@ -5,7 +5,7 @@
 //
 //===---------------------------------------------------------------------===//
 #include "include/Parser/ast.h"
-using namespace compiler::ast;
+using namespace ast;
 
 //===----------------------CompoundStmt-------------------------===//
 //

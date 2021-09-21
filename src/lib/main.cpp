@@ -15,11 +15,11 @@
 #include <sstream>
 
 
-using namespace compiler::parse;
-using namespace compiler::sema;
-using namespace compiler::IR;
-using namespace compiler::IRBuild;
-using namespace compiler::Interpreter;
+using namespace parse;
+using namespace sema;
+using namespace IR;
+using namespace IRBuild;
+using namespace Execution;
 int main(int argc, char *argv[]) {
   // FIXME: We should use more mature approach to handle user options.
   if (argc != 2) {

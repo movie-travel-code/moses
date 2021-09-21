@@ -4,7 +4,7 @@
 //
 //===--------------------------------------------------------------------===//
 #include "include/IR/MosesIRContext.h"
-using namespace compiler::IR;
+using namespace IR;
 
 IRTyPtr Type::getVoidType(MosesIRContext &Ctx) { return Ctx.getVoidTy(); }
 

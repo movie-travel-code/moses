@@ -4,7 +4,6 @@
 #include <string>
 
 
-namespace compiler {
 namespace lex {
 class TokenLocation {
   std::size_t LineNumber;
@@ -75,7 +74,7 @@ public:
         const std::string &lexem);
   enum class TokenFlags { StatrtOfLine, LeadingSpace };
 
-  void setKind(compiler::tok::TokenValue K) { value = K; }
+  void setKind(tok::TokenValue K) { value = K; }
   [[nodiscard]] TokenValue getKind() const { return value; }
 
   [[nodiscard]] bool is(TokenValue K) const { return K == value; }
@@ -154,8 +153,8 @@ public:
   [[nodiscard]] bool isBinaryOp() {
     return (value >= TokenValue::BO_Mul) &&
            (value <= TokenValue::BO_OrAssign) &&
-           (value != TokenValue::UO_Inc || value != TokenValue::UO_Dec ||
-            value != TokenValue::UO_Exclamatory);
+           value != TokenValue::UO_Inc && value != TokenValue::UO_Dec &&
+            value != TokenValue::UO_Exclamatory;
   }
 
   [[nodiscard]] bool isUnaryOp() {
@@ -186,5 +185,4 @@ public:
   [[nodiscard]] bool operator!=(const Token &token) const { return !operator==(token); }
 };
 } // namespace lex
-} // namespace compiler
 #endif

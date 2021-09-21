@@ -15,8 +15,6 @@
 #include <string>
 #include <vector>
 
-
-namespace compiler {
 namespace IR {
 /// User - The User class provides a basis for expressing the ownership of User
 /// towards other Value instances.
@@ -63,6 +61,5 @@ public:
   void replaceUsesOfWith(ValPtr From, ValPtr To);
 };
 } // namespace IR
-} // namespace compiler
 
 #endif

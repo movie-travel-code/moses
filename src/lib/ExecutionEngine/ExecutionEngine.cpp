@@ -5,8 +5,8 @@
 //===---------------------------------------------------------------------===//
 #include "include/ExecutionEngine/ExecutionEngine.h"
 
-using namespace compiler::Interpreter;
-extern void print(std::shared_ptr<compiler::IR::Value> V);
+using namespace Execution;
+extern void print(std::shared_ptr<IR::Value> V);
 Interpreter::Interpreter(const std::list<ValPtr> &Insts,
                          const MosesIRContext &Ctx)
     : Insts(Insts), Ctx(Ctx) {
@@ -249,29 +249,29 @@ void Interpreter::visitCmpInst(CmpInstPtr I) {
   GenericValue Result;
 
   switch (PreD) {
-  case compiler::IR::CmpInst::CMP_EQ:
+  case IR::CmpInst::CMP_EQ:
     if (Ty->isBoolTy())
       Result.BoolVal = LHS.BoolVal == RHS.BoolVal;
     if (Ty->isIntegerTy())
       Result.BoolVal = LHS.IntVal == RHS.IntVal;
     // To Do: Userdefined type
     break;
-  case compiler::IR::CmpInst::CMP_NE:
+  case IR::CmpInst::CMP_NE:
     if (Ty->isBoolTy())
       Result.BoolVal = LHS.BoolVal != RHS.BoolVal;
     if (Ty->isIntegerTy())
       Result.IntVal = LHS.IntVal != RHS.IntVal;
     break;
-  case compiler::IR::CmpInst::CMP_GT:
+  case IR::CmpInst::CMP_GT:
     Result.BoolVal = LHS.IntVal > RHS.IntVal;
     break;
-  case compiler::IR::CmpInst::CMP_GE:
+  case IR::CmpInst::CMP_GE:
     Result.BoolVal = LHS.IntVal >= RHS.IntVal;
     break;
-  case compiler::IR::CmpInst::CMP_LT:
+  case IR::CmpInst::CMP_LT:
     Result.BoolVal = LHS.IntVal < RHS.IntVal;
     break;
-  case compiler::IR::CmpInst::CMP_LE:
+  case IR::CmpInst::CMP_LE:
     Result.BoolVal = LHS.IntVal <= RHS.IntVal;
     break;
   default:
@@ -343,16 +343,14 @@ GenericValue Interpreter::getConstantValue(ConstantPtr C) {
 GenericValue Interpreter::getOperandValue(ValPtr V, ExecutionContext &SF) {
   if (ConstantPtr CPV = std::dynamic_pointer_cast<Constant>(V))
     return getConstantValue(CPV);
-  else
-    return getLocalAndGlobalGV(V);
+  return getLocalAndGlobalGV(V);
 }
 
 GenericValue Interpreter::getLocalAndGlobalGV(ValPtr V) {
   ExecutionContext &SF = ECStack.back();
   if (SF.Values.find(V) != SF.Values.end())
     return SF.Values[V];
-  else
-    return TopLevelFrame.Values[V];
+  return TopLevelFrame.Values[V];
 }
 
 void Interpreter::SetGenericValue(ValPtr V, GenericValue GV,

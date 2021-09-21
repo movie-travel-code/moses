@@ -10,8 +10,7 @@
 // * An evaluated result, valid only if constant folding has not faild.
 //
 //==----------------------------------------------------------------------===//
-#ifndef CONSTANT_EVALUATOR_H
-#define CONSTANT_EVALUATOR_H
+#pragma once
 #include "EvaluatedExprVisitor.h"
 #include "ast.h"
 
@@ -48,4 +47,3 @@ public:
   bool HasSideEffects(const Expr *Exp) const;
 };
 } // namespace ast
-#endif

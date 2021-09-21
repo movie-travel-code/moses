@@ -3,8 +3,7 @@
 // This file defines the class ExecutionEngine.
 //
 //===---------------------------------------------------------------------===//
-#ifndef EXECUTION_ENGINE_H
-#define EXECUTION_ENGINE_H
+#pragma once
 
 #include "include/IR/BasicBlock.h"
 #include "include/IR/Function.h"
@@ -155,5 +154,3 @@ public:
   void callFunction(FuncPtr Function, std::vector<GenericValue> ArgVals);
 };
 } // namespace Execution
-
-#endif

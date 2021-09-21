@@ -4,8 +4,7 @@
 // such as the global type and constant uniquing tables.
 //
 //===---------------------------------------------------------------------===//
-#ifndef MOSES_IR_CONTEXT_H
-#define MOSES_IR_CONTEXT_H
+#pragma once
 #include "include/Support/Hasing.h"
 #include "include/Support/TypeSet.h"
 #include "ConstantAndGlobal.h"
@@ -169,4 +168,3 @@ public:
   }
 };
 } // namespace IR
-#endif

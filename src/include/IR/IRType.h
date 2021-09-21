@@ -3,8 +3,7 @@
 // This file contains the declaration of the Type class.
 //
 //===---------------------------------------------------------------------===//
-#ifndef MOSES_IR_IRTYPE_H
-#define MOSES_IR_IRTYPE_H
+#pragma once
 #include "include/Parser/Type.h"
 #include <cassert>
 #include <iostream>
@@ -200,5 +199,3 @@ public:
   void Print(std::ostringstream &out) override;
 };
 } // namespace IR
-
-#endif

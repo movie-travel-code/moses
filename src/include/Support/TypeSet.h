@@ -3,8 +3,7 @@
 // This file defines the TypeSet class.
 //
 //===---------------------------------------------------------------------===//
-#ifndef TYPE_SET_H
-#define TYPE_SET_H
+#pragma once
 #include <vector>
 
 namespace SupportStructure {
@@ -46,4 +45,3 @@ public:
   }
 };
 } // namespace SupportStructure
-#endif

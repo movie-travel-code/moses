@@ -4,9 +4,7 @@
 // llvm source code farmatting:http://llvm.org/docs/CodingStandards.html
 //
 //===-----------------------------------------------------------------------===//
-
-#ifndef AST_INCLUDE
-#define AST_INCLUDE
+#pragma once
 #include "Type.h"
 #include "include/IR/Value.h"
 #include "include/Support/SourceLocation.h"
@@ -685,4 +683,3 @@ public:
   virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
 };
 } // namespace ast
-#endif

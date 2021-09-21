@@ -7,8 +7,7 @@
 // and a symbol table.
 //
 //===---------------------------------------------------------------------===//
-#ifndef MOSES_IR_FUNCTION_H
-#define MOSES_IR_FUNCTION_H
+#pragma once
 #include "ConstantAndGlobal.h"
 #include "ValueSymbolTable.h"
 #include <list>
@@ -105,5 +104,3 @@ public:
   void Print(std::ostringstream &out);
 };
 } // namespace IR
-
-#endif

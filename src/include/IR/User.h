@@ -9,8 +9,7 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef MOSES_IR_USR_H
-#define MOSES_IR_USR_H
+#pragma once
 #include "Value.h"
 #include <string>
 #include <vector>
@@ -61,5 +60,3 @@ public:
   void replaceUsesOfWith(ValPtr From, ValPtr To);
 };
 } // namespace IR
-
-#endif

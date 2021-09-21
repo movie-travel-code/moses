@@ -4,8 +4,7 @@
 // 
 //===---------------------------------------------------------------------===//
 
-#ifndef EVALUATED_EXPR_VISITOR_H
-#define EVALUATED_EXPR_VISITOR_H
+#pragma once
 #include "ast.h"
 #include <iostream>
 #include <typeinfo>
@@ -121,5 +120,3 @@ public:
   bool EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) override;
 };
 } // namespace ast
-
-#endif

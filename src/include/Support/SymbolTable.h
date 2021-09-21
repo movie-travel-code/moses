@@ -3,8 +3,7 @@
 // This file is used to implement SymbolTable.
 // 
 //===---------------------------------------------------------------------===//
-#ifndef SYMBOL_TABLE_H
-#define SYMBOL_TABLE_H
+#pragma once
 #include "include/IR/Instruction.h"
 #include "include/IRBuild/CGCall.h"
 #include "include/Parser/Type.h"
@@ -245,4 +244,3 @@ public:
   std::shared_ptr<Scope> getScope() const { return scope; }
 };
 } // namespace Support
-#endif

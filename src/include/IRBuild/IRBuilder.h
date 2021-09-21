@@ -10,8 +10,7 @@
 // form of moses IR.
 // -------------------------------------------------------------------------
 
-#ifndef MOSES_IR_BUILDER_H
-#define MOSES_IR_BUILDER_H
+#pragma once
 #include "include/IR/BasicBlock.h"
 #include "include/IR/ConstantAndGlobal.h"
 #include "include/IR/ConstantFolder.h"
@@ -714,4 +713,3 @@ private:
   ValPtr EvaluateExprAsBool(ExprASTPtr E);
 };
 } // namespace IRBuild
-#endif

@@ -4,8 +4,7 @@
 // bunch of other important classes, like Instruction, Function, Type, etc...
 //
 //===---------------------------------------------------------------------===//
-#ifndef MOSES_IR_VALUE
-#define MOSES_IR_VALUE
+#pragma once
 #include "IRType.h"
 #include <cassert>
 #include <iostream>
@@ -195,4 +194,3 @@ public:
   bool operator==(const Use &use);
 };
 } // namespace IR
-#endif

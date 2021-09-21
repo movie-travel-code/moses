@@ -7,8 +7,7 @@
 // because you can do certain things with these global objects that you can't
 // do to anything else. For example, use the address of one as a constant.
 //===---------------------------------------------------------------------===//
-#ifndef MOSES_IR_CONSTANT_AND_GLOBAL_H
-#define MOSES_IR_CONSTANT_AND_GLOBAL_H
+#pragma once
 #include "User.h"
 
 namespace IR {
@@ -172,5 +171,3 @@ public:
   void Print(std::ostringstream &out) override;
 };
 } // namespace IR
-
-#endif

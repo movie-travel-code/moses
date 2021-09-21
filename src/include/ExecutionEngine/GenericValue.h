@@ -4,8 +4,7 @@
 // arbitrary type.
 //
 //===---------------------------------------------------------------------===//
-#ifndef GENERIC_VALUE_H
-#define GENERIC_VALUE_H
+#pragma once
 
 namespace Execution {
 using PointerTy = void *;
@@ -22,4 +21,3 @@ struct GenericValue {
 inline GenericValue PTOGV(void *P) { return GenericValue(P); }
 inline void *GVTOP(const GenericValue &GV) { return GV.PointerVal; }
 } // namespace Execution
-#endif

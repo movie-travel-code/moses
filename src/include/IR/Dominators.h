@@ -8,8 +8,7 @@
 // dominator tree.
 //
 //===---------------------------------------------------------------------===//
-#ifndef MOSES_IR_DOMINATORS_H
-#define MOSES_IR_DOMINATORS_H
+#pragma once
 #include "BasicBlock.h"
 #include <map>
 #include <set>
@@ -154,4 +153,3 @@ public:
   bool dominates(InstPtr A, InstPtr B) const;
 };
 } // namespace IR
-#endif

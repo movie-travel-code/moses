@@ -3,8 +3,7 @@
 // This file defines the ASTContext interface.
 //
 //===---------------------------------------------------------------------===//
-#ifndef AST_CONTEXT_H
-#define AST_CONTEXT_H
+#pragma once
 #include "include/Support/Hasing.h"
 #include "include/Support/TypeSet.h"
 #include "Type.h"
@@ -35,4 +34,3 @@ public:
   bool isParseOrSemaSuccess;
 };
 } // namespace ast
-#endif

@@ -11,8 +11,7 @@
 // useful in the intermediate stage modification to a program.
 //
 //===---------------------------------------------------------------------===//
-#ifndef MOSES_IR_BASIC_BLOCK_H
-#define MOSES_IR_BASIC_BLOCK_H
+#pragma once
 #include "Function.h"
 #include "Instruction.h"
 #include <memory>
@@ -99,4 +98,3 @@ public:
   void Print(std::ostringstream &out) override;
 };
 } // namespace IR
-#endif

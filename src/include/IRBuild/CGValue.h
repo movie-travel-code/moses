@@ -4,8 +4,7 @@
 // represent the range of values for C L- and R- values.
 //
 //===---------------------------------------------------------------------===//
-#ifndef CG_VALUE_H
-#define CG_VALUE_H
+#pragma once
 #include "include/IR/IRType.h"
 #include "include/IR/Value.h"
 #include "include/Parser/Type.h"
@@ -59,5 +58,3 @@ public:
   }
 };
 } // namespace CodeGen
-
-#endif

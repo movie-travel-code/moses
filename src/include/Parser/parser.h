@@ -3,8 +3,7 @@
 // This file is used to implement the parser.
 //
 //===---------------------------------------------------------------------===//
-#ifndef PARSER_INCLUDE
-#define PARSER_INCLUDE
+#pragma once
 #include "ASTContext.h"
 #include "ast.h"
 #include "include/Lexer/scanner.h"
@@ -318,4 +317,3 @@ private:
   void syntaxErrorRecovery(ParseContext::context context);
 };
 } // namespace parse
-#endif

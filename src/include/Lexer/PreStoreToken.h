@@ -4,8 +4,7 @@
 // keyword.
 //
 //===--------------------------------------------------------------------===//
-#ifndef PRESTORETOKEN_INCLUDE
-#define PRESTORETOKEN_INCLUDE
+#pragma once
 #include "Token.h"
 #include <algorithm>
 #include <cassert>
@@ -74,5 +73,3 @@ public:
   [[nodiscard]] tok::TokenValue isOperator(const std::string &lexem) const;
 };
 } // namespace lex
-
-#endif

@@ -1,5 +1,4 @@
-#ifndef Scanner_INCLUDE
-#define Scanner_INCLUDE
+#pragma once
 #include "include/Support/error.h"
 #include "PreStoreToken.h"
 #include "Token.h"
@@ -75,5 +74,3 @@ public:
   static void setErrorFlag(bool flag) { errorFlag = flag; }
 };
 } // namespace parse
-
-#endif

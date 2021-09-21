@@ -3,8 +3,7 @@
 // This file is used to define class Type.
 //
 //===---------------------------------------------------------------------===//
-#ifndef TYPE_INCLUDE
-#define TYPE_INCLUDE
+#pragma once
 #include "include/Lexer/TokenKinds.h"
 #include "include/Support/Hasing.h"
 #include "include/Support/TypeSet.h"
@@ -242,4 +241,3 @@ struct TypeKeyInfo {
 };
 }; // namespace TypeKeyInfo
 } // namespace ast
-#endif

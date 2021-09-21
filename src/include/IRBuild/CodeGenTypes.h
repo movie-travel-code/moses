@@ -3,8 +3,7 @@
 // This file handles AST -> moses-IR type lowering.
 //
 //===---------------------------------------------------------------===//
-#ifndef CODE_GEN_TYPES_H
-#define CODE_GEN_TYPES_H
+#pragma once
 #include "include/IR/IRType.h"
 #include "include/IR/MosesIRContext.h"
 #include "include/Parser/Type.h"
@@ -65,4 +64,3 @@ public:
   std::string getAnonyName();
 };
 } // namespace IRBuild
-#endif

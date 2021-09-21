@@ -25,8 +25,7 @@
 // ------------------------------------------------------------------------------
 //===---------------------------------------------------------------------===//
 
-#ifndef SEMA_INCLUDE
-#define SEMA_INCLUDE
+#pragma once
 #include "ASTContext.h"
 #include "include/Lexer/scanner.h"
 #include "include/Support/Hasing.h"
@@ -189,4 +188,3 @@ private:
                                        std::shared_ptr<Type> initType) const;
 };
 } // namespace sema
-#endif

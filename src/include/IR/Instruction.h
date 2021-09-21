@@ -4,8 +4,7 @@
 // base class for all of the moses ir instructions.
 //
 //===---------------------------------------------------------------------===//
-#ifndef MOSES_IR_INSTRUCTION_H
-#define MOSES_IR_INSTRUCTION_H
+#pragma once
 #include "BasicBlock.h"
 #include "ConstantAndGlobal.h"
 #include "User.h"
@@ -701,5 +700,3 @@ public:
   void Print(std::ostringstream &out);
 };
 } // namespace IR
-
-#endif

@@ -6,8 +6,7 @@
 // use ConstantExpr and the routines in llvm/Analysis/ConstantFolding.h
 //
 //===---------------------------------------------------------------------===//
-#ifndef MOSES_IR_CONSTANT_FOLDER_H
-#define MOSES_IR_CONSTANT_FOLDER_H
+#pragma once
 #include "ConstantAndGlobal.h"
 #include "Instruction.h"
 
@@ -111,5 +110,3 @@ public:
   }
 };
 } // namespace IR
-
-#endif

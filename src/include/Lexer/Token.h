@@ -1,5 +1,4 @@
-#ifndef TOKEN_INCLUDE
-#define TOKEN_INCLUDE
+#pragma once
 #include "TokenKinds.h"
 #include <string>
 
@@ -185,4 +184,3 @@ public:
   [[nodiscard]] bool operator!=(const Token &token) const { return !operator==(token); }
 };
 } // namespace lex
-#endif

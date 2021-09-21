@@ -1,5 +1,4 @@
-#ifndef SOURCELOCATION_INCLUDE
-#define SOURCELOCATION_INCLUDE
+#pragma once
 #include "include/Lexer/Token.h"
 #include <iostream>
 #include <string>
@@ -34,4 +33,3 @@ public:
   bool operator!=(const SourceLocation &loc) const { return !operator==(loc); }
 };
 } // namespace lex
-#endif

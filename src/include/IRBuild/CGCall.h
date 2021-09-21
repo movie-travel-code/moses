@@ -3,8 +3,7 @@
 // These classes wrap the information about a call.
 //
 //===---------------------------------------------------------------------===//
-#ifndef CGCALL_H
-#define CGCALL_H
+#pragma once
 #include "include/IR/IRType.h"
 #include "include/Parser/Type.h"
 #include <string>
@@ -124,5 +123,3 @@ public:
                                      const std::string &Name);
 };
 } // namespace IRBuild
-
-#endif

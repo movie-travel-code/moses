@@ -26,7 +26,7 @@ class ScopeSymbol;
 class Scope {
 public:
   // Scope Kind.
-  enum ScopeKind {
+  enum class ScopeKind {
     SK_Function,
     SK_Block,
     SK_While,
@@ -65,7 +65,7 @@ public:
       : ScopeName(name), Parent(paren), Flags(kind), Depth(depth) {}
 
   /// getFlags - Return the flags for this scope.
-  unsigned getFlags() const { return Flags; }
+  ScopeKind getFlags() const { return Flags; }
 
   /// \brief Add symbol.
   void addDef(std::shared_ptr<Symbol> sym) { SymbolTable.push_back(sym); };

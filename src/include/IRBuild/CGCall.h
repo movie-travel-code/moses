@@ -42,7 +42,7 @@ using AAIPtr = std::shared_ptr<ArgABIInfo>;
 //		Note: Caller allocate the space for temp memory and pass a pointer of the temp memory to the callee.
 class ArgABIInfo {
 public:
-  enum Kind {
+  enum class Kind {
     /// Direct - Pass the argument directly using the normal converted moses IR
     /// type, or by coercing to another specified type stored in 'CoerceToType'.
     Direct,

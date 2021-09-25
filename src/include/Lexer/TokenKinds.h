@@ -72,4 +72,4 @@ enum class TokenValue : unsigned short {
   FILE_EOF,
   UNKNOWN
 };
-}
+} // namespace tok

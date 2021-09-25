@@ -386,7 +386,7 @@ public:
 
   FuncTypePtr getFunctionType() const { return FTy; }
 
-  enum TailCallKind {
+  enum class TailCallKind {
     TCK_None = 0,
     TCK_Tail = 1,
     TCK_MustTail = 2,
@@ -396,7 +396,7 @@ public:
   bool isIntrinsicCall() const { return IsIntrisicCall; }
 
   // To Do:
-  TailCallKind getTailCallKind() const { return TCK_None; }
+  TailCallKind getTailCallKind() const { return TailCallKind::TCK_None; }
   bool isTailCall() const { return true; }
   bool isMustTailCall() const { return true; }
   bool isNoTailCall() const { return true; }

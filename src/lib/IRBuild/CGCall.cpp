@@ -51,7 +51,7 @@ private:
 void ASTToIRMapping::construct(const CGFunctionInfo &FI) {
   auto RetAI = FI.getReturnInfo();
   unsigned IRCursorArgNo = 0;
-  if (RetAI->getKind() == ArgABIInfo::InDirect) {
+  if (RetAI->getKind() == ArgABIInfo::Kind::InDirect) {
     // SRet
     HasSRet = true;
     IRCursorArgNo++;
@@ -60,7 +60,7 @@ void ASTToIRMapping::construct(const CGFunctionInfo &FI) {
 
   for (auto item : FI.getArgsInfo()) {
     switch (item->getKind()) {
-    case ArgABIInfo::Direct:
+    case ArgABIInfo::Kind::Direct:
       // coerce or flatten.
       if (item->getType()->getKind() == TypeKind::USERDEFIED ||
           item->getType()->getKind() == TypeKind::ANONYMOUS) {
@@ -71,10 +71,10 @@ void ASTToIRMapping::construct(const CGFunctionInfo &FI) {
         ArgInfo.push_back(IRArgs(IRCursorArgNo++, 1));
       }
       break;
-    case ArgABIInfo::InDirect:
+    case ArgABIInfo::Kind::InDirect:
       ArgInfo.push_back(IRArgs(IRCursorArgNo++, 1));
       break;
-    case ArgABIInfo::Ignore:
+    case ArgABIInfo::Kind::Ignore:
       ArgInfo.push_back(IRArgs(IRCursorArgNo, 0));
       break;
     default:
@@ -129,12 +129,12 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
     std::tie(FirstIRArg, NumIRArgs) =
         IRFunctionArgs.getIRArgs(isSRet ? i + 1 : i);
     switch (ArgInfo->getKind()) {
-    case ArgABIInfo::InDirect: {
+    case ArgABIInfo::Kind::InDirect: {
       ValPtr V = fun->getArg(FirstIRArg);
       EmitParmDecl(Arg, V);
       break;
     }
-    case ArgABIInfo::Direct: {
+    case ArgABIInfo::Kind::Direct: {
       ValPtr V = fun->getArg(FirstIRArg);
       auto ArgType = Types.ConvertType(ArgInfo->getType());
       if (ArgType->isAggregateType()) {
@@ -158,7 +158,7 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
       }
       break;
     }
-    case ArgABIInfo::Ignore:
+    case ArgABIInfo::Kind::Ignore:
       EmitParmDecl(Arg, CreateAlloca(Types.ConvertType(ArgInfo->getType())));
       break;
     }
@@ -433,9 +433,9 @@ AAIPtr CGFunctionInfo::classifyArgumentType(MosesIRContext &Ctx, ASTTyPtr ArgTy,
   }
 
   if (ArgTy->size() <= 64)
-    return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Direct, Name,
+    return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Direct, Name,
                                         nullptr, true);
-  return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::InDirect,
+  return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::InDirect,
                                       ModuleBuilder::LocalInstNamePrefix +
                                           Name + ".addr");
 }
@@ -579,7 +579,7 @@ GetFuncTypeRet CodeGenTypes::getFunctionType(const FunctionDecl *FD,
       ArgTypes.push_back(PointerType::get(ConvertType(ArgsInfo[i]->getType())));
       ArgNames.push_back(ArgsInfo[i]->getArgName() + ".addr");
       break;
-    case ArgABIInfo::Ignore:
+    case ArgABIInfo::Kind::Ignore:
       ArgTypes.push_back(IR::Type::getVoidType(IRCtx));
       ArgNames.push_back(ArgsInfo[i]->getArgName());
       break;

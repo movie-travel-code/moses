@@ -35,7 +35,7 @@ public:
   //===----------------------------------------------------------===//
   // Definitions of all of the base types for the type system. Based
   // on this value, you can cast to a class defined in DerivedTypes.h.
-  enum TypeID {
+  enum class TypeID {
     VoidTy,
     LabelTy,
     IntegerTy,
@@ -55,14 +55,14 @@ public:
   //===-----------------------------------------------------===//
   // Accessors for working with types.
   TypeID getTypeID() const { return ID; }
-  bool isVoidType() const { return getTypeID() == VoidTy; }
-  bool isLabelTy() const { return getTypeID() == LabelTy; }
-  bool isIntegerTy() const { return getTypeID() == IntegerTy; }
-  bool isFunctionTy() const { return getTypeID() == FunctionTy; }
-  bool isStructTy() const { return getTypeID() == StructTy; }
-  bool isAnonyTy() const { return getTypeID() == AnonyTy; }
-  bool isBoolTy() const { return getTypeID() == BoolTy; }
-  bool isPointerTy() const { return getTypeID() == PointerTy; }
+  bool isVoidType() const { return getTypeID() == TypeID::VoidTy; }
+  bool isLabelTy() const { return getTypeID() == TypeID::LabelTy; }
+  bool isIntegerTy() const { return getTypeID() == TypeID::IntegerTy; }
+  bool isFunctionTy() const { return getTypeID() == TypeID::FunctionTy; }
+  bool isStructTy() const { return getTypeID() == TypeID::StructTy; }
+  bool isAnonyTy() const { return getTypeID() == TypeID::AnonyTy; }
+  bool isBoolTy() const { return getTypeID() == TypeID::BoolTy; }
+  bool isPointerTy() const { return getTypeID() == TypeID::PointerTy; }
 
   /// isSingleValueType - Return true if the type is a valid type for a
   /// register in codegen.
@@ -70,7 +70,7 @@ public:
 
   /// isAggregateType - Return true if the type is an aggregate type.
   bool isAggregateType() const {
-    return getTypeID() == StructTy || getTypeID() == AnonyTy;
+    return getTypeID() == TypeID::StructTy || getTypeID() == TypeID::AnonyTy;
   }
   //===------------------------------------------------------------===//
   // Helper for get types.
@@ -178,7 +178,7 @@ public:
     return ContainedTys[index];
   }
 
-  static bool classof(IRTyPtr T) { return T->getTypeID() == StructTy; }
+  static bool classof(IRTyPtr T) { return T->getTypeID() == TypeID::StructTy; }
 
   /// \brief Print the StructType Info.
   void Print(std::ostringstream &out) override;

@@ -14,7 +14,7 @@ namespace ast {
 struct EvalStatus {
   enum ValueKind { IntKind, BoolKind, AnonymousKind };
 
-  enum Result {
+  enum class Result {
     Constant,
     NotConstant,
     Pending
@@ -43,7 +43,7 @@ struct EvalInfo {
 
   EvalStatus evalstatus;
 
-  enum EvaluationMode {
+  enum class EvaluationMode {
     EM_PotentialConstantExpression,
 
     /// Fold the expression to a constant. Stop if we hit a side-effect
@@ -53,7 +53,7 @@ struct EvalInfo {
   /// Are we checking whether the expression is a potential constant
   /// expression?
   bool checkingPotentialConstantExpression() const {
-    return EvalMode == EM_PotentialConstantExpression;
+    return EvalMode == EvaluationMode::EM_PotentialConstantExpression;
   }
 
   EvalInfo(EvalStatus::ValueKind vk, EvaluationMode Mode)

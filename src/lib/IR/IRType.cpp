@@ -12,18 +12,18 @@ using StructTyPtr = std::shared_ptr<StructType>;
 // Implements class Type.
 unsigned Type::getSize() const {
   switch (ID) {
-  case Type::VoidTy:
+  case Type::TypeID::VoidTy:
     return 0;
-  case Type::IntegerTy:
+  case Type::TypeID::IntegerTy:
     return sizeof(int);
-  case Type::BoolTy:
+  case Type::TypeID::BoolTy:
     return sizeof(int);
-  case Type::PointerTy:
+  case Type::TypeID::PointerTy:
     return sizeof(void *);
-  case Type::LabelTy:
-  case Type::FunctionTy:
-  case Type::StructTy:
-  case Type::AnonyTy:
+  case Type::TypeID::LabelTy:
+  case Type::TypeID::FunctionTy:
+  case Type::TypeID::StructTy:
+  case Type::TypeID::AnonyTy:
     break;
   default:
     break;
@@ -34,19 +34,19 @@ unsigned Type::getSize() const {
 /// \brief Print the Type info, i32 bool void and so on.
 void Type::Print(std::ostringstream &out) {
   switch (ID) {
-  case Type::VoidTy:
+  case Type::TypeID::VoidTy:
     out << " void";
     break;
-  case Type::LabelTy:
+  case Type::TypeID::LabelTy:
     out << " label";
     break;
-  case Type::IntegerTy:
+  case Type::TypeID::IntegerTy:
     out << " int";
     break;
-  case Type::BoolTy:
+  case Type::TypeID::BoolTy:
     out << " bool";
     break;
-  case Type::FunctionTy:
+  case Type::TypeID::FunctionTy:
     // oops. Have no idea to handle the funciton type's name.
     out << " function.type";
     break;
@@ -87,7 +87,9 @@ IRTyPtr FunctionType::operator[](unsigned index) const {
   return ContainedTys[index];
 }
 
-bool FunctionType::classof(IRTyPtr Ty) { return Ty->getTypeID() == FunctionTy; }
+bool FunctionType::classof(IRTyPtr Ty) {
+  return Ty->getTypeID() == TypeID::FunctionTy;
+}
 
 std::vector<IRTyPtr>
 FunctionType::ConvertParmTypeToIRType(MosesIRContext &Ctx,
@@ -118,14 +120,14 @@ FunctionType::ConvertParmTypeToIRType(MosesIRContext &Ctx,
 ///	e.g.	int (*call)(int);
 ///			call = add;
 ///
-///			%call = alloca i32 (i32)*					; <i32
-///(i32)**>
-///					~~~~~~~~~~~~~~~~		--------> Funcition
-///type<i32 (i32)>
+///			%call = alloca i32 (i32)*					;
+///<i32 (i32)**>
+///					~~~~~~~~~~~~~~~~		-------->
+///Funcition type<i32 (i32)>
 ///     store i32 (i32)* @add, i32 (i32)** %call
 ///					...
-///			%1 = load i32 (i32)** %call					; <i32
-///(i32)*>
+///			%1 = load i32 (i32)** %call					;
+///<i32 (i32)*>
 ///					...
 ///			%4 = call i32 %2(i32 %3)
 void FunctionType::Print(std::ostringstream &out) {

@@ -284,12 +284,10 @@ void Interpreter::visitCmpInst(CmpInstPtr I) {
 void Interpreter::visitGEPInst(GEPInstPtr I) {
   ExecutionContext &SF = ECStack.back();
   void *BaseAddr = GVTOP(getOperandValue(I->getOperand(0).get(), SF));
-  unsigned long TotalIndex = 0;
   GenericValue Result;
   // GEP instruction just have two operand. Shit.
   GenericValue index = getOperandValue(I->getOperand(2).get(), SF);
 
-  TotalIndex = index.IntVal;
   Result.PointerVal = (char *)BaseAddr + index.IntVal * sizeof(int);
   SetGenericValue(I, Result, SF);
 }

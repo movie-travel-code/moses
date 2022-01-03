@@ -14,7 +14,7 @@ using color = DomTreeNode::color;
 
 //===---------------------------------------------------------------------===//
 // Implements the class DominatorTree
-DomTreeNodePtr DominatorTree::getDomTreeNode(BBPtr BB) const {
+DomTreeNodePtr DominatorTree::getDomTreeNode(std::shared_ptr<BasicBlock> BB) const {
   auto Result = DomTreeNodes.find(BB);
   if (Result != DomTreeNodes.end())
     return Result->second;
@@ -42,19 +42,19 @@ void DominatorTree::printDomFrontier(std::ostream &out) const {
                "-----------------\n";
 }
 
-void DominatorTree::runOnCFG(std::vector<BBPtr> &BBs) {
+void DominatorTree::runOnCFG(std::vector<std::shared_ptr<BasicBlock>> &BBs) {
   for (const auto &item : BBs)
     Vertex.push_back(item);
   computeDomTree(BBs[0]);
 }
 
-void DominatorTree::runOnFunction(FuncPtr F) {
+void DominatorTree::runOnFunction(std::shared_ptr<Function> F) {
   Vertex = F->getBasicBlockList();
   computeDomTree(F->getEntryBlock());
 }
 
 // compute the DomTree.
-void DominatorTree::computeDomTree(BBPtr EntryBlock) {
+void DominatorTree::computeDomTree(std::shared_ptr<BasicBlock> EntryBlock) {
   for (const auto &item : Vertex) {
     DomTreeNodes.insert({item, std::make_shared<DomTreeNode>(item)});
   }
@@ -246,14 +246,14 @@ void DominatorTree::ComputeDomFrontier() {
   }
 }
 
-void DominatorTree::ComputeDomFrontierOnCFG(std::vector<BBPtr> &BBs) {
+void DominatorTree::ComputeDomFrontierOnCFG(std::vector<std::shared_ptr<BasicBlock>> &BBs) {
   if (RootNode->getIDom() == nullptr)
     runOnCFG(BBs);
   ComputeDomFrontier();
 
   printDomFrontier(std::cout);
 }
-void DominatorTree::ComputeDomFrontierOnFunction(FuncPtr F) {
+void DominatorTree::ComputeDomFrontierOnFunction(std::shared_ptr<Function> F) {
   if (RootNode->getIDom() == nullptr)
     runOnFunction(F);
   ComputeDomFrontier();

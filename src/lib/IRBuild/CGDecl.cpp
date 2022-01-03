@@ -17,7 +17,7 @@ extern void print(std::shared_ptr<IR::Value> V);
 ///		}
 void ModuleBuilder::EmitLocalVarDecl(const VarDecl *var) {
   // (1) Create AllocInst.
-  ValPtr DeclPtr = EmitLocalVarAlloca(var);
+  std::shared_ptr<Value> DeclPtr = EmitLocalVarAlloca(var);
 
   // (2) If 'var' have Initialization expression, emit it.
   // Note: We only handle the built-in type.
@@ -26,18 +26,18 @@ void ModuleBuilder::EmitLocalVarDecl(const VarDecl *var) {
     if (ty->isAggregateType()) {
       EmitAggExpr(init.get(), DeclPtr);
     } else {
-      ValPtr V = EmitScalarExpr(init.get());
+      std::shared_ptr<Value> V = EmitScalarExpr(init.get());
       EmitStoreOfScalar(V, DeclPtr);
     }
   }
 }
 
 /// \brief EmitLocalVarAlloca - Emit tha alloca for a local variable.
-AllocaInstPtr ModuleBuilder::EmitLocalVarAlloca(const VarDecl *var) {
-  ASTTyPtr Ty = var->getDeclType();
+std::shared_ptr<AllocaInst>  ModuleBuilder::EmitLocalVarAlloca(const VarDecl *var) {
+  std::shared_ptr<ASTType> Ty = var->getDeclType();
 
   IRTyPtr IRTy = Types.ConvertType(Ty);
-  AllocaInstPtr allocInst =
+  std::shared_ptr<AllocaInst>  allocInst =
       CreateAlloca(IRTy, LocalInstNamePrefix + var->getName() + ".addr");
 
   if (std::shared_ptr<VariableSymbol> varSym =
@@ -54,8 +54,8 @@ AllocaInstPtr ModuleBuilder::EmitLocalVarAlloca(const VarDecl *var) {
 /// (1) Direct - Alloca Instruction, store.
 /// (2) Indirect - Aggregate, DeclPtr = Arg;
 /// (3) Ignore.
-void ModuleBuilder::EmitParmDecl(const VarDecl *VD, ValPtr Arg) {
-  ValPtr DeclPtr;
+void ModuleBuilder::EmitParmDecl(const VarDecl *VD, std::shared_ptr<Value> Arg) {
+  std::shared_ptr<Value> DeclPtr;
   // A fixed sized single-value variable becomes an alloca in the entry block.
   IRTyPtr Ty = Types.ConvertType(VD->getDeclType());
 
@@ -103,7 +103,7 @@ void ModuleBuilder::EmitFunctionDecl(const FunctionDecl *FD) {
   CurFunc->CGFnInfo = FI;
   CurFunc->CurFuncDecl = const_cast<FunctionDecl *>(FD);
   CurFunc->FnRetTy = Types.ConvertType(FD->getReturnType());
-  FuncPtr func =
+  std::shared_ptr<Function> func =
       Function::create(TypeAndName.first, FD->getFDName(), TypeAndName.second);
   CurFunc->CurFn = func;
   IRs.push_back(func);
@@ -137,7 +137,7 @@ void ModuleBuilder::EmitFunctionDecl(const FunctionDecl *FD) {
 
 /// \brief Handle the start of function.
 void ModuleBuilder::StartFunction(std::shared_ptr<CGFunctionInfo const> FnInfo,
-                                  FuncPtr Fn) {
+                                  std::shared_ptr<Function> Fn) {
   EntryBlock = CreateBasicBlock("entry", Fn);
   // EmitBlock(EntryBB);
   Fn->addBB(EntryBlock);
@@ -162,13 +162,13 @@ void ModuleBuilder::FinishFunction() {
   EmitFunctionEpilogue(CurFunc->CGFnInfo);
 }
 
-ValPtr ModuleBuilder::visit(const VarDecl *VD) {
+std::shared_ptr<Value> ModuleBuilder::visit(const VarDecl *VD) {
   EmitLocalVarDecl(VD);
   return nullptr;
 }
 
 /// \brief Handle function declaration.
-ValPtr ModuleBuilder::visit(const FunctionDecl *FD) {
+std::shared_ptr<Value> ModuleBuilder::visit(const FunctionDecl *FD) {
   // (1) switch the scope and save the context-info.
   // e.g.       var num = 10;                           ----> Old Scope.
   //            func add(lhs:int, rhs:int) -> int       ----> New Scope.
@@ -190,6 +190,6 @@ ValPtr ModuleBuilder::visit(const FunctionDecl *FD) {
   return nullptr;
 }
 
-ValPtr ModuleBuilder::visit([[maybe_unused]] const UnpackDecl *UD) {
+std::shared_ptr<Value> ModuleBuilder::visit([[maybe_unused]] const UnpackDecl *UD) {
   return nullptr;
 }

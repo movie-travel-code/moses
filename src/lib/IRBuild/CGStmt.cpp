@@ -8,35 +8,36 @@
 using namespace IR;
 using namespace IRBuild;
 extern void print(std::shared_ptr<IR::Value> V);
-ValPtr ModuleBuilder::visit(const IfStatement *IS) {
+std::shared_ptr<Value> ModuleBuilder::visit(const IfStatement *IS) {
   EmitIfStmt(IS);
   return nullptr;
 }
 
-ValPtr ModuleBuilder::visit(const BreakStatement *BS) {
+std::shared_ptr<Value> ModuleBuilder::visit(const BreakStatement *BS) {
   EmitBreakStmt(BS);
   return nullptr;
 }
 
-ValPtr ModuleBuilder::visit(const ContinueStatement *CS) {
+std::shared_ptr<Value> ModuleBuilder::visit(const ContinueStatement *CS) {
   EmitContinueStmt(CS);
   return nullptr;
 }
 
 void ModuleBuilder::EmitBreakStmt([[maybe_unused]] const BreakStatement *BS) {
   assert(!BreakContinueStack.empty() && "break statement not in a loop!");
-  BBPtr Block = BreakContinueStack.back().BreakBlock;
+  std::shared_ptr<BasicBlock> Block = BreakContinueStack.back().BreakBlock;
   EmitBrach(Block);
 }
 
-void ModuleBuilder::EmitContinueStmt([[maybe_unused]] const ContinueStatement *CS) {
+void ModuleBuilder::EmitContinueStmt(
+    [[maybe_unused]] const ContinueStatement *CS) {
   assert(!BreakContinueStack.empty() && "continue statement not in a loop!");
-  BBPtr Block = BreakContinueStack.back().ContinueBlock;
+  std::shared_ptr<BasicBlock> Block = BreakContinueStack.back().ContinueBlock;
   EmitBrach(Block);
 }
 
 /// EmitBlock - Emit the given block \arg BB and set it as the insert point.
-void ModuleBuilder::EmitBlock(BBPtr BB, bool IsFinished) {
+void ModuleBuilder::EmitBlock(std::shared_ptr<BasicBlock> BB, bool IsFinished) {
   /// Fall out of the current block (if necessary).
   /// e.g.     B0
   ///         /
@@ -60,7 +61,7 @@ void ModuleBuilder::EmitBlock(BBPtr BB, bool IsFinished) {
 
 /// \brief Emit a branch from the current block to the target one if this
 /// was a real block.
-void ModuleBuilder::EmitBrach(BBPtr Target) {
+void ModuleBuilder::EmitBrach(std::shared_ptr<BasicBlock> Target) {
   if (!CurBB || CurBB->getTerminator()) {
     // If there is no insert point or the previous block is already
     // terminated, don't touch it.
@@ -98,10 +99,10 @@ void ModuleBuilder::EmitReturnBlock() {
 ///         }				             -------------------------
 ///
 ///                              -----------------------------------------------
-///             ---> while.cond | %tmp = load i32* %num                         | 
-///                             |  %tmp1 = load i32* %lhs                       |
-///                             | %cmp = cmp lt i32 %tmp, %tmp1                 |
-///                             | br %cmp, label %while.body, label %while.end  |
+///             ---> while.cond | %tmp = load i32* %num |
+///                             |  %tmp1 = load i32* %lhs | | %cmp = cmp lt i32
+///                             %tmp, %tmp1                 | | br %cmp, label
+///                             %while.body, label %while.end  |
 ///                             -------------------------------------------------
 ///
 ///                             ----------------------------- ---> while.body
@@ -117,13 +118,16 @@ void ModuleBuilder::EmitReturnBlock() {
 void ModuleBuilder::EmitWhileStmt(const WhileStatement *whilestmt) {
   // Emit the header for the loop, insert it in current 'function',
   // which will create an uncond br to it.
-  BBPtr LoopHeader = CreateBasicBlock(getCurLocalName("while.cond"));
+  std::shared_ptr<BasicBlock> LoopHeader =
+      CreateBasicBlock(getCurLocalName("while.cond"));
   EmitBlock(LoopHeader);
 
   // Create an exit block for when the condition fails, create a block
   // for the body of the loop.
-  BBPtr ExitBlock = CreateBasicBlock(getCurLocalName("while.end"));
-  BBPtr LoopBody = CreateBasicBlock(getCurLocalName("while.body"));
+  std::shared_ptr<BasicBlock> ExitBlock =
+      CreateBasicBlock(getCurLocalName("while.end"));
+  std::shared_ptr<BasicBlock> LoopBody =
+      CreateBasicBlock(getCurLocalName("while.body"));
 
   // Store the blocks to use for break and continue.
   BreakContinueStack.push_back(CGStmt::BreakContinue(ExitBlock, LoopHeader));
@@ -131,12 +135,13 @@ void ModuleBuilder::EmitWhileStmt(const WhileStatement *whilestmt) {
   // Evaluate the conditional in the while header.
   // The evaluation of the controlling expression taks place before each
   // execution of the loop body.
-  ValPtr CondVal = whilestmt->getCondition()->Accept(this);
+  std::shared_ptr<Value> CondVal = whilestmt->getCondition()->Accept(this);
 
   // while(true) is common, avoid extra blocks. Be sure to correctly handle
   // break/continue though.
   bool EmitBoolCondBranch = true;
-  if (ConstantBoolPtr CB = std::dynamic_pointer_cast<ConstantBool>(CondVal)) {
+  if (std::shared_ptr<ConstantBool> CB =
+          std::dynamic_pointer_cast<ConstantBool>(CondVal)) {
     if (CB->getVal()) {
       EmitBoolCondBranch = false;
     }
@@ -167,22 +172,25 @@ void ModuleBuilder::EmitWhileStmt(const WhileStatement *whilestmt) {
 
 /// If the given basic block is only a branch to another basic block, simplify
 /// it.
-void ModuleBuilder::SimplifyForwardingBlocks(BBPtr BB) {
-  if (BB->getInstList().size() != 1) { return ; }
-  BrInstPtr BI = std::dynamic_pointer_cast<BranchInst>(BB->getTerminator());
+void ModuleBuilder::SimplifyForwardingBlocks(std::shared_ptr<BasicBlock> BB) {
+  if (BB->getInstList().size() != 1) {
+    return;
+  }
+  std::shared_ptr<BranchInst> BI =
+      std::dynamic_pointer_cast<BranchInst>(BB->getTerminator());
   if (!BI || !BI->isUncoditional())
     return;
   BB->replaceAllUsesWith(BI->getSuccessor(0));
   BB->removeFromParent();
 }
 
-ValPtr ModuleBuilder::visit(const WhileStatement *WS) {
+std::shared_ptr<Value> ModuleBuilder::visit(const WhileStatement *WS) {
   EmitWhileStmt(WS);
   return nullptr;
 }
 
 /// \brief Dispatched the task to the children.
-ValPtr ModuleBuilder::visit(const CompoundStmt *comstmt) {
+std::shared_ptr<Value> ModuleBuilder::visit(const CompoundStmt *comstmt) {
   // (1) Switch the scope.
   auto symTab = CurScope->getSymbolTable();
   auto num = symTab.size();
@@ -210,7 +218,7 @@ ValPtr ModuleBuilder::visit(const CompoundStmt *comstmt) {
   return nullptr;
 }
 
-ValPtr ModuleBuilder::visit(const ReturnStatement *retstmt) {
+std::shared_ptr<Value> ModuleBuilder::visit(const ReturnStatement *retstmt) {
   return EmitReturnStmt(retstmt);
 }
 
@@ -231,8 +239,9 @@ void ModuleBuilder::EmitIfStmt(const IfStatement *ifstmt) {
     /// C/C++ has goto statement, so there is one situation that we can't elide
     /// the specified block. e.g	    if (10 != 10)
     ///	        {                    -----> Evaluate the condition expression to
-    ///be false, dead 'then'. 	    RET:	return num;      -----> The 'RET' label
-    ///means that there is possible that 	                                    'return num' can be execeted.
+    /// be false, dead 'then'. 	    RET:	return num;      -----> The
+    /// 'RET' label means that there is possible that 'return num' can be
+    /// execeted.
     ///	        }
     ///	        else
     ///	        {
@@ -289,7 +298,8 @@ void ModuleBuilder::EmitIfStmt(const IfStatement *ifstmt) {
 ///				~~~~~~~~~~~~~~
 ///			}
 ///
-ValPtr ModuleBuilder::EmitReturnStmt(const ReturnStatement *RS) {
+std::shared_ptr<Value>
+ModuleBuilder::EmitReturnStmt(const ReturnStatement *RS) {
   // Emit the sub-expression, even if unused, to evaluate the side effects.
   const Expr *SubE = RS->getSubExpr().get();
 
@@ -304,7 +314,7 @@ ValPtr ModuleBuilder::EmitReturnStmt(const ReturnStatement *RS) {
              SubE->getType()->getKind() == TypeKind::ANONYMOUS) {
     EmitAggExpr(SubE, CurFunc->ReturnValue);
   } else {
-    ValPtr V = SubE->Accept(this);
+    std::shared_ptr<Value> V = SubE->Accept(this);
     auto ret = CreateStore(V, CurFunc->ReturnValue);
   }
   EmitBrach(CurFunc->ReturnBlock);
@@ -315,7 +325,8 @@ void ModuleBuilder::EmitFunctionBody(StmtASTPtr body) {
   EmitCompoundStmt(body.get());
 }
 
-ValPtr ModuleBuilder::EmitCompoundStmt(const StatementAST *stmt) {
+std::shared_ptr<Value>
+ModuleBuilder::EmitCompoundStmt(const StatementAST *stmt) {
   stmt->Accept(this);
   return nullptr;
 }

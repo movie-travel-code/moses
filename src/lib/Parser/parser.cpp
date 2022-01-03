@@ -598,7 +598,7 @@ ExprASTPtr Parser::ParsePostfixExpression() {
 /// post-expression is eimple for now.
 ExprASTPtr Parser::ParsePostfixExpressionSuffix(ExprASTPtr LHS) {
   auto locStart = scan.getToken().getTokenLoc();
-  std::shared_ptr<Type> type = nullptr;
+  std::shared_ptr<ASTType> type = nullptr;
 
   // To Do: Shit code!
   std::string OpName;
@@ -767,7 +767,7 @@ ExprASTPtr Parser::ParseCallExpr(Token tok) {
   auto startLoc = tok.getTokenLoc();
   std::string funcName = tok.getLexem();
   std::vector<ExprASTPtr> Args;
-  std::vector<std::shared_ptr<Type>> ParmTyps;
+  std::vector<std::shared_ptr<ASTType>> ParmTyps;
   bool first = true;
   // [(] [param] [,parm] [,parm] [)]
   // To Do: Shit code!
@@ -859,7 +859,7 @@ DeclASTPtr Parser::ParseVarDecl() {
 
   Token curTok = scan.getToken();
   scan.getNextToken();
-  std::shared_ptr<Type> DeclType = nullptr;
+  std::shared_ptr<ASTType> DeclType = nullptr;
 
   // type-annotation ':'
   if (validateToken(TokenValue::PUNCTUATOR_Colon)) {
@@ -946,7 +946,7 @@ ExprASTPtr Parser::ParseAnonymousInitExpr() {
   // consume '{'
   scan.getNextToken();
   std::vector<ExprASTPtr> initExprs;
-  std::vector<std::shared_ptr<Type>> initTypes;
+  std::vector<std::shared_ptr<ASTType>> initTypes;
   while (1) {
     switch (scan.getToken().getKind()) {
     case TokenValue::BO_Sub:
@@ -1017,7 +1017,7 @@ StmtASTPtr Parser::ParseFunctionDefinition() {
     syntaxErrorRecovery(ParseContext::context::FunctionDefinition);
   }
 
-  std::shared_ptr<Type> returnType = nullptr;
+  std::shared_ptr<ASTType> returnType = nullptr;
 
   switch (scan.getToken().getKind()) {
   case TokenValue::KEYWORD_int:
@@ -1132,7 +1132,7 @@ ParmDeclPtr Parser::ParseParmDecl() {
     return nullptr;
   }
 
-  std::shared_ptr<Type> DeclType = nullptr;
+  std::shared_ptr<ASTType> DeclType = nullptr;
   // Handle decl type.
   if (validateToken(TokenValue::KEYWORD_int)) {
     DeclType = Ctx.Int;
@@ -1234,7 +1234,7 @@ DeclASTPtr Parser::ParseClassDecl() {
 }
 
 std::shared_ptr<AnonymousType> Parser::ParseAnony() {
-  std::vector<std::shared_ptr<Type>> types;
+  std::vector<std::shared_ptr<ASTType>> types;
   auto startloc = scan.getToken().getTokenLoc();
   scan.getNextToken();
   while (1) {

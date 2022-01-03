@@ -64,7 +64,7 @@ void Sema::ActOnFunctionDeclStart(const std::string &name) {
 
 /// \brief ActOnFunctionDecl - Set return type and create new scope.
 void Sema::ActOnFunctionDecl([[maybe_unused]] const std::string &name,
-                             std::shared_ptr<Type> returnType) {
+                             std::shared_ptr<ASTType> returnType) {
   getFunctionStackTop()->setReturnType(returnType);
 
   auto OldScope = CurScope;
@@ -124,7 +124,7 @@ bool Sema::ActOnBreakAndContinueStmt(bool whileContext) {
 }
 
 /// \brief Mainly current whether identifier is user defined type.
-std::shared_ptr<Type> Sema::ActOnReturnType(const std::string &name) const {
+std::shared_ptr<ASTType> Sema::ActOnReturnType(const std::string &name) const {
   if (ClassSymPtr sym = std::dynamic_pointer_cast<ClassSymbol>(
           ScopeStack[0]->CheckWhetherInCurScope(name))) {
     return sym->getType();
@@ -186,7 +186,7 @@ void Sema::ActOnVarDecl(
   }
 }
 
-bool Sema::ActOnReturnAnonymous(std::shared_ptr<Type> type) const {
+bool Sema::ActOnReturnAnonymous(std::shared_ptr<ASTType> type) const {
   if (!type)
     return false;
 
@@ -208,7 +208,7 @@ bool Sema::ActOnReturnAnonymous(std::shared_ptr<Type> type) const {
   return true;
 }
 
-bool Sema::ActOnReturnStmt(std::shared_ptr<Type> type) const {
+bool Sema::ActOnReturnStmt(std::shared_ptr<ASTType> type) const {
   if (!getFunctionStackTop() || !getFunctionStackTop()->getReturnType())
     return false;
 
@@ -238,10 +238,10 @@ VarDeclPtr Sema::ActOnDeclRefExpr(const std::string &name) {
 
 /// \brief Act on Call Expr.
 /// Perform name lookup and parm type checking.
-std::shared_ptr<Type>
-Sema::ActOnCallExpr(const std::string &name, std::vector<std::shared_ptr<Type>> args,
+std::shared_ptr<ASTType>
+Sema::ActOnCallExpr(const std::string &name, std::vector<std::shared_ptr<ASTType>> args,
                     FunctionDeclPtr &FD) {
-  std::shared_ptr<Type> ReturnType = nullptr;
+  std::shared_ptr<ASTType> ReturnType = nullptr;
 
   // First check whether the call is `print()`.
   // FIXME: In the future, we should put the builtin functions, like `pint`,
@@ -258,7 +258,7 @@ Sema::ActOnCallExpr(const std::string &name, std::vector<std::shared_ptr<Type>> 
     // Construct the funtion symbol for `print`.
     // Record this func symbol.
     std::shared_ptr<FunctionSymbol> PrintSym = std::make_shared<FunctionSymbol>(
-        name, std::make_shared<Type>(TypeKind::VOID), ScopeStack[0], nullptr);
+        name, std::make_shared<ASTType>(TypeKind::VOID), ScopeStack[0], nullptr);
 
     ParmDeclPtr ParmDecl = std::make_shared<ParameterDecl>(
         SourceLocation(), SourceLocation(), "parm", false, args[0]);
@@ -335,7 +335,7 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok,
   }
 
   // Check expression's value kind.
-  std::shared_ptr<Type> type = nullptr;
+  std::shared_ptr<ASTType> type = nullptr;
   if (tok.isAssign()) {
     if (!lhs->isLValue())
       errorReport("Left hand expression must be lvalue.");
@@ -425,7 +425,7 @@ ExprASTPtr Sema::ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok) {
     errorReport("Type error. Expect user defined type.");
   }
 
-  std::shared_ptr<Type> memberType = nullptr;
+  std::shared_ptr<ASTType> memberType = nullptr;
   int idx = -1;
   /// (2) Check Member name.
   if (UDTyPtr BaseType =
@@ -495,7 +495,7 @@ ExprASTPtr Sema::ActOnUnarySubExpr(ExprASTPtr rhs) {
 /// var {num, {flag, lhs, rhs}} = anony;
 /// Shit code!
 UnpackDeclPtr Sema::ActOnUnpackDecl(UnpackDeclPtr unpackDecl,
-                                    std::shared_ptr<Type> type) {
+                                    std::shared_ptr<ASTType> type) {
   if (UnpackDeclPtr unpackd =
           std::dynamic_pointer_cast<UnpackDecl>(unpackDecl)) {
     if (!type) {
@@ -531,7 +531,7 @@ BinaryPtr Sema::ActOnAnonymousTypeVariableAssignment(ExprASTPtr lhs,
 }
 
 /// \brief Mainly check the conditon expression type.
-bool Sema::ActOnConditionExpr(std::shared_ptr<Type> type) const {
+bool Sema::ActOnConditionExpr(std::shared_ptr<ASTType> type) const {
   if (!type || type->getKind() != TypeKind::BOOL) {
     errorReport("Conditional expression is not a boolean type.");
     return false;
@@ -540,7 +540,7 @@ bool Sema::ActOnConditionExpr(std::shared_ptr<Type> type) const {
 }
 
 /// \brief Mainly check parameter declaration type.
-std::shared_ptr<Type> Sema::ActOnParmDeclUserDefinedType(Token tok) const {
+std::shared_ptr<ASTType> Sema::ActOnParmDeclUserDefinedType(Token tok) const {
   if (ClassSymPtr csym = std::dynamic_pointer_cast<ClassSymbol>(
           ScopeStack[0]->CheckWhetherInCurScope(tok.getLexem()))) {
     return csym->getType();
@@ -551,7 +551,7 @@ std::shared_ptr<Type> Sema::ActOnParmDeclUserDefinedType(Token tok) const {
 }
 
 /// \brief Mainly check variable declararion type.
-std::shared_ptr<Type> Sema::ActOnVarDeclUserDefinedType(Token tok) const {
+std::shared_ptr<ASTType> Sema::ActOnVarDeclUserDefinedType(Token tok) const {
   return ActOnParmDeclUserDefinedType(tok);
 }
 
@@ -607,7 +607,7 @@ std::shared_ptr<Scope> Sema::getScopeStackTop() const {
 
 UnpackDeclPtr
 Sema::unpackDeclTypeChecking(UnpackDeclPtr decl,
-                             std::shared_ptr<Type> initType) const {
+                             std::shared_ptr<ASTType> initType) const {
   if (AnonTyPtr anonyt = std::dynamic_pointer_cast<AnonymousType>(initType)) {
     if (!(decl->TypeCheckingAndTypeSetting(anonyt))) {
       errorReport("Unpack declaration type error.");
@@ -620,7 +620,7 @@ Sema::unpackDeclTypeChecking(UnpackDeclPtr decl,
     decl->getDecls(unpackDecls);
 
     // 2: types
-    std::vector<std::shared_ptr<Type>> types;
+    std::vector<std::shared_ptr<ASTType>> types;
     anonyt->getTypes(types);
 
     // 3: check

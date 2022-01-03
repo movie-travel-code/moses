@@ -16,6 +16,6 @@ namespace IR {
 class IRPrinter {
 public:
   static void Print(const MosesIRContext &Ctx, std::ostringstream &out);
-  static void Print(const std::list<ValPtr> &IR, std::ostringstream &out);
+  static void Print(const std::list<std::shared_ptr<Value>> &IR, std::ostringstream &out);
 };
 } // namespace IR

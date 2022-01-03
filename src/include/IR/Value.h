@@ -63,35 +63,9 @@ class Value;
 class User;
 
 typedef std::shared_ptr<Type> TyPtr;
-typedef std::shared_ptr<Value> ValPtr;
 typedef std::shared_ptr<Use> UsePtr;
-typedef std::shared_ptr<Instruction> InstPtr;
-typedef std::shared_ptr<BasicBlock> BBPtr;
-typedef std::shared_ptr<BinaryOperator> BOInstPtr;
-typedef std::shared_ptr<CmpInst> CmpInstPtr;
-typedef std::shared_ptr<GetElementPtrInst> GEPInstPtr;
-typedef std::shared_ptr<CallInst> CallInstPtr;
-typedef std::shared_ptr<ExtractValueInst> EVInstPtr;
-typedef std::shared_ptr<PHINode> PHINodePtr;
-typedef std::shared_ptr<ReturnInst> RetInstPtr;
-typedef std::shared_ptr<Function> FuncPtr;
-typedef std::shared_ptr<ValueSymbolTable> SymTabPtr;
-typedef std::shared_ptr<User> UserPtr;
-typedef std::shared_ptr<Argument> ArgPtr;
-typedef std::shared_ptr<TerminatorInst> TermiPtr;
-typedef std::shared_ptr<ReturnInst> ReturnInstPtr;
-typedef std::shared_ptr<ConstantBool> ConstantBoolPtr;
-typedef std::shared_ptr<ConstantInt> ConstantIntPtr;
-typedef std::shared_ptr<BranchInst> BrInstPtr;
-typedef std::shared_ptr<UnaryOperator> UOInstPtr;
-typedef std::shared_ptr<AllocaInst> AllocaInstPtr;
-typedef std::shared_ptr<LoadInst> LoadInstPtr;
-typedef std::shared_ptr<StoreInst> StoreInstPtr;
-typedef std::shared_ptr<GetElementPtrInst> GEPInstPtr;
-typedef std::shared_ptr<FunctionType> FuncTypePtr;
 typedef std::shared_ptr<StructType> StructTypePtr;
-typedef std::list<InstPtr>::iterator Iterator;
-typedef std::shared_ptr<Intrinsic> IntrinsicPtr;
+typedef std::list<std::shared_ptr<Instruction>>::iterator Iterator;
 class Value {
 public:
   // ------------------nonsense for coding------------------------
@@ -138,7 +112,7 @@ public:
   /// replaceAllUsesWith - Go through the use list for this definition and make
   /// each use point to "V" instead of "this". After this completes, this's
   /// use list is guaranteed to be empty.
-  void replaceAllUsesWith(ValPtr NewV);
+  void replaceAllUsesWith(std::shared_ptr<Value> NewV);
 
   //---------------------------------------------------------------------
   // Methods for handling the vector of uses of this Value.
@@ -177,19 +151,19 @@ public:
 class Use {
 private:
   User *U;
-  ValPtr Val;
+  std::shared_ptr<Value> Val;
 
 public:
   Use() : U(nullptr), Val(nullptr) {}
-  Use(ValPtr Val, User *U);
+  Use(std::shared_ptr<Value> Val, User *U);
   Use(const Use &u);
   ~Use();
 
-  ValPtr get() const { return Val; }
+  std::shared_ptr<Value> get() const { return Val; }
   const Value *getUser() const { return reinterpret_cast<Value *>(U); }
-  void set(ValPtr Val);
+  void set(std::shared_ptr<Value> Val);
 
-  ValPtr operator=(ValPtr RHS);
+  std::shared_ptr<Value> operator=(std::shared_ptr<Value> RHS);
   const Use &operator=(Use RHS);
   bool operator==(const Use &use);
 };

@@ -17,10 +17,10 @@ public:
   //===--------------------------------------------------------------===//
   // Binary Operators - Arithmetic
   //===--------------------------------------------------------------===//
-  static ConstantIntPtr CreateArithmetic(MosesIRContext &Ctx,
+  static std::shared_ptr<ConstantInt> CreateArithmetic(MosesIRContext &Ctx,
                                          BinaryOperator::Opcode Op,
-                                         ConstantIntPtr LHS,
-                                         ConstantIntPtr RHS) {
+                                         std::shared_ptr<ConstantInt> LHS,
+                                         std::shared_ptr<ConstantInt> RHS) {
     switch (Op) {
     case IR::Instruction::Opcode::Add:
       return std::make_shared<ConstantInt>(Ctx, LHS->getVal() + RHS->getVal());
@@ -44,10 +44,10 @@ public:
   //===--------------------------------------------------------------===//
   // Binary Operators - boolean
   //===--------------------------------------------------------------===//
-  static ConstantBoolPtr CreateBoolean(MosesIRContext &Ctx,
+  static std::shared_ptr<ConstantBool> CreateBoolean(MosesIRContext &Ctx,
                                        BinaryOperator::Opcode Op,
-                                       ConstantBoolPtr LHS,
-                                       ConstantBoolPtr RHS) {
+                                       std::shared_ptr<ConstantBool> LHS,
+                                       std::shared_ptr<ConstantBool> RHS) {
     switch (Op) {
     case IR::Instruction::Opcode::And:
       return std::make_shared<ConstantBool>(Ctx,
@@ -60,8 +60,8 @@ public:
     }
   }
 
-  static ConstantBoolPtr CreateCmp(MosesIRContext &Ctx, CmpInst::Predicate P,
-                                   ConstantIntPtr LHS, ConstantIntPtr RHS) {
+  static std::shared_ptr<ConstantBool> CreateCmp(MosesIRContext &Ctx, CmpInst::Predicate P,
+                                   std::shared_ptr<ConstantInt> LHS, std::shared_ptr<ConstantInt> RHS) {
     switch (P) {
     case IR::CmpInst::CMP_EQ:
       return std::make_shared<ConstantBool>(Ctx,
@@ -84,8 +84,8 @@ public:
     }
   }
 
-  static ConstantBoolPtr CreateCmp(MosesIRContext &Ctx, CmpInst::Predicate P,
-                                   ConstantBoolPtr LHS, ConstantBoolPtr RHS) {
+  static std::shared_ptr<ConstantBool> CreateCmp(MosesIRContext &Ctx, CmpInst::Predicate P,
+                                   std::shared_ptr<ConstantBool> LHS, std::shared_ptr<ConstantBool> RHS) {
     switch (P) {
     case IR::CmpInst::CMP_EQ:
       return std::make_shared<ConstantBool>(Ctx,
@@ -101,11 +101,11 @@ public:
   //===----------------------------------------------------------===//
   // Unary Oeprators
   //===----------------------------------------------------------===//
-  static ConstantIntPtr CreateNeg(MosesIRContext &Ctx, ConstantIntPtr C) {
+  static std::shared_ptr<ConstantInt> CreateNeg(MosesIRContext &Ctx, std::shared_ptr<ConstantInt> C) {
     return std::make_shared<ConstantInt>(Ctx, 0 - C->getVal());
   }
 
-  static ConstantBoolPtr CreateNot(MosesIRContext &Ctx, ConstantBoolPtr C) {
+  static std::shared_ptr<ConstantBool> CreateNot(MosesIRContext &Ctx, std::shared_ptr<ConstantBool> C) {
     return std::make_shared<ConstantBool>(Ctx, !C->getVal());
   }
 };

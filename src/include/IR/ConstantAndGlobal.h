@@ -73,7 +73,9 @@ protected:
 
 public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof([[maybe_unused]] const ConstantIntegral *) { return true; }
+  static bool classof([[maybe_unused]] const ConstantIntegral *) {
+    return true;
+  }
   static bool classof(const Constant *CPV); // defined in Constants.cpp
   // To Do:
   static bool classof([[maybe_unused]] const Value *V) { return true; }
@@ -91,12 +93,12 @@ public:
 
   /// getTrue() - static factory methods - Return objects of the specified
   /// value.
-  static ConstantBoolPtr getTrue(MosesIRContext &Ctx) {
+  static std::shared_ptr<ConstantBool> getTrue(MosesIRContext &Ctx) {
     return std::make_shared<ConstantBool>(Ctx, true);
   }
   /// getFalse() - static factory methods - Return objects of the specified
   /// value.
-  static ConstantBoolPtr getFalse(MosesIRContext &Ctx) {
+  static std::shared_ptr<ConstantBool> getFalse(MosesIRContext &Ctx) {
     return std::make_shared<ConstantBool>(Ctx, false);
   }
   /// inverted - Return the opposite value of the current value.
@@ -123,7 +125,7 @@ public:
   ConstantInt(MosesIRContext &Ctx, int val);
 
   /// \brief Get a ConstantInt for a specific value.
-  static ConstantIntPtr get(MosesIRContext &Ctx, int value) {
+  static std::shared_ptr<ConstantInt> get(MosesIRContext &Ctx, int value) {
     auto CI = std::make_shared<ConstantInt>(Ctx, value);
     CI->setName(std::to_string(value));
     return CI;
@@ -132,11 +134,12 @@ public:
   bool equalsInt(int v) const { return Val == v; }
   int getVal() const { return Val; }
   // Shit code.
-  static ConstantIntPtr getZeroValueForNegative(MosesIRContext &Ctx) {
+  static std::shared_ptr<ConstantInt>
+  getZeroValueForNegative(MosesIRContext &Ctx) {
     return std::make_shared<ConstantInt>(Ctx, 0);
   }
 
-  static bool classof(ValPtr V) {
+  static bool classof(std::shared_ptr<Value> V) {
     return V->getValueType() == Value::ValueTy::ConstantVal;
   }
 

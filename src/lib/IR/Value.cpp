@@ -21,7 +21,7 @@ const Value *Value::use_begin() const { return Uses.front()->getUser(); }
 /// Go through the uses list for this definition and make each use point
 /// to 'V' instead of 'this'. After this completes, this's use list is
 /// guaranteed to be empty.
-void Value::replaceAllUsesWith(ValPtr NewV) {
+void Value::replaceAllUsesWith(std::shared_ptr<Value> NewV) {
   assert(NewV && "Value::replaceAllUsesWith(<null>) is invalid!");
   assert(NewV.get() != this &&
          "this->replaceAllUsesWith(expr(this)) is NOT valid!");
@@ -44,7 +44,7 @@ Value::~Value() {
   // Tell the Users, this value is gone,
 }
 
-Use::Use(ValPtr Val, User *U) : U(U), Val(Val) {
+Use::Use(std::shared_ptr<Value> Val, User *U) : U(U), Val(Val) {
   if (Val)
     Val->addUse(*this);
 }
@@ -57,14 +57,14 @@ Use::~Use() {
     Val->killUse(*this);
 }
 
-void Use::set(ValPtr Val) {
+void Use::set(std::shared_ptr<Value> Val) {
   if (this->Val)
     this->Val->killUse(*this);
   this->Val = Val;
   if (Val)
     Val->addUse(*this);
 }
-ValPtr Use::operator=(ValPtr RHS) {
+std::shared_ptr<Value> Use::operator=(std::shared_ptr<Value> RHS) {
   set(RHS);
   return RHS;
 }

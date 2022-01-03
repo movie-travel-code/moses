@@ -20,7 +20,7 @@ void IRPrinter::Print(const MosesIRContext &Ctx, std::ostringstream &out) {
   }
 }
 
-void IRPrinter::Print(const std::list<ValPtr> &IR, std::ostringstream &out) {
+void IRPrinter::Print(const std::list<std::shared_ptr<Value>> &IR, std::ostringstream &out) {
   for (const auto &item : IR) {
     item->Print(out);
     out << "\n";

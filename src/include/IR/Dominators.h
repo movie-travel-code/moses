@@ -24,7 +24,7 @@ public:
   enum class color { WHITE, GRAY, BLACK };
 
 private:
-  BBPtr TheBB;
+  std::shared_ptr<BasicBlock> TheBB;
   int PostNumber;
   int DFSInNum, DFSOutNum;
   color VisitColor;
@@ -44,11 +44,11 @@ private:
 
   std::vector<DomTreeNodePtr> Predecessors;
 public:
-  DomTreeNode(BBPtr BB = nullptr)
+  DomTreeNode(std::shared_ptr<BasicBlock> BB = nullptr)
       : TheBB(BB), PostNumber(-1), DFSInNum(-1), DFSOutNum(-1), IDom(nullptr),
         Father(nullptr) {}
 
-  BBPtr getBlock() const { return TheBB; }
+  std::shared_ptr<BasicBlock> getBlock() const { return TheBB; }
   DomTreeNodePtr getIDom() const { return IDom; }
 
   const std::vector<DomTreeNodePtr> &getChildren() const { return Children; }
@@ -87,13 +87,13 @@ public:
 
 // DominatorTree - This represents the forward Dominance.
 class DominatorTree {
-  using DomTreeNodeMapType = std::map<BBPtr, DomTreeNodePtr>;
+  using DomTreeNodeMapType = std::map<std::shared_ptr<BasicBlock>, DomTreeNodePtr>;
   DomTreeNodeMapType DomTreeNodes;
   DomTreeNodePtr RootNode;
 
   std::vector<DomTreeNodePtr> PostOrder;
   std::vector<DomTreeNodePtr> ReversePostOrder;
-  std::list<BBPtr> Vertex;
+  std::list<std::shared_ptr<BasicBlock>> Vertex;
 
   std::map<DomTreeNodePtr, std::vector<DomTreeNodePtr>> PredecessorrsOfCFG;
 
@@ -108,7 +108,7 @@ private:
   void getReversePostOrder();
 
   // compute the DomTree.
-  void computeDomTree(BBPtr EntryBlock);
+  void computeDomTree(std::shared_ptr<BasicBlock> EntryBlock);
 
   std::vector<DomTreeNodePtr> getDomNodePredsFromCFG(DomTreeNodePtr Node);
   // Intersect() - This function only be using to get closest parent of A and B.
@@ -122,19 +122,19 @@ private:
 
 public:
   // compute the DomTree of the CFG.
-  void runOnCFG(std::vector<BBPtr> &BBs);
+  void runOnCFG(std::vector<std::shared_ptr<BasicBlock>> &BBs);
   // compute the DomTree of the Function.
-  void runOnFunction(FuncPtr F);
+  void runOnFunction(std::shared_ptr<Function> F);
 
-  void ComputeDomFrontierOnCFG(std::vector<BBPtr> &BBs);
-  void ComputeDomFrontierOnFunction(FuncPtr F);
+  void ComputeDomFrontierOnCFG(std::vector<std::shared_ptr<BasicBlock>> &BBs);
+  void ComputeDomFrontierOnFunction(std::shared_ptr<Function> F);
 
-  DomTreeNodePtr getDomTreeNode(BBPtr BB) const;
+  DomTreeNodePtr getDomTreeNode(std::shared_ptr<BasicBlock> BB) const;
 
   // getRootNode - This returns the entry node for the CFG of the function.
   DomTreeNodePtr getRootNode() { return RootNode; }
   bool properlyDominates(DomTreeNodePtr Node) const;
-  bool isReachableFromEntry(BBPtr BB) const;
+  bool isReachableFromEntry(std::shared_ptr<BasicBlock> BB) const;
   bool dominates(DomTreeNodePtr A, DomTreeNodePtr B) const;
 
   // printIDoms - Convert IDoms to human readable form.
@@ -150,6 +150,6 @@ public:
 
   // dominates - Return true if A dominates B. This perform the special
   // checks necessary if A and B are in the same basic block.
-  bool dominates(InstPtr A, InstPtr B) const;
+  bool dominates(std::shared_ptr<Instruction> A, std::shared_ptr<Instruction> B) const;
 };
 } // namespace IR

@@ -28,11 +28,12 @@
 #pragma once
 #include "ASTContext.h"
 #include "Lexer/scanner.h"
+#include "Parser/Type.h"
 #include "Support/Hasing.h"
 #include "Support/SymbolTable.h"
-#include "Parser/Type.h"
 #include <memory>
 #include <string>
+
 
 namespace sema {
 using namespace ast;
@@ -99,13 +100,15 @@ public:
 
   void ActOnFunctionDeclStart(const std::string &name);
 
-  void ActOnFunctionDecl(const std::string &name, std::shared_ptr<Type> returnType);
+  void ActOnFunctionDecl(const std::string &name,
+                         std::shared_ptr<ASTType> returnType);
 
   StmtASTPtr ActOnFunctionDeclEnd(const std::string &name);
 
   void ActOnParmDecl(const std::string &name, ParmDeclPtr parm);
 
-  StmtASTPtr ActOnConstDecl(const std::string &name, std::shared_ptr<Type> type);
+  StmtASTPtr ActOnConstDecl(const std::string &name,
+                            std::shared_ptr<ASTType> type);
 
   void ActOnVarDecl(const std::string &name, VarDeclPtr VD);
 
@@ -116,22 +119,22 @@ public:
                          ExprASTPtr condtion, StmtASTPtr ThenPart,
                          StmtASTPtr ElsePart);
 
-  std::shared_ptr<Type> ActOnReturnType(const std::string &name) const;
+  std::shared_ptr<ASTType> ActOnReturnType(const std::string &name) const;
 
   bool ActOnBreakAndContinueStmt(bool whileContext);
 
   StmtASTPtr ActOnContinueStmt();
 
-  bool ActOnReturnStmt(std::shared_ptr<Type> type) const;
+  bool ActOnReturnStmt(std::shared_ptr<ASTType> type) const;
 
   StmtASTPtr BuildReturnStmt();
 
   bool ActOnUnpackDeclElement(const std::string &name);
 
   UnpackDeclPtr ActOnUnpackDecl(UnpackDeclPtr unpackDecl,
-                                std::shared_ptr<Type> type);
+                                std::shared_ptr<ASTType> type);
 
-  bool ActOnReturnAnonymous(std::shared_ptr<Type> type) const;
+  bool ActOnReturnAnonymous(std::shared_ptr<ASTType> type) const;
 
   BinaryPtr ActOnAnonymousTypeVariableAssignment(ExprASTPtr lhs,
                                                  ExprASTPtr rhs) const;
@@ -139,9 +142,10 @@ public:
   // (2) Expression
   ExprASTPtr ActOnConstantExpression();
 
-  std::shared_ptr<Type> ActOnCallExpr(const std::string &calleeName,
-                                      std::vector<std::shared_ptr<Type>> Args,
-                                      FunctionDeclPtr &FD);
+  std::shared_ptr<ASTType>
+  ActOnCallExpr(const std::string &calleeName,
+                std::vector<std::shared_ptr<ASTType>> Args,
+                FunctionDeclPtr &FD);
 
   ExprASTPtr ActOnUnaryOperator();
 
@@ -157,11 +161,11 @@ public:
 
   ExprASTPtr ActOnExprStmt();
 
-  bool ActOnConditionExpr(std::shared_ptr<Type> type) const;
+  bool ActOnConditionExpr(std::shared_ptr<ASTType> type) const;
 
-  std::shared_ptr<Type> ActOnParmDeclUserDefinedType(Token tok) const;
+  std::shared_ptr<ASTType> ActOnParmDeclUserDefinedType(Token tok) const;
 
-  std::shared_ptr<Type> ActOnVarDeclUserDefinedType(Token tok) const;
+  std::shared_ptr<ASTType> ActOnVarDeclUserDefinedType(Token tok) const;
 
   // (3) help method
   bool isInFunctionContext() const { return FunctionStack.size() != 0; }
@@ -185,6 +189,6 @@ private:
   void errorReport(const std::string &msg) const;
 
   UnpackDeclPtr unpackDeclTypeChecking(UnpackDeclPtr unpackDecl,
-                                       std::shared_ptr<Type> initType) const;
+                                       std::shared_ptr<ASTType> initType) const;
 };
 } // namespace sema

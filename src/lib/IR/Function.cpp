@@ -9,7 +9,7 @@ using namespace IR;
 
 //===---------------------------------------------------------------------===//
 // Implement class Argument.
-Argument::Argument(TyPtr Ty, const std::string &Name, FuncPtr F)
+Argument::Argument(TyPtr Ty, const std::string &Name, std::shared_ptr<Function> F)
     : Value(Ty, ValueTy::ArgumentVal, Name), Parent(F) {}
 
 void Argument::Print(std::ostringstream &out) {
@@ -18,7 +18,7 @@ void Argument::Print(std::ostringstream &out) {
 }
 //===---------------------------------------------------------------------===//
 // Implement class function.
-Function::Function(FuncTypePtr Ty, const std::string &Name,
+Function::Function(std::shared_ptr<FunctionType> Ty, const std::string &Name,
                    std::vector<std::string> Names)
     : GlobalValue(PointerType::get(Ty), Value::ValueTy::FunctionVal, Name),
       ReturnType(Ty->getReturnType()), FunctionTy(Ty) {
@@ -30,7 +30,7 @@ Function::Function(FuncTypePtr Ty, const std::string &Name,
 }
 
 /// \brief Get the argument.
-ArgPtr Function::operator[](unsigned index) const {
+std::shared_ptr<Argument> Function::operator[](unsigned index) const {
   assert(index < Arguments.size() &&
          "Index out of range when we get the specified Argument(IR).");
   return Arguments[index];
@@ -44,14 +44,14 @@ void Function::setArgumentInfo(unsigned index, const std::string &name) {
 }
 
 /// \brief Create a new function.
-FuncPtr Function::create(FuncTypePtr Ty, const std::string &Name,
+std::shared_ptr<Function> Function::create(std::shared_ptr<FunctionType> Ty, const std::string &Name,
                          std::vector<std::string> Names) {
   auto func = std::make_shared<Function>(Ty, Name, Names);
   return func;
 }
 
 TyPtr Function::getReturnType() const {
-  if (FuncTypePtr ty = std::dynamic_pointer_cast<FunctionType>(FunctionTy))
+  if (std::shared_ptr<FunctionType> ty = std::dynamic_pointer_cast<FunctionType>(FunctionTy))
     return ty->getReturnType();
   return nullptr;
 }

@@ -76,7 +76,7 @@ void UnpackDecl::getDecls(std::vector<VarDeclPtr> &SubDecls) const {
   }
 }
 
-void UnpackDecl::setCorrespondingType(std::shared_ptr<Type> type) {
+void UnpackDecl::setCorrespondingType(std::shared_ptr<ASTType> type) {
   declType = type;
 }
 

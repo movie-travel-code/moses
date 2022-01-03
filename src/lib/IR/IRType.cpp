@@ -91,9 +91,8 @@ bool FunctionType::classof(IRTyPtr Ty) {
   return Ty->getTypeID() == TypeID::FunctionTy;
 }
 
-std::vector<IRTyPtr>
-FunctionType::ConvertParmTypeToIRType(MosesIRContext &Ctx,
-                                      std::vector<ASTTyPtr> ParmTyps) {
+std::vector<IRTyPtr> FunctionType::ConvertParmTypeToIRType(
+    MosesIRContext &Ctx, std::vector<std::shared_ptr<ASTType>> ParmTyps) {
   std::vector<IRTyPtr> IRTypes;
   for (auto item : ParmTyps) {
     switch (item->getKind()) {
@@ -120,14 +119,16 @@ FunctionType::ConvertParmTypeToIRType(MosesIRContext &Ctx,
 ///	e.g.	int (*call)(int);
 ///			call = add;
 ///
-///			%call = alloca i32 (i32)*					;
-///<i32 (i32)**>
-///					~~~~~~~~~~~~~~~~		-------->
-///Funcition type<i32 (i32)>
+///			%call = alloca i32 (i32)*
+///;
+///< i32 (i32)**>
+///					~~~~~~~~~~~~~~~~ --------> Funcition
+/// type<i32 (i32)>
 ///     store i32 (i32)* @add, i32 (i32)** %call
 ///					...
-///			%1 = load i32 (i32)** %call					;
-///<i32 (i32)*>
+///			%1 = load i32 (i32)** %call
+///;
+///< i32 (i32)*>
 ///					...
 ///			%4 = call i32 %2(i32 %3)
 void FunctionType::Print(std::ostringstream &out) {
@@ -160,7 +161,7 @@ StructType::StructType(std::vector<IRTyPtr> members,
 ///			var a : A;
 ///		}
 std::shared_ptr<StructType> StructType::Create(MosesIRContext &Ctx,
-                                               ASTTyPtr type) {
+                                               std::shared_ptr<ASTType> type) {
   std::vector<IRTyPtr> members;
   std::string Name;
   if (ASTUDTyPtr UD = std::dynamic_pointer_cast<ASTUDTy>(type)) {
@@ -186,7 +187,7 @@ std::shared_ptr<StructType> StructType::Create(MosesIRContext &Ctx,
 }
 
 std::shared_ptr<StructType> StructType::get(MosesIRContext &Ctx,
-                                            ASTTyPtr type) {
+                                            std::shared_ptr<ASTType> type) {
   std::vector<IRTyPtr> members;
   if (ASTUDTyPtr UD = std::dynamic_pointer_cast<ASTUDTy>(type)) {
     auto subtypes = UD->getMemberTypes();

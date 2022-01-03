@@ -35,23 +35,23 @@ using namespace IR;
 using namespace CodeGen;
 
 using Opcode = BinaryOperator::Opcode;
-using CallArgList = std::vector<std::pair<RValue, IRBuild::ASTTyPtr>>;
+using CallArgList = std::vector<std::pair<RValue, std::shared_ptr<ASTType>>>;
 
 namespace CGStmt {
 // BreakContinueStack - This keeps track of where break and continue
 // statements should jump to.
 struct BreakContinue {
-  BreakContinue(BBPtr bb, BBPtr cb) : BreakBlock(bb), ContinueBlock(cb) {}
-  BBPtr BreakBlock;
-  BBPtr ContinueBlock;
+  BreakContinue(std::shared_ptr<BasicBlock> bb, std::shared_ptr<BasicBlock> cb) : BreakBlock(bb), ContinueBlock(cb) {}
+  std::shared_ptr<BasicBlock> BreakBlock;
+  std::shared_ptr<BasicBlock> ContinueBlock;
 };
 } // namespace CGStmt
 
 namespace CGExpr {
 struct BinOpInfo {
-  ValPtr LHS;
-  ValPtr RHS;
-  IRBuild::ASTTyPtr Ty;
+  std::shared_ptr<Value> LHS;
+  std::shared_ptr<Value> RHS;
+  std::shared_ptr<ASTType> Ty;
   const BinaryExpr *BE;
 };
 } // namespace CGExpr
@@ -62,21 +62,21 @@ struct FunctionBuilderStatus {
   FunctionDecl *CurFuncDecl;
   CGFuncInfoConstPtr CGFnInfo;
   TyPtr FnRetTy;
-  FuncPtr CurFn;
+  std::shared_ptr<Function> CurFn;
   // Count the return expr(contain implicit return-expr).
   unsigned NumReturnExprs;
 
   // For switching context to top-level.
-  BBPtr TopLevelCurBB;
-  BBPtr TopLevelEntry;
-  std::list<InstPtr>::iterator TopLevelAllocaIsPt;
-  std::list<InstPtr>::iterator TopLevelCurIsPt;
+  std::shared_ptr<BasicBlock> TopLevelCurBB;
+  std::shared_ptr<BasicBlock> TopLevelEntry;
+  std::list<std::shared_ptr<Instruction>>::iterator TopLevelAllocaIsPt;
+  std::list<std::shared_ptr<Instruction>>::iterator TopLevelCurIsPt;
   bool TopLevelIsAllocaInsertPointSetByNormalInsert;
   unsigned TopLevelTempCounter;
 
   /// ReturnBlock - Unified return block.
   /// ReturnBlock can omit later.
-  BBPtr ReturnBlock;
+  std::shared_ptr<BasicBlock> ReturnBlock;
   /// ReturnValue - The temporary alloca to hold the return value. This is null
   /// iff the function has no return value.
   /// If we have multiple return statements, we need this tempprary alloca.
@@ -105,7 +105,7 @@ struct FunctionBuilderStatus {
   ///		; <label>:8
   ///			%9 = load i32* %1
   ///			ret i32 %9
-  ValPtr ReturnValue;
+  std::shared_ptr<Value> ReturnValue;
 
   explicit FunctionBuilderStatus()
       : CurFuncDecl(nullptr), CGFnInfo(nullptr), FnRetTy(nullptr),
@@ -118,7 +118,7 @@ struct FunctionBuilderStatus {
 /// The ModuleBuilder is responsible for processing each class and method
 /// declarations.
 /// -------------------------------------------------------------------
-class ModuleBuilder : public StatementAST::Visitor<ValPtr> {
+class ModuleBuilder : public StatementAST::Visitor<std::shared_ptr<Value>> {
 public:
   using FuncStatusPtr = std::shared_ptr<FunctionBuilderStatus>;
   static std::string LocalInstNamePrefix;
@@ -136,15 +136,15 @@ private:
   CodeGenTypes Types;
 
   // IRs for the whole translation-unit.
-  std::list<ValPtr> IRs;
+  std::list<std::shared_ptr<Value>> IRs;
 
-  BBPtr CurBB;
+  std::shared_ptr<BasicBlock> CurBB;
   // CurFunc - Contains all the state information about current function.
   FuncStatusPtr CurFunc;
 
   // 'InsertPoint' is pointing at the end of current basic block of most of the
   // time. Note we should clear 'InsertPoint' when we switch to the new block.
-  std::list<InstPtr>::iterator InsertPoint;
+  std::list<std::shared_ptr<Instruction>>::iterator InsertPoint;
 
   // The insert point for alloca instructions.
   // Alloca instruction only appear in the Entry Block.
@@ -157,9 +157,9 @@ private:
   //                         --------------------
   // Before executing the function code, we should pre-allocate a portion of
   // memory on the stack.
-  std::list<InstPtr>::iterator AllocaInsertPoint;
+  std::list<std::shared_ptr<Instruction>>::iterator AllocaInsertPoint;
   bool isAllocaInsertPointSetByNormalInsert;
-  BBPtr EntryBlock;
+  std::shared_ptr<BasicBlock> EntryBlock;
   // This is just for naming the temporary result(the name of the instruction.).
   unsigned TempCounter;
 
@@ -179,30 +179,30 @@ public:
   void VisitChildren(std::vector<std::shared_ptr<StatementAST>> AST);
 
   // Note: We only need to consider the type of AST leaf node.
-  ValPtr visit([[maybe_unused]] const StatementAST *stmt) { return nullptr; }
-  ValPtr visit([[maybe_unused]] const ExprStatement *exprstmt) { return nullptr; }
-  ValPtr visit(const CompoundStmt *comstmt);
-  ValPtr visit(const IfStatement *ifstmt);
-  ValPtr visit(const WhileStatement *whilestmt);
-  ValPtr visit(const ReturnStatement *retstmt);
-  ValPtr visit([[maybe_unused]] const DeclStatement *declstmt) { return nullptr; }
-  ValPtr visit(const BreakStatement *BS);
-  ValPtr visit(const ContinueStatement *CS);
-  ValPtr visit(const VarDecl *VD);
-  ValPtr visit([[maybe_unused]] const ParameterDecl *PD) { return nullptr; }
-  ValPtr visit([[maybe_unused]] const ClassDecl *CD) { return nullptr; }
-  ValPtr visit(const FunctionDecl *FD);
-  ValPtr visit([[maybe_unused]] const UnpackDecl *UD);
-  ValPtr visit(const BinaryExpr *B);
-  ValPtr visit(const CallExpr *Call);
-  ValPtr visit(const DeclRefExpr *DRE);
-  ValPtr visit(const BoolLiteral *BL);
-  ValPtr visit(const NumberExpr *NE);
-  ValPtr visit(const UnaryExpr *UE);
-  ValPtr visit(const MemberExpr *ME);
-  ValPtr visit([[maybe_unused]] const Expr *E) { return nullptr; }
+  std::shared_ptr<Value> visit([[maybe_unused]] const StatementAST *stmt) { return nullptr; }
+  std::shared_ptr<Value> visit([[maybe_unused]] const ExprStatement *exprstmt) { return nullptr; }
+  std::shared_ptr<Value> visit(const CompoundStmt *comstmt);
+  std::shared_ptr<Value> visit(const IfStatement *ifstmt);
+  std::shared_ptr<Value> visit(const WhileStatement *whilestmt);
+  std::shared_ptr<Value> visit(const ReturnStatement *retstmt);
+  std::shared_ptr<Value> visit([[maybe_unused]] const DeclStatement *declstmt) { return nullptr; }
+  std::shared_ptr<Value> visit(const BreakStatement *BS);
+  std::shared_ptr<Value> visit(const ContinueStatement *CS);
+  std::shared_ptr<Value> visit(const VarDecl *VD);
+  std::shared_ptr<Value> visit([[maybe_unused]] const ParameterDecl *PD) { return nullptr; }
+  std::shared_ptr<Value> visit([[maybe_unused]] const ClassDecl *CD) { return nullptr; }
+  std::shared_ptr<Value> visit(const FunctionDecl *FD);
+  std::shared_ptr<Value> visit([[maybe_unused]] const UnpackDecl *UD);
+  std::shared_ptr<Value> visit(const BinaryExpr *B);
+  std::shared_ptr<Value> visit(const CallExpr *Call);
+  std::shared_ptr<Value> visit(const DeclRefExpr *DRE);
+  std::shared_ptr<Value> visit(const BoolLiteral *BL);
+  std::shared_ptr<Value> visit(const NumberExpr *NE);
+  std::shared_ptr<Value> visit(const UnaryExpr *UE);
+  std::shared_ptr<Value> visit(const MemberExpr *ME);
+  std::shared_ptr<Value> visit([[maybe_unused]] const Expr *E) { return nullptr; }
 
-  const std::list<ValPtr> &getIRs() const { return IRs; };
+  const std::list<std::shared_ptr<Value>> &getIRs() const { return IRs; };
 
 private:
   //===-----------------------------------------------------------===//
@@ -220,14 +220,14 @@ private:
 
   /// \brief Emit a branch from the current block to the target one if this
   /// was a real block.
-  void EmitBrach(BBPtr Target);
+  void EmitBrach(std::shared_ptr<BasicBlock> Target);
 
   /// EmitParmDecl - Emit an alloca (or GlobalValue depending on target)
   /// for the specified parameter and set up LocalDeclMap.
-  void EmitParmDecl(const VarDecl *VD, ValPtr Arg);
+  void EmitParmDecl(const VarDecl *VD, std::shared_ptr<Value> Arg);
 
   /// EmitLocalVarAlloca - Emit the alloca.
-  AllocaInstPtr EmitLocalVarAlloca(const VarDecl *var);
+  std::shared_ptr<AllocaInst>  EmitLocalVarAlloca(const VarDecl *var);
   //===--------------------------------------------------------------===//
   // Helper for function call generation.
   //===--------------------------------------------------------------===//
@@ -239,21 +239,21 @@ private:
   /// expand is only allowed on structures whose fields are all scalar types or
   /// are all scalar types or are themselves expandable types.
   /// ----------------------clang2.6 Expand--------------------
-  void ExpandTypeToArgs(ASTTyPtr ASTTy, RValue Src, std::vector<ValPtr> &Args);
+  void ExpandTypeToArgs(std::shared_ptr<ASTType> ASTTy, RValue Src, std::vector<std::shared_ptr<Value>> &Args);
 
   /// ExpandTypeFromArgs - Reconstruct a structure of type \arg Ty
   /// from function arguments into \arg Dst.
-  void ExpandTypeFromArgs(ASTTyPtr ASTTy, LValue LV,
-                          std::vector<ValPtr> &SubArgs);
+  void ExpandTypeFromArgs(std::shared_ptr<ASTType> ASTTy, LValue LV,
+                          std::vector<std::shared_ptr<Value>> &SubArgs);
 
-  RValue EmitCall(const FunctionDecl *FD, ValPtr FuncAddr,
+  RValue EmitCall(const FunctionDecl *FD, std::shared_ptr<Value> FuncAddr,
                   const std::vector<ExprASTPtr> &Args);
 
   RValue EmitCall(const FunctionDecl *FD, CGFuncInfoConstPtr CGFunInfo,
-                  ValPtr FuncAddr, CallArgList CallArgs);
+                  std::shared_ptr<Value> FuncAddr, CallArgList CallArgs);
 
   /// EmitCallArg - Emit a single call argument.
-  void EmitCallArg(const Expr *E, IRBuild::ASTTyPtr ArgType);
+  void EmitCallArg(const Expr *E, std::shared_ptr<ASTType> ArgType);
 
   /// EmitCallArgs - Emit call arguments for a function.
   void EmitCallArgs(CallArgList &CallArgs,
@@ -263,8 +263,8 @@ private:
   /// if statement) to the specified blocks. Based on the condition, this might
   /// try to simplify the codegen of the conditional based on the branch.
   /// To Do: TrueCount for PGO(profile-guided optimization).
-  void EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueB,
-                            BBPtr FalseBlock /*, unsigned TrueCount*/);
+  void EmitBranchOnBoolExpr(ExprASTPtr Cond, std::shared_ptr<BasicBlock> TrueB,
+                            std::shared_ptr<BasicBlock> FalseBlock /*, unsigned TrueCount*/);
 
   //===---------------------------------------------------------===//
   // Helper for builder configuration.
@@ -287,17 +287,17 @@ private:
     return I;
   }
 
-  ConstantBoolPtr InsertHelper(ConstantBoolPtr B, std::string Name = "") {
+  std::shared_ptr<ConstantBool> InsertHelper(std::shared_ptr<ConstantBool> B, std::string Name = "") {
     B->setName(Name);
     return B;
   }
 
-  ConstantIntPtr InsertHelper(ConstantIntPtr I, std::string Name = "") {
+  std::shared_ptr<ConstantInt> InsertHelper(std::shared_ptr<ConstantInt> I, std::string Name = "") {
     I->setName(Name);
     return I;
   }
 
-  AllocaInstPtr InsertHelper(AllocaInstPtr I, std::string Name = "") {
+  std::shared_ptr<AllocaInst> InsertHelper(std::shared_ptr<AllocaInst>  I, std::string Name = "") {
     if (EntryBlock) {
       if (Name == "") {
         Name = getCurLocalName();
@@ -310,8 +310,8 @@ private:
   }
 
   /// \brief Template specialization.
-  /*ValPtr InsertHelper(ConstantBoolPtr V, std::string Name = "") const { return
-     V; } ValPtr InsertHelper(ConstantIntPtr V, std::string Name = "") const {
+  /*std::shared_ptr<Value> InsertHelper(std::shared_ptr<ConstantBool> V, std::string Name = "") const { return
+     V; } std::shared_ptr<Value> InsertHelper(std::shared_ptr<ConstantInt> V, std::string Name = "") const {
      return V; }*/
   /// \brief Clear the insertion point: created instructions will not be
   /// inserted into a block.
@@ -324,11 +324,11 @@ private:
 
   /// \brief This specifies that created instructions should be appended to the
   /// end of the ** specified block **.
-  void SetInsertPoint(BBPtr TheBB);
+  void SetInsertPoint(std::shared_ptr<BasicBlock> TheBB);
 
   /// \brief This specifies that created instructions should be inserted before
   /// the specified instruction.
-  void SetInsertPoint(InstPtr I);
+  void SetInsertPoint(std::shared_ptr<Instruction> I);
 
   bool HaveInsertPoint() const { return CurBB ? true : false; }
   //===---------------------------------------------------------------===//
@@ -336,97 +336,97 @@ private:
   //===---------------------------------------------------------------===//
 
   /// \brief Get the constant value for i1 true.
-  ConstantBoolPtr getTrue() { return ConstantBool::getTrue(Context); }
+  std::shared_ptr<ConstantBool> getTrue() { return ConstantBool::getTrue(Context); }
   /// \brief Get the constant value for i1 false;
-  ConstantBoolPtr getFalse() { return ConstantBool::getFalse(Context); }
+  std::shared_ptr<ConstantBool> getFalse() { return ConstantBool::getFalse(Context); }
   /// \brief Get the constant value for int.
-  ConstantIntPtr getInt(int val) { return ConstantInt::get(Context, val); }
+  std::shared_ptr<ConstantInt> getInt(int val) { return ConstantInt::get(Context, val); }
 
   //===---------------------------------------------------------===//
   // Instruction creation methods: Terminators
   //===---------------------------------------------------------===//
   /// \brief Create a 'ret void' instruction.
-  ReturnInstPtr CreateRetVoid();
+  std::shared_ptr<ReturnInst> CreateRetVoid();
   /// \brief Create a 'ret <val>' instruction.
-  ReturnInstPtr CreateRet(ValPtr);
+  std::shared_ptr<ReturnInst> CreateRet(std::shared_ptr<Value>);
 
-  ReturnInstPtr CreateAggregateRet(std::vector<ValPtr> retVals, unsigned N);
+  std::shared_ptr<ReturnInst> CreateAggregateRet(std::vector<std::shared_ptr<Value>> retVals, unsigned N);
 
   /// \brief Create an unconditional 'br label X' instruction.
-  BrInstPtr Create(BBPtr Dest);
+  std::shared_ptr<BranchInst> Create(std::shared_ptr<BasicBlock> Dest);
 
   /// \brief Create a conditional 'br Cond, TrueDest, FalseDest' instruction.
   /// MDNode *BranchWeights
   /// MDNode *Unpredictable
-  BrInstPtr CreateCondBr(ValPtr Cond, BBPtr True, BBPtr False);
+  std::shared_ptr<BranchInst> CreateCondBr(std::shared_ptr<Value> Cond, std::shared_ptr<BasicBlock> True, std::shared_ptr<BasicBlock> False);
 
   /// \brief Create an unconditional 'br label X' instruction.
-  BrInstPtr CreateBr(BBPtr Dest);
+  std::shared_ptr<BranchInst> CreateBr(std::shared_ptr<BasicBlock> Dest);
 
   //===------------------------------------------------------------------===//
   // Instruction creation methods: Binary Operators
   //===------------------------------------------------------------------===//
 
-  BOInstPtr CreateInsertBinOp(BinaryOperator::Opcode Opc, ValPtr LHS,
-                              ValPtr RHS, std::string Name);
-  ValPtr CreateAdd(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateSub(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateMul(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateDiv(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateRem(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateShl(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateShr(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateAnd(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateOr(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateNeg(ValPtr V, std::string Name = "");
-  ValPtr CreateNot(ValPtr V, std::string Name = "");
+  std::shared_ptr<BinaryOperator> CreateInsertBinOp(BinaryOperator::Opcode Opc, std::shared_ptr<Value> LHS,
+                              std::shared_ptr<Value> RHS, std::string Name);
+  std::shared_ptr<Value> CreateAdd(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateSub(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateMul(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateDiv(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateRem(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateShl(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateShr(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateAnd(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateOr(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateNeg(std::shared_ptr<Value> V, std::string Name = "");
+  std::shared_ptr<Value> CreateNot(std::shared_ptr<Value> V, std::string Name = "");
 
   //===------------------------------------------------------------------===//
   // Instruction creation methods: Memory Instructions.
   //===------------------------------------------------------------------===//
-  AllocaInstPtr CreateAlloca(TyPtr Ty, std::string Name = "");
-  LoadInstPtr CreateLoad(ValPtr Ptr);
-  StoreInstPtr CreateStore(ValPtr Val, ValPtr Ptr);
-  GEPInstPtr CreateGEP(TyPtr Ty, ValPtr Ptr, std::vector<unsigned> IdxList,
+  std::shared_ptr<AllocaInst> CreateAlloca(TyPtr Ty, std::string Name = "");
+  std::shared_ptr<LoadInst> CreateLoad(std::shared_ptr<Value> Ptr);
+  std::shared_ptr<StoreInst> CreateStore(std::shared_ptr<Value> Val, std::shared_ptr<Value> Ptr);
+  std::shared_ptr<GetElementPtrInst> CreateGEP(TyPtr Ty, std::shared_ptr<Value> Ptr, std::vector<unsigned> IdxList,
                        std::string Name = "");
-  GEPInstPtr CreateGEP(TyPtr Ty, ValPtr Ptr, unsigned Idx,
+  std::shared_ptr<GetElementPtrInst> CreateGEP(TyPtr Ty, std::shared_ptr<Value> Ptr, unsigned Idx,
                        std::string Name = "");
 
   //===---------------------------------------------------------------===//
   // Instruction creation methods: Compare Instructions.
   //===---------------------------------------------------------------===//
-  ValPtr CreateCmpEQ(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateCmpNE(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateCmpGT(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateCmpGE(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateCmpLT(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateCmpLE(ValPtr LHS, ValPtr RHS, std::string Name = "");
-  ValPtr CreateCmp(CmpInst::Predicate P, ValPtr LHS, ValPtr RHS,
+  std::shared_ptr<Value> CreateCmpEQ(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateCmpNE(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateCmpGT(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateCmpGE(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateCmpLT(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateCmpLE(std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::string Name = "");
+  std::shared_ptr<Value> CreateCmp(CmpInst::Predicate P, std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS,
                    std::string Name = "");
 
   //===---------------------------------------------------------------===//
   // Instruction creation methods: Other Instructions.
   //===---------------------------------------------------------------===//
-  PHINodePtr CreatePHI(TyPtr Ty, unsigned NumReservedValues,
+  std::shared_ptr<PHINode> CreatePHI(TyPtr Ty, unsigned NumReservedValues,
                        std::string Name = "");
-  CallInstPtr CreateCall(ValPtr Callee, std::vector<ValPtr> Args);
-  CallInstPtr CreateIntrinsic(IntrinsicPtr Intr, std::vector<ValPtr> Args);
-  EVInstPtr CreateExtractValueValue(ValPtr Agg, std::vector<unsigned> Idxs,
+  std::shared_ptr<CallInst> CreateCall(std::shared_ptr<Value> Callee, std::vector<std::shared_ptr<Value>> Args);
+  std::shared_ptr<CallInst> CreateIntrinsic(std::shared_ptr<Intrinsic> Intr, std::vector<std::shared_ptr<Value>> Args);
+  std::shared_ptr<ExtractValueInst> CreateExtractValueValue(std::shared_ptr<Value> Agg, std::vector<unsigned> Idxs,
                                     std::string Name = "");
 
   //===----------------------------------------------------------------------===//
   // Utility creattion methods
   //===----------------------------------------------------------------------===//
   /// \brief Return an i1 value testing if \p Arg is null
-  ValPtr CreateIsNull(ValPtr Arg, std::string Name = "");
+  std::shared_ptr<Value> CreateIsNull(std::shared_ptr<Value> Arg, std::string Name = "");
   /// \brief Return an i1 value testing if \p Arg is not null.
-  ValPtr CreateIsNotNull(ValPtr Arg, std::string Name = "");
+  std::shared_ptr<Value> CreateIsNotNull(std::shared_ptr<Value> Arg, std::string Name = "");
 
   //===----------------------------------------------------------------------===//
   // Other create*().
   //===----------------------------------------------------------------------===//
-  BBPtr CreateBasicBlock(std::string Name, FuncPtr parent = nullptr,
-                         BBPtr before = nullptr);
+  std::shared_ptr<BasicBlock> CreateBasicBlock(std::string Name, std::shared_ptr<Function> parent = nullptr,
+                         std::shared_ptr<BasicBlock> before = nullptr);
 
 private:
   //===---------------------------------------------------------===//
@@ -441,7 +441,7 @@ private:
   void EmitFunctionDecl(const FunctionDecl *FD);
 
   /// \brief Handle the start of function.
-  void StartFunction(std::shared_ptr<CGFunctionInfo const> FnInfo, FuncPtr Fn);
+  void StartFunction(std::shared_ptr<CGFunctionInfo const> FnInfo, std::shared_ptr<Function> Fn);
 
   /// \brief Complete IR generation of the current function. It is legal to call
   /// this function even if there is no current insertion point.
@@ -474,7 +474,7 @@ private:
   //         |     subl $N, %esp    |
   //          ======================
   void EmitFunctionPrologue(std::shared_ptr<CGFunctionInfo const> FunInfo,
-                            FuncPtr fun);
+                            std::shared_ptr<Function> fun);
 
   // EmitFunctionEpilogue - Reverse the actions of the function prologue and
   // returns control to the calling funciton. It typically does the following
@@ -512,7 +512,7 @@ private:
   /// FixMe: I don't know why we need to return a value. But Clang
   /// 'EmitCompoundStmt'
   ///	need a value to return.
-  ValPtr EmitCompoundStmt(const StatementAST *S);
+  std::shared_ptr<Value> EmitCompoundStmt(const StatementAST *S);
   void EmitIfStmt(const IfStatement *IS);
   void EmitConBrHints();
   void EmitWhileStmt(const WhileStatement *WS);
@@ -553,7 +553,7 @@ private:
   /// Rather than just writing
   ///	void f2() {f();}", so funny!
 
-  ValPtr EmitReturnStmt(const ReturnStatement *S);
+  std::shared_ptr<Value> EmitReturnStmt(const ReturnStatement *S);
   void EmitDeclStmt(const DeclStatement *S);
 
   //===---------------------------------------------------------===//
@@ -582,32 +582,32 @@ private:
 
   /// \brief EmitExprAsInit - Emit the code necessary to initialize a location
   /// in memory with the given initializer.
-  ValPtr EmitBinaryExpr(const BinaryExpr *BE);
+  std::shared_ptr<Value> EmitBinaryExpr(const BinaryExpr *BE);
 
   /// \brief EmitCallExpr - Emit the code for call expression.
   RValue EmitCallExpr(const CallExpr *CE);
 
   /// \brief EmitUnaryExpr - Emit code for unary expression, including '-' '!'
   /// '--' '++'.
-  ValPtr EmitUnaryExpr(const UnaryExpr *UE);
+  std::shared_ptr<Value> EmitUnaryExpr(const UnaryExpr *UE);
 
   /// \brief EmitPrePostIncDec - Emit code for '--' '++'.
-  ValPtr EmitPrePostIncDec(const UnaryExpr *UE, bool isInc, bool isPre);
+  std::shared_ptr<Value> EmitPrePostIncDec(const UnaryExpr *UE, bool isInc, bool isPre);
 
-  ValPtr EmitMemberExpr([[maybe_unused]] const MemberExpr *ME);
+  std::shared_ptr<Value> EmitMemberExpr([[maybe_unused]] const MemberExpr *ME);
 
   /// \brief Handle the algebraic and boolean operation, include '+' '-' '*' '/'
   /// '%'
   ///	'<' '>' '<=' '>=' '==' '!='.
-  ValPtr EmitAlgAndBooleanOp(const CGExpr::BinOpInfo &BE);
+  std::shared_ptr<Value> EmitAlgAndBooleanOp(const CGExpr::BinOpInfo &BE);
 
   /// \brief Handle the assign operation, include '='.
-  ValPtr EmitBinAssignOp(const BinaryExpr *BE);
+  std::shared_ptr<Value> EmitBinAssignOp(const BinaryExpr *BE);
 
   /// \brief Handle the compound assign operation, include '*=' '/=' '%=' '+='
   /// '-='
   ///	'&&=' '||='.
-  ValPtr EmitCompoundAssignOp(const BinaryExpr *BE);
+  std::shared_ptr<Value> EmitCompoundAssignOp(const BinaryExpr *BE);
 
   void EmitExprAsInit(const Expr *init, const VarDecl *D, LValue lvalue);
   void EmitScalarInit(const Expr *init, const VarDecl *D, LValue lvalue);
@@ -615,7 +615,7 @@ private:
   /// \brief EmitLoadOfLValue - Given an expression with complex type that
   /// represents a l-value, this method emits the address of the l-value, then
   /// loads and returns the result.
-  ValPtr EmitLoadOfLValue(const Expr *E);
+  std::shared_ptr<Value> EmitLoadOfLValue(const Expr *E);
 
   /// \brief EmitLoadOfLValue - Given an expression that represents a value
   /// lvalue, this method emits the address of the lvalue, then loads the result
@@ -623,11 +623,11 @@ private:
   RValue EmitLoadOfLValue(LValue LV);
 
   /// EmitStoreOfScalar - Store a scalar value to an address.
-  void EmitStoreOfScalar(ValPtr Value, ValPtr Addr);
+  void EmitStoreOfScalar(std::shared_ptr<Value> V, std::shared_ptr<Value> Addr);
 
   /// EmitScalarExpr - Emit the computation of the specified expression of
   /// scalar type, returning the result.
-  ValPtr EmitScalarExpr(const Expr *E);
+  std::shared_ptr<Value> EmitScalarExpr(const Expr *E);
 
   /// EmitStoreThroughLValue - Store the specified rvalue into the specified
   /// lvalue.
@@ -649,33 +649,33 @@ private:
   /// EmitAggExpr - Emit the computation of the specified expression of
   /// aggregate type. The result is computed into DestPtr. Note that if DestPtr
   /// is null, the value of the aggregate expression is not needed.
-  void EmitAggExpr(const Expr *E, ValPtr DestPtr);
+  void EmitAggExpr(const Expr *E, std::shared_ptr<Value> DestPtr);
 
   /// CreateCoercedStore - Create a store to \arg DstPtr from \arg Src,
   /// where the souece and destination may have different types.
-  void CreateCoercedStore(ValPtr Src, ValPtr DestPtr);
+  void CreateCoercedStore(std::shared_ptr<Value> Src, std::shared_ptr<Value> DestPtr);
 
-  void EmitDeclRefExprAgg(const DeclRefExpr *DRE, ValPtr DestPtr);
-  void EmitMemberExprAgg(const MemberExpr *ME, ValPtr DestPtr);
-  void EmitCallExprAgg(const CallExpr *CE, ValPtr DestPtr);
+  void EmitDeclRefExprAgg(const DeclRefExpr *DRE, std::shared_ptr<Value> DestPtr);
+  void EmitMemberExprAgg(const MemberExpr *ME, std::shared_ptr<Value> DestPtr);
+  void EmitCallExprAgg(const CallExpr *CE, std::shared_ptr<Value> DestPtr);
   void EmitBinaryExprAgg(const BinaryExpr *B);
 
   /// EmitAggregateCopy - Emit an aggregate copy.
-  void EmitAggregateCopy(ValPtr DestPtr, ValPtr SrcPtr, ASTTyPtr Ty);
+  void EmitAggregateCopy(std::shared_ptr<Value> DestPtr, std::shared_ptr<Value> SrcPtr, std::shared_ptr<ASTType> Ty);
 
   /// EmitAggregateClear
-  void EmitAggregateClear(ValPtr DestPtr, ASTTyPtr Ty);
+  void EmitAggregateClear(std::shared_ptr<Value> DestPtr, std::shared_ptr<ASTType> Ty);
 
   // EmitAggLoadOfLValue - Given an expression with aggregate type that
   // represents a value lvalue, thid method emits the address of the lvalue,
   // then loads the result into DestPtr.
-  ValPtr EmitAggLoadOfLValue(const Expr *E, ValPtr DestPtr);
+  std::shared_ptr<Value> EmitAggLoadOfLValue(const Expr *E, std::shared_ptr<Value> DestPtr);
 
   /// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
-  void EmitFinalDestCopy(const Expr *E, RValue Src, ValPtr DestPtr);
+  void EmitFinalDestCopy(const Expr *E, RValue Src, std::shared_ptr<Value> DestPtr);
 
   /// EmitFinalDestCopy - Perform the final copy to DestPtr, if desired.
-  void EmitFinalDestCopy(const Expr *E, LValue Src, ValPtr DestPtr);
+  void EmitFinalDestCopy(const Expr *E, LValue Src, std::shared_ptr<Value> DestPtr);
 
   /// SimplifyForwardingBlocks - If the given basic block is only a branch to
   /// another basic block, simplify it. This assumes that no other code could
@@ -702,14 +702,14 @@ private:
 	///    -----------/----  BB4     -\-----------  BB3
   ///   |                |        |             |
   ///    ----------------          -------------
-  void SimplifyForwardingBlocks(BBPtr BB);
+  void SimplifyForwardingBlocks(std::shared_ptr<BasicBlock> BB);
 
   /// EmitBlock - Emit the given block \arg BB and set it as the insert point,
   /// adding a fall-through branch from current insert block if necessary.
-  void EmitBlock(BBPtr BB, bool IsFinished = false);
+  void EmitBlock(std::shared_ptr<BasicBlock> BB, bool IsFinished = false);
 
   /// EvaluateExprAsBool = Perform the usual unary conversions on the specified
   /// expression and compare the result against zero, returning an Int1Ty value.
-  ValPtr EvaluateExprAsBool(ExprASTPtr E);
+  std::shared_ptr<Value> EvaluateExprAsBool(ExprASTPtr E);
 };
 } // namespace IRBuild

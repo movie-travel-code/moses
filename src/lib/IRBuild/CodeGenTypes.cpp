@@ -9,7 +9,7 @@
 using namespace IRBuild;
 
 std::shared_ptr<IR::Type>
-CodeGenTypes::ConvertType(std::shared_ptr<ast::Type> type) {
+CodeGenTypes::ConvertType(std::shared_ptr<ast::ASTType> type) {
   assert(type && "CovertType must be non-null!");
   std::shared_ptr<StructType> IRType = nullptr;
   // (1) Check type cache.

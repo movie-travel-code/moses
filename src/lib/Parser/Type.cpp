@@ -6,11 +6,9 @@
 #include "Parser/Type.h"
 using namespace ast;
 using namespace tok;
-typedef std::shared_ptr<Type> TyPtr;
-
 //===---------------------------------------------------------------------===//
 // Implements Type class.
-TypeKind Type::checkTypeKind(TokenValue kind) {
+TypeKind ASTType::checkTypeKind(TokenValue kind) {
   switch (kind) {
   case TokenValue::KEYWORD_int:
     return TypeKind::INT;
@@ -21,7 +19,7 @@ TypeKind Type::checkTypeKind(TokenValue kind) {
   }
 }
 
-std::string Type::getTypeName() const {
+std::string ASTType::getTypeName() const {
   switch (Kind) {
   case TypeKind::INT:
     return "int";
@@ -37,9 +35,11 @@ std::string Type::getTypeName() const {
 }
 
 // remove const attribute.
-TyPtr Type::const_remove() const { return std::make_shared<Type>(Kind); }
+std::shared_ptr<ASTType> ASTType::const_remove() const {
+  return std::make_shared<ASTType>(Kind);
+}
 
-bool Type::operator==(const Type &rhs) const {
+bool ASTType::operator==(const ASTType &rhs) const {
   if (Kind == rhs.getKind()) {
     return true;
   }
@@ -48,9 +48,9 @@ bool Type::operator==(const Type &rhs) const {
 
 //===---------------------------------------------------------------------===//
 // Implement class UserDefinedType.
-std::shared_ptr<Type>
+std::shared_ptr<ASTType>
 UserDefinedType::getMemberType(const std::string &name) const {
-  auto getType = [&]() -> TyPtr {
+  auto getType = [&]() -> std::shared_ptr<ASTType> {
     for (auto item : subTypes) {
       if (name == item.second) {
         return item.first;
@@ -89,7 +89,7 @@ unsigned long UserDefinedType::size() const {
   return size;
 }
 
-TyPtr UserDefinedType::StripOffShell() const {
+std::shared_ptr<ASTType> UserDefinedType::StripOffShell() const {
   if (size() > 32)
     return nullptr;
   if (auto UDTy = std::dynamic_pointer_cast<UserDefinedType>(subTypes[0].first))
@@ -98,7 +98,7 @@ TyPtr UserDefinedType::StripOffShell() const {
     return subTypes[0].first;
 }
 
-bool UserDefinedType::operator==(const Type &rhs) const {
+bool UserDefinedType::operator==(const ASTType &rhs) const {
   unsigned subTypeNum = subTypes.size();
   try {
     const UserDefinedType &rhsUserDef =
@@ -118,7 +118,8 @@ bool UserDefinedType::operator==(const Type &rhs) const {
 
 //===---------------------------------------------------------------------===//
 // Implement class AnonymousType.
-void AnonymousType::getTypes(std::vector<std::shared_ptr<Type>> &types) const {
+void AnonymousType::getTypes(
+    std::vector<std::shared_ptr<ASTType>> &types) const {
   unsigned size = subTypes.size();
   for (unsigned index = 0; index < size; index++) {
     if (std::shared_ptr<AnonymousType> type =
@@ -130,7 +131,7 @@ void AnonymousType::getTypes(std::vector<std::shared_ptr<Type>> &types) const {
   }
 }
 
-TyPtr AnonymousType::StripOffShell() const {
+std::shared_ptr<ASTType> AnonymousType::StripOffShell() const {
   if (size() > 32)
     return nullptr;
   if (auto UDTy = std::dynamic_pointer_cast<AnonymousType>(subTypes[0]))
@@ -141,7 +142,8 @@ TyPtr AnonymousType::StripOffShell() const {
 
 unsigned long AnonymousType::size() const {
   unsigned long size = 0;
-  std::for_each(subTypes.begin(), subTypes.end(),
-                [&size](const TyPtr &ty) { size += ty->size(); });
+  std::for_each(
+      subTypes.begin(), subTypes.end(),
+      [&size](const std::shared_ptr<ASTType> &ty) { size += ty->size(); });
   return size;
 }

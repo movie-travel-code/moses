@@ -5,13 +5,14 @@
 //
 //===-----------------------------------------------------------------------===//
 #pragma once
-#include "Type.h"
 #include "IR/Value.h"
 #include "Support/SourceLocation.h"
+#include "Type.h"
 #include <cassert>
 #include <memory>
 #include <string>
 #include <vector>
+
 
 namespace ast {
 using namespace lex;
@@ -119,8 +120,10 @@ public:
 
   SourceLocation getLocStart() const { return LocStart; }
   SourceLocation getLocEnd() const { return LocEnd; }
-  void setLocStart([[maybe_unused]] unsigned long line, [[maybe_unused]] unsigned long number) {}
-  void setLocEnd([[maybe_unused]] unsigned long line, [[maybe_unused]] unsigned long number) {}
+  void setLocStart([[maybe_unused]] unsigned long line,
+                   [[maybe_unused]] unsigned long number) {}
+  void setLocEnd([[maybe_unused]] unsigned long line,
+                 [[maybe_unused]] unsigned long number) {}
   // virtual
 };
 
@@ -138,7 +141,7 @@ public:
   };
 
 private:
-  std::shared_ptr<Type> ExprType;
+  std::shared_ptr<ASTType> ExprType;
   ExprValueKind VK;
   // a = num * 5;
   // var num = {10, num};
@@ -146,7 +149,7 @@ private:
 
 public:
   Expr() : ExprType(nullptr), CanBeEvaluated(false) {}
-  Expr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type,
+  Expr(SourceLocation start, SourceLocation end, std::shared_ptr<ASTType> type,
        ExprValueKind vk, bool canDoEvaluate)
       : StatementAST(start, end), ExprType(type), VK(vk),
         CanBeEvaluated(canDoEvaluate) {}
@@ -155,9 +158,9 @@ public:
       : StatementAST(expr.LocStart, expr.LocEnd), ExprType(expr.ExprType),
         CanBeEvaluated(expr.CanBeEvaluated) {}
 
-  std::shared_ptr<Type> getType() const { return ExprType; }
+  std::shared_ptr<ASTType> getType() const { return ExprType; }
 
-  void setType(std::shared_ptr<Type> type) { ExprType = type; }
+  void setType(std::shared_ptr<ASTType> type) { ExprType = type; }
 
   /// isLvalue - True if this expression is an "l-value" according to
   /// the rules of the current language. Like C/C++��moses give somewhat
@@ -188,7 +191,7 @@ public:
       : Expr(start, end, nullptr, ExprValueKind::VK_RValue, true), Val(Val) {}
   virtual ~NumberExpr() {}
 
-  void setIntType(std::shared_ptr<Type> type) { Expr::setType(type); }
+  void setIntType(std::shared_ptr<ASTType> type) { Expr::setType(type); }
 
   double getVal() const { return Val; }
 
@@ -202,7 +205,7 @@ public:
   CharExpr(SourceLocation start, SourceLocation end, std::string c)
       : Expr(start, end, nullptr, ExprValueKind::VK_RValue, true), C(c) {}
 
-  void setCharType(std::shared_ptr<Type> type) { Expr::setType(type); }
+  void setCharType(std::shared_ptr<ASTType> type) { Expr::setType(type); }
 
   virtual ~CharExpr() {}
 
@@ -214,7 +217,7 @@ class StringLiteral : public Expr {
 
 public:
   StringLiteral(SourceLocation start, SourceLocation end,
-                std::shared_ptr<Type> type, std::string str)
+                std::shared_ptr<ASTType> type, std::string str)
       : Expr(start, end, type, ExprValueKind::VK_RValue, true), str(str) {}
   virtual ~StringLiteral() {}
 
@@ -230,7 +233,7 @@ public:
              ExprValueKind::VK_RValue, true),
         value(value) {}
 
-  void setBoolType(std::shared_ptr<Type> type) { Expr::setType(type); }
+  void setBoolType(std::shared_ptr<ASTType> type) { Expr::setType(type); }
 
   bool getVal() const { return value; }
 
@@ -246,7 +249,7 @@ class DeclRefExpr final : public Expr {
 
 public:
   DeclRefExpr(SourceLocation start, SourceLocation end,
-              std::shared_ptr<Type> type, const std::string &name,
+              std::shared_ptr<ASTType> type, const std::string &name,
               VarDeclPtr var)
       : Expr(start, end, type, ExprValueKind::VK_LValue, true), Name(name),
         var(var) {}
@@ -267,7 +270,7 @@ class BinaryExpr final : public Expr {
 
 public:
   BinaryExpr(SourceLocation start, SourceLocation end,
-             std::shared_ptr<Type> type, std::string Op, ExprASTPtr LHS,
+             std::shared_ptr<ASTType> type, std::string Op, ExprASTPtr LHS,
              ExprASTPtr RHS)
       : Expr(start, end, type, ExprValueKind::VK_RValue, true), OpName(Op),
         LHS(LHS), RHS(RHS) {}
@@ -290,7 +293,7 @@ class UnaryExpr final : public Expr {
 
 public:
   UnaryExpr(SourceLocation start, SourceLocation end,
-            std::shared_ptr<Type> type, std::string Op, ExprASTPtr subExpr,
+            std::shared_ptr<ASTType> type, std::string Op, ExprASTPtr subExpr,
             ExprValueKind vk)
       : Expr(start, end, type, vk, true), OpName(Op), SubExpr(subExpr) {}
 
@@ -313,9 +316,10 @@ class CallExpr final : public Expr {
   std::vector<std::shared_ptr<Expr>> Args;
 
 public:
-  CallExpr(SourceLocation start, SourceLocation end, std::shared_ptr<Type> type,
-           const std::string &Callee, std::vector<std::shared_ptr<Expr>> Args,
-           ExprValueKind vk, FunctionDeclPtr FD, bool canDoEvaluate)
+  CallExpr(SourceLocation start, SourceLocation end,
+           std::shared_ptr<ASTType> type, const std::string &Callee,
+           std::vector<std::shared_ptr<Expr>> Args, ExprValueKind vk,
+           FunctionDeclPtr FD, bool canDoEvaluate)
       : Expr(start, end, type, vk, canDoEvaluate), CalleeName(Callee),
         FuncDecl(FD), Args(Args) {}
 
@@ -347,7 +351,7 @@ class MemberExpr final : public Expr {
 
 public:
   MemberExpr(SourceLocation start, SourceLocation end,
-             std::shared_ptr<Type> type, std::shared_ptr<Expr> base,
+             std::shared_ptr<ASTType> type, std::shared_ptr<Expr> base,
              SourceLocation operatorloc, const std::string &name,
              bool canDoEvaluate, std::size_t idx)
       : Expr(start, end, type, ExprValueKind::VK_LValue, canDoEvaluate),
@@ -368,7 +372,7 @@ class AnonymousInitExpr final : public Expr {
 public:
   AnonymousInitExpr(SourceLocation start, SourceLocation end,
                     std::vector<ExprASTPtr> initExprs,
-                    std::shared_ptr<Type> type)
+                    std::shared_ptr<ASTType> type)
       : Expr(start, end, type, Expr::ExprValueKind::VK_RValue, true),
         InitExprs(initExprs) {}
 
@@ -526,16 +530,16 @@ public:
 /// -----------------------------------------------
 class DeclStatement : public StatementAST {
 protected:
-  std::shared_ptr<Type> declType;
+  std::shared_ptr<ASTType> declType;
 
 public:
   DeclStatement(SourceLocation start, SourceLocation end,
-                std::shared_ptr<Type> type)
+                std::shared_ptr<ASTType> type)
       : StatementAST(start, end), declType(type) {}
 
   virtual ~DeclStatement() {}
 
-  std::shared_ptr<Type> getDeclType() const { return declType; }
+  std::shared_ptr<ASTType> getDeclType() const { return declType; }
 
   virtual IRValue Accept(Visitor<IRValue> *v) const { return v->visit(this); }
 };
@@ -557,12 +561,12 @@ class VarDecl : public DeclStatement {
 
 public:
   VarDecl(SourceLocation start, SourceLocation end, const std::string &name,
-          std::shared_ptr<Type> type, bool isConst, ExprASTPtr init)
+          std::shared_ptr<ASTType> type, bool isConst, ExprASTPtr init)
       : DeclStatement(start, end, type), IsConst(isConst), name(name),
         InitExpr(init) {}
   const std::string &getName() const { return name; }
 
-  std::shared_ptr<Type> getDeclType() const { return declType; }
+  std::shared_ptr<ASTType> getDeclType() const { return declType; }
 
   void setInitExpr(ExprASTPtr B) { InitExpr = B; }
 
@@ -580,7 +584,7 @@ public:
 class ParameterDecl final : public VarDecl {
 public:
   ParameterDecl(SourceLocation start, SourceLocation end, std::string name,
-                bool isConst, std::shared_ptr<Type> type)
+                bool isConst, std::shared_ptr<ASTType> type)
       : VarDecl(start, end, name, type, isConst, nullptr) {}
 
   const std::string &getParmName() const { return VarDecl::getName(); }
@@ -601,7 +605,7 @@ public:
   bool TypeCheckingAndTypeSetting(AnonTyPtr type);
 
   // To Do: Shit code!
-  void setCorrespondingType(std::shared_ptr<Type> type);
+  void setCorrespondingType(std::shared_ptr<ASTType> type);
 
   std::size_t getDeclNumber() const { return decls.size(); };
 
@@ -621,14 +625,14 @@ class FunctionDecl : public DeclStatement {
   std::vector<ParmDeclPtr> parameters;
   std::size_t paraNum;
   StmtASTPtr funcBody;
-  std::shared_ptr<Type> returnType;
+  std::shared_ptr<ASTType> returnType;
   // For now, we just have builtin function `print()`.
   bool IsBuiltin;
 
 public:
   FunctionDecl(SourceLocation start, SourceLocation end,
                const std::string &name, std::vector<ParmDeclPtr> Args,
-               StmtASTPtr body, std::shared_ptr<Type> returnType,
+               StmtASTPtr body, std::shared_ptr<ASTType> returnType,
                bool IsBuiltin = false)
       : DeclStatement(start, end, nullptr), FDName(name), parameters(Args),
         paraNum(parameters.size()), funcBody(body), returnType(returnType),
@@ -640,7 +644,7 @@ public:
   const std::string &getParmName(std::size_t index) const {
     return parameters[index].get()->getParmName();
   }
-  std::shared_ptr<Type> getReturnType() const { return returnType; }
+  std::shared_ptr<ASTType> getReturnType() const { return returnType; }
   const std::string &getFDName() const { return FDName; }
   ParmDeclPtr getParmDecl(unsigned index) const { return (*this)[index]; }
   ParmDeclPtr operator[](unsigned index) const {

@@ -57,7 +57,7 @@ public:
   };
 
 private:
-  ASTTyPtr Ty;
+  std::shared_ptr<ASTType> Ty;
   Kind TheKind;
   // Easy to pass the parameter name to IR::Function.
   // Note:	(1) Direct-Builtin name    ----> name
@@ -74,13 +74,13 @@ private:
   bool CanBeFlattened;
 
 public:
-  ArgABIInfo(ASTTyPtr type, Kind kind, std::string name = "",
+  ArgABIInfo(std::shared_ptr<ASTType> type, Kind kind, std::string name = "",
              std::shared_ptr<IR::Type> tydata = nullptr, bool flatten = false)
       : Ty(type), TheKind(kind), Name(name), TypeData(tydata),
         CanBeFlattened(flatten) {}
 
-  static std::shared_ptr<ArgABIInfo> Create(ASTTyPtr type, Kind kind);
-  ASTTyPtr getType() const { return Ty; }
+  static std::shared_ptr<ArgABIInfo> Create(std::shared_ptr<ASTType> type, Kind kind);
+  std::shared_ptr<ASTType> getType() const { return Ty; }
   Kind getKind() const { return TheKind; }
   bool canBeFlattened() const { return CanBeFlattened; }
   IRTyPtr getCoerceeToType() const { return TypeData; }
@@ -98,8 +98,8 @@ private:
 
 public:
   CGFunctionInfo(MosesIRContext &Ctx,
-                 std::vector<std::pair<ASTTyPtr, std::string>> ArgsTy,
-                 ASTTyPtr RetTy);
+                 std::vector<std::pair<std::shared_ptr<ASTType>, std::string>> ArgsTy,
+                 std::shared_ptr<ASTType> RetTy);
 
   static std::shared_ptr<CGFunctionInfo const> create(MosesIRContext &Ctx,
                                                       const FunctionDecl *FD);
@@ -108,7 +108,7 @@ public:
 
   unsigned getArgNums() const { return ArgInfos.size(); }
   const std::vector<AAIPtr> &getArgsInfo() const { return ArgInfos; }
-  const ASTTyPtr getParm(unsigned index) const;
+  const std::shared_ptr<ASTType> getParm(unsigned index) const;
   ArgABIInfo::Kind getKind(unsigned index) const;
   const AAIPtr getArgABIInfo(unsigned index) const;
   AAIPtr getReturnInfo() const { return ReturnInfo; }
@@ -118,8 +118,8 @@ public:
   std::vector<std::string> getArgNames() const;
 
   // Generate ArgABIInfo for return type.
-  static AAIPtr classifyReturnTye(MosesIRContext &Ctx, ASTTyPtr RetTy);
-  static AAIPtr classifyArgumentType(MosesIRContext &Ctx, ASTTyPtr ArgTy,
+  static AAIPtr classifyReturnTye(MosesIRContext &Ctx, std::shared_ptr<ASTType> RetTy);
+  static AAIPtr classifyArgumentType(MosesIRContext &Ctx, std::shared_ptr<ASTType> ArgTy,
                                      const std::string &Name);
 };
 } // namespace IRBuild

@@ -11,6 +11,7 @@
 #include <sstream>
 #include <vector>
 
+using namespace ast;
 namespace IR {
 class Type;
 class StructType;
@@ -18,8 +19,6 @@ class FunctionType;
 class PointerType;
 class MosesIRContext;
 
-using ASTType = ast::Type;
-using ASTTyPtr = std::shared_ptr<ASTType>;
 using ASTBuiltinTy = ast::BuiltinType;
 using ASTUDTy = ast::UserDefinedType;
 using ASTUDTyPtr = std::shared_ptr<ASTUDTy>;
@@ -123,7 +122,7 @@ public:
 
 private:
   std::vector<IRTyPtr> ConvertParmTypeToIRType(MosesIRContext &Ctx,
-                                               std::vector<ASTTyPtr> ParmTypes);
+                                               std::vector<std::shared_ptr<ASTType>> ParmTypes);
 };
 
 /// Class to represent struct types.
@@ -149,12 +148,12 @@ public:
   /*static IRStructTyPtr Create(std::string Name);
                   static IRStructTyPtr Create(MosesIRContext &Ctx,
      std::vector<IRTyPtr> Elements, std::string Name);*/
-  static IRStructTyPtr Create(MosesIRContext &Ctx, ASTTyPtr type);
+  static IRStructTyPtr Create(MosesIRContext &Ctx, std::shared_ptr<ASTType> type);
 
   /// Create literal struct type.
   static IRStructTyPtr get(std::vector<IRTyPtr> Elements);
   /// Create literal struct type.
-  static IRStructTyPtr get(MosesIRContext &Ctx, ASTTyPtr type);
+  static IRStructTyPtr get(MosesIRContext &Ctx, std::shared_ptr<ASTType> type);
 
   virtual unsigned getSize() const override;
 

@@ -40,7 +40,7 @@ public:
     return Operands[i];
   }
 
-  void setOeprand(unsigned i, ValPtr Val) {
+  void setOeprand(unsigned i, std::shared_ptr<Value> Val) {
     assert(i < Operands.size() && "User out of range!");
     Operands[i] = Val;
   }
@@ -57,6 +57,7 @@ public:
 
   /// replaceUsesofWith - Replaces all references to the "From" definition with
   /// references to the "To" definition.
-  void replaceUsesOfWith(ValPtr From, ValPtr To);
+  void replaceUsesOfWith(std::shared_ptr<Value> From,
+                         std::shared_ptr<Value> To);
 };
 } // namespace IR

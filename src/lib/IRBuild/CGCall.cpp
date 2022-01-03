@@ -16,7 +16,7 @@ namespace {
 ///                ||
 ///                \/
 ///			[sret ,type1, coerce-to-type2, ..., {flatten.1,
-///flatten.2}] 	ASTToIRMapping is the key to generate function.
+/// flatten.2}] 	ASTToIRMapping is the key to generate function.
 class ASTToIRMapping {
   unsigned TotalIRArgs;
   bool HasSRet;
@@ -100,7 +100,7 @@ void ASTToIRMapping::construct(const CGFunctionInfo &FI) {
 ///							~~~~~~~~
 /// Therefore, we should refer to 'inalloca' attribute in future.
 void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
-                                         FuncPtr fun) {
+                                         std::shared_ptr<Function> fun) {
   // Create a pointer value for every parameter declaration. This usually
   // entails copying one or more IR arguments into an alloca.
   // e.g.		define i32 @func(i32 %lhs, i32 %rhs)
@@ -130,21 +130,21 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
         IRFunctionArgs.getIRArgs(isSRet ? i + 1 : i);
     switch (ArgInfo->getKind()) {
     case ArgABIInfo::Kind::InDirect: {
-      ValPtr V = fun->getArg(FirstIRArg);
+      std::shared_ptr<Value> V = fun->getArg(FirstIRArg);
       EmitParmDecl(Arg, V);
       break;
     }
     case ArgABIInfo::Kind::Direct: {
-      ValPtr V = fun->getArg(FirstIRArg);
+      std::shared_ptr<Value> V = fun->getArg(FirstIRArg);
       auto ArgType = Types.ConvertType(ArgInfo->getType());
       if (ArgType->isAggregateType()) {
         // If this structure was wxpanded into multiple arguments then we
         // need to create a temporary and reconstruct it from the arguments.
         std::string Name = Arg->getName();
-        ValPtr Temp =
+        std::shared_ptr<Value> Temp =
             CreateAlloca(ArgType, LocalInstNamePrefix + Name + ".addr");
 
-        std::vector<ValPtr> SubArgs;
+        std::vector<std::shared_ptr<Value>> SubArgs;
         for (unsigned index = FirstIRArg; index < FirstIRArg + NumIRArgs;
              index++) {
           SubArgs.push_back(fun->getArg(index));
@@ -167,7 +167,7 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
 
 /// EmitFunctionEpilog - Emit the code to return the given temporary.
 void ModuleBuilder::EmitFunctionEpilogue(CGFuncInfoConstPtr CGFnInfo) {
-  ValPtr RV = nullptr;
+  std::shared_ptr<Value> RV = nullptr;
   auto RetInfo = CGFnInfo->getReturnInfo();
 
   switch (RetInfo->getKind()) {
@@ -193,8 +193,9 @@ void ModuleBuilder::EmitFunctionEpilogue(CGFuncInfoConstPtr CGFnInfo) {
 
 /// ExpandTypeFromArgs - Reconstruct a structure of type \arg Ty
 /// from function arguments into \arg Dst.
-void ModuleBuilder::ExpandTypeFromArgs(ASTTyPtr ASTTy, LValue LV,
-                                       std::vector<ValPtr> &SubArgs) {
+void ModuleBuilder::ExpandTypeFromArgs(
+    std::shared_ptr<ASTType> ASTTy, LValue LV,
+    std::vector<std::shared_ptr<Value>> &SubArgs) {
   assert(ASTTy->getKind() == TypeKind::ANONYMOUS ||
          ASTTy->getKind() == TypeKind::USERDEFIED &&
              "Can only expand class types.");
@@ -208,8 +209,9 @@ void ModuleBuilder::ExpandTypeFromArgs(ASTTyPtr ASTTy, LValue LV,
 
 /// ExpandTypeToArgs - Expand an RValue \arg Src, with the IR type for
 /// \arg Ty, into individual arguments on the provided vector \arg Args.
-void ModuleBuilder::ExpandTypeToArgs(ASTTyPtr ASTTy, RValue Src,
-                                     std::vector<ValPtr> &Args) {
+void ModuleBuilder::ExpandTypeToArgs(
+    std::shared_ptr<ASTType> ASTTy, RValue Src,
+    std::vector<std::shared_ptr<Value>> &Args) {
   assert(ASTTy->getKind() == TypeKind::ANONYMOUS ||
          ASTTy->getKind() == TypeKind::USERDEFIED &&
              "Can only expand class types.");
@@ -228,10 +230,11 @@ void ModuleBuilder::ExpandTypeToArgs(ASTTyPtr ASTTy, RValue Src,
 /// CreateCoercedStore - Create a store to \arg DstPtr from \arg Src,
 /// where the souece and destination may have different types.
 /// e.g.	class A {var mem:int;};		--coerce to--> int
-///			func ret() -> A { }			--coerce to--> func ret() ->
-///int {}
+///			func ret() -> A { }			--coerce to--> func ret()
+///-> int {}
 /// int-value ----> class-A-value
-void ModuleBuilder::CreateCoercedStore(ValPtr Src, ValPtr DestPtr) {
+void ModuleBuilder::CreateCoercedStore(std::shared_ptr<Value> Src,
+                                       std::shared_ptr<Value> DestPtr) {
   // Handle specially and foolish
   // (1) Create GEP instruction for DestPtr
   //     DestPtr , 0, 0
@@ -241,7 +244,8 @@ void ModuleBuilder::CreateCoercedStore(ValPtr Src, ValPtr DestPtr) {
 }
 
 /// \brief EmitCall - Emit code for CallExpr.
-RValue ModuleBuilder::EmitCall(const FunctionDecl *FD, ValPtr FuncAddr,
+RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
+                               std::shared_ptr<Value> FuncAddr,
                                const std::vector<ExprASTPtr> &ArgExprs) {
   CallArgList Args;
   // (1) EmitCallArgs().
@@ -253,14 +257,16 @@ RValue ModuleBuilder::EmitCall(const FunctionDecl *FD, ValPtr FuncAddr,
 }
 
 /// \brief EmitCall - Generate a call of the given funciton.
-/// e.g.	func add(n : Node) -> int {}    ----flattend---->   define @add(int n.1, int n.2) {}
-/// 
+/// e.g.	func add(n : Node) -> int {}    ----flattend---->   define @add(int
+/// n.1, int n.2) {}
+///
 ///	When we come across 'add(n)', we should emit 'n' first and emit
-///callexpr.
+/// callexpr.
 RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
-                               CGFuncInfoConstPtr CGFunInfo, ValPtr FuncAddr,
+                               CGFuncInfoConstPtr CGFunInfo,
+                               std::shared_ptr<Value> FuncAddr,
                                CallArgList CallArgs) {
-  std::vector<ValPtr> Args;
+  std::vector<std::shared_ptr<Value>> Args;
   // Handle struct-return functions by passing a pointer to the location that we
   // would like to return into.
   auto RetInfo = CGFunInfo->getReturnInfo();
@@ -317,7 +323,8 @@ RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
     // (1) AggregateType coerce
     // (2) BuiltinType
     if (Types.ConvertType(RetInfo->getType())->isAggregateType()) {
-      ValPtr V = CreateAlloca(Types.ConvertType(RetInfo->getType()), "%coerce");
+      std::shared_ptr<Value> V =
+          CreateAlloca(Types.ConvertType(RetInfo->getType()), "%coerce");
       CreateCoercedStore(CallRest, V);
       return RValue::getAggregate(V);
     } else {
@@ -332,7 +339,7 @@ RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
 // EmitCallArgs - Emit call arguments for a function.
 void ModuleBuilder::EmitCallArgs(CallArgList &CallArgs,
                                  const std::vector<ExprASTPtr> &ArgExprs) {
-  ValPtr V = nullptr;
+  std::shared_ptr<Value> V = nullptr;
   for (auto item : ArgExprs) {
     auto ty = Types.ConvertType(item->getType());
     if (ty->isAggregateType()) {
@@ -348,15 +355,17 @@ void ModuleBuilder::EmitCallArgs(CallArgList &CallArgs,
 
 //===--------------------------------------------------------------------------===//
 // Implements the ArgABIInfo
-std::shared_ptr<ArgABIInfo> ArgABIInfo::Create(ASTTyPtr type, Kind kind) {
+std::shared_ptr<ArgABIInfo> ArgABIInfo::Create(std::shared_ptr<ASTType> type,
+                                               Kind kind) {
   return std::make_shared<ArgABIInfo>(type, kind);
 }
 
 //===--------------------------------------------------------------------------===//
 // Implements the CGFunctionInfo below.
 CGFunctionInfo::CGFunctionInfo(
-    MosesIRContext &Ctx, std::vector<std::pair<ASTTyPtr, std::string>> ArgsTy,
-    ASTTyPtr RetTy) {
+    MosesIRContext &Ctx,
+    std::vector<std::pair<std::shared_ptr<ASTType>, std::string>> ArgsTy,
+    std::shared_ptr<ASTType> RetTy) {
   // Generate the ArgABIInfo.
   // (1) Create the ArgABIInfo for Return Type.
   ReturnInfo = classifyReturnTye(Ctx, RetTy);
@@ -372,7 +381,8 @@ CGFunctionInfo::CGFunctionInfo(
 ///       void                          ----> Ignore
 ///       struct{int/bool}              ----> Direct(coerce to int)
 ///       struct{int/bool, int/bool}    ----> InDirect(sret hidden pointer)
-AAIPtr CGFunctionInfo::classifyReturnTye(MosesIRContext &Ctx, ASTTyPtr RetTy) {
+AAIPtr CGFunctionInfo::classifyReturnTye(MosesIRContext &Ctx,
+                                         std::shared_ptr<ASTType> RetTy) {
   if (RetTy->getKind() == TypeKind::VOID)
     return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Ignore);
 
@@ -404,12 +414,12 @@ AAIPtr CGFunctionInfo::classifyReturnTye(MosesIRContext &Ctx, ASTTyPtr RetTy) {
 /// \brief classifyArgumentType - compute the ArgABIInfo for ArgumentType.
 /// Rule:	int/bool						---->
 /// Direct
-///			void							---->
-///Ignore 			struct{int/bool}				----> Direct(coerce to
-///int-i32) 			struct{int/bool, int/bool}		----> Direct(flatten int, int)
-///			struct{int/bool, int/bool,,,}	----> Indirect(hidden
-///pointer)
-AAIPtr CGFunctionInfo::classifyArgumentType(MosesIRContext &Ctx, ASTTyPtr ArgTy,
+///			void ----> Ignore 			struct{int/bool}
+/// ----> Direct(coerce to
+/// int-i32) 			struct{int/bool, int/bool}		----> Direct(flatten
+/// int, int) 			struct{int/bool, int/bool,,,}	----> Indirect(hidden pointer)
+AAIPtr CGFunctionInfo::classifyArgumentType(MosesIRContext &Ctx,
+                                            std::shared_ptr<ASTType> ArgTy,
                                             const std::string &Name) {
   if (ArgTy->getKind() == TypeKind::VOID)
     return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Ignore, Name);
@@ -442,14 +452,14 @@ AAIPtr CGFunctionInfo::classifyArgumentType(MosesIRContext &Ctx, ASTTyPtr ArgTy,
 
 CGFuncInfoConstPtr CGFunctionInfo::create(MosesIRContext &Ctx,
                                           const FunctionDecl *FD) {
-  std::vector<std::pair<ASTTyPtr, std::string>> ArgsTy;
+  std::vector<std::pair<std::shared_ptr<ASTType>, std::string>> ArgsTy;
   for (auto item : FD->getParms()) {
     ArgsTy.push_back({item->getDeclType(), item->getName()});
   }
   return std::make_shared<CGFunctionInfo>(Ctx, ArgsTy, FD->getReturnType());
 }
 
-const ASTTyPtr CGFunctionInfo::getParm(unsigned index) const {
+const std::shared_ptr<ASTType> CGFunctionInfo::getParm(unsigned index) const {
   assert(index <= getArgNums() - 1 &&
          "Index out of range when we get FunctionInfo.");
   return ArgInfos[index]->getType();
@@ -480,7 +490,8 @@ std::vector<std::string> CGFunctionInfo::getArgNames() const {
 
 /// \brief getFunctionType - Create FunctionType for CGFunctionInfo.
 /// e.g.	class Node { var x:int; var y:int; };
-///			func foo(parm:Node, length:int, Agg:{int, {bool, int}, int}) -> Node
+///			func foo(parm:Node, length:int, Agg:{int, {bool, int}, int})
+///-> Node
 ///			{
 ///				var n:Node;
 ///				n.x = 10;
@@ -492,7 +503,8 @@ std::vector<std::string> CGFunctionInfo::getArgNames() const {
 ///
 ///			%struct.Node = type {int, int}
 ///			%anony.1 = type {int, {bool, int}, int}
-///			define void @foo(%struct.Node* sret retvalue, int %struct.Node.x, int %struct.Node.y, %anony.1* byval parm)
+///			define void @foo(%struct.Node* sret retvalue, int
+///%struct.Node.x, int %struct.Node.y, %anony.1* byval parm)
 ///			{
 ///				%1 = alloca int
 ///				%2 = alloca int

@@ -44,11 +44,11 @@ class CodeGenTypes {
   ;
 
   // Contains the moses-IR type for any converted RecordDecl.
-  std::map<const ast::Type *, std::shared_ptr<StructType>> RecordDeclTypes;
+  std::map<const ast::ASTType *, std::shared_ptr<StructType>> RecordDeclTypes;
 
   // Hold CGFunctionInfo results.
   std::map<const FunctionDecl *, CGFuncInfoConstPtr> FunctionInfos;
-  std::map<const FunctionDecl *, FuncTypePtr> FunctionTypes;
+  std::map<const FunctionDecl *, std::shared_ptr<FunctionType>> FunctionTypes;
   unsigned AnonyTypesCounter;
   std::string TypeNamePrefix;
 
@@ -56,7 +56,7 @@ public:
   CodeGenTypes(MosesIRContext &IRCtx)
       : IRCtx(IRCtx), AnonyTypesCounter(0), TypeNamePrefix("@") {}
   /// ConvertType - Convert type T into a moses-IR type.
-  IRTyPtr ConvertType(ASTTyPtr type);
+  IRTyPtr ConvertType(std::shared_ptr<ASTType> type);
   GetFuncTypeRet getFunctionType(const FunctionDecl *FD,
                                  std::shared_ptr<CGFunctionInfo const> Info);
   std::shared_ptr<const CGFunctionInfo>

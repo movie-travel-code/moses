@@ -147,7 +147,7 @@ void ModuleBuilder::StartFunction(CGFunctionInfo FnInfo,
   TempCounter = 0;
 
   CurFunc->ReturnBlock = CreateBasicBlock("return", CurFunc->CurFn);
-  auto RetTy = FnInfo.getReturnInfo()->getType();
+  auto RetTy = FnInfo.getReturnInfo().getType();
   if (RetTy->getKind() == TypeKind::VOID) {
     // Void type; nothing to return
     CurFunc->ReturnValue = nullptr;

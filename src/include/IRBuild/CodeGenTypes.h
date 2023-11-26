@@ -4,15 +4,16 @@
 //
 //===---------------------------------------------------------------===//
 #pragma once
+#include "CGCall.h"
 #include "IR/IRType.h"
 #include "IR/MosesIRContext.h"
 #include "Parser/Type.h"
 #include "Parser/ast.h"
-#include "CGCall.h"
 #include <cassert>
 #include <map>
 #include <set>
 #include <utility>
+
 
 namespace IRBuild {
 using namespace IR;
@@ -56,8 +57,7 @@ public:
       : IRCtx(IRCtx), AnonyTypesCounter(0), TypeNamePrefix("@") {}
   /// ConvertType - Convert type T into a moses-IR type.
   IRTyPtr ConvertType(std::shared_ptr<ASTType> type);
-  GetFuncTypeRet getFunctionType(const FunctionDecl *FD,
-                                 CGFunctionInfo Info);
+  GetFuncTypeRet getFunctionType(const FunctionDecl *FD, CGFunctionInfo Info);
   CGFunctionInfo arrangeFunctionInfo(const FunctionDecl *FD);
   std::string getAnonyName();
 };

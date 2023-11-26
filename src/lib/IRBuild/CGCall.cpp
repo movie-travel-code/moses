@@ -99,7 +99,7 @@ void ASTToIRMapping::construct(const CGFunctionInfo &FI) {
 /// 		define i32 func(%struct.1 lhs) {}
 ///							~~~~~~~~
 /// Therefore, we should refer to 'inalloca' attribute in future.
-void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
+void ModuleBuilder::EmitFunctionPrologue(CGFunctionInfo FunInfo,
                                          std::shared_ptr<Function> fun) {
   // Create a pointer value for every parameter declaration. This usually
   // entails copying one or more IR arguments into an alloca.
@@ -116,14 +116,14 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
   //			}
   auto FuncType = fun->getFunctionType();
   bool isSRet = false;
-  if (FunInfo->getReturnInfo()->getKind() == ArgABIInfo::Kind::InDirect) {
+  if (FunInfo.getReturnInfo()->getKind() == ArgABIInfo::Kind::InDirect) {
     fun->getArg(0)->setName(getCurLocalName("agg.result"));
     isSRet = true;
   }
 
-  ASTToIRMapping IRFunctionArgs(*FunInfo);
-  for (unsigned i = 0; i < FunInfo->getArgNums(); i++) {
-    auto ArgInfo = FunInfo->getArgABIInfo(i);
+  ASTToIRMapping IRFunctionArgs(FunInfo);
+  for (unsigned i = 0; i < FunInfo.getArgNums(); i++) {
+    auto ArgInfo = FunInfo.getArgABIInfo(i);
     auto Arg = CurFunc->CurFuncDecl->getParmDecl(i).get();
     unsigned FirstIRArg, NumIRArgs;
     std::tie(FirstIRArg, NumIRArgs) =
@@ -166,9 +166,9 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
 }
 
 /// EmitFunctionEpilog - Emit the code to return the given temporary.
-void ModuleBuilder::EmitFunctionEpilogue(CGFuncInfoConstPtr CGFnInfo) {
+void ModuleBuilder::EmitFunctionEpilogue(CGFunctionInfo CGFnInfo) {
   std::shared_ptr<Value> RV = nullptr;
-  auto RetInfo = CGFnInfo->getReturnInfo();
+  auto RetInfo = CGFnInfo.getReturnInfo();
 
   switch (RetInfo->getKind()) {
   case ArgABIInfo::Kind::Direct:
@@ -263,13 +263,13 @@ RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
 ///	When we come across 'add(n)', we should emit 'n' first and emit
 /// callexpr.
 RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
-                               CGFuncInfoConstPtr CGFunInfo,
+                               CGFunctionInfo CGFunInfo,
                                std::shared_ptr<Value> FuncAddr,
                                CallArgList CallArgs) {
   std::vector<std::shared_ptr<Value>> Args;
   // Handle struct-return functions by passing a pointer to the location that we
   // would like to return into.
-  auto RetInfo = CGFunInfo->getReturnInfo();
+  auto RetInfo = CGFunInfo.getReturnInfo();
 
   // If the call return a temporary with struct return, create a temporary
   // alloca to hold the result.
@@ -279,7 +279,7 @@ RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
     Args.push_back(forPrint);
   }
 
-  auto ArgsInfo = CGFunInfo->getArgsInfo();
+  auto ArgsInfo = CGFunInfo.getArgsInfo();
   assert(ArgsInfo.size() == CallArgs.size() && "Arguments number don't match!");
   unsigned ArgsNum = ArgsInfo.size();
   for (unsigned i = 0; i < ArgsNum; i++) {
@@ -450,13 +450,13 @@ AAIPtr CGFunctionInfo::classifyArgumentType(MosesIRContext &Ctx,
                                           Name + ".addr");
 }
 
-CGFuncInfoConstPtr CGFunctionInfo::create(MosesIRContext &Ctx,
+CGFunctionInfo CGFunctionInfo::create(MosesIRContext &Ctx,
                                           const FunctionDecl *FD) {
   std::vector<std::pair<std::shared_ptr<ASTType>, std::string>> ArgsTy;
   for (auto item : FD->getParms()) {
     ArgsTy.push_back({item->getDeclType(), item->getName()});
   }
-  return std::make_shared<CGFunctionInfo>(Ctx, ArgsTy, FD->getReturnType());
+  return CGFunctionInfo(Ctx, ArgsTy, FD->getReturnType());
 }
 
 const std::shared_ptr<ASTType> CGFunctionInfo::getParm(unsigned index) const {
@@ -514,13 +514,13 @@ std::vector<std::string> CGFunctionInfo::getArgNames() const {
 ///				ret
 ///			}
 GetFuncTypeRet CodeGenTypes::getFunctionType(const FunctionDecl *FD,
-                                             CGFuncInfoConstPtr Info) {
+                                             CGFunctionInfo Info) {
   std::vector<std::string> ArgNames;
   std::vector<TyPtr> ArgTypes;
 
   // (1) Create the llvm::FunctionType
   TyPtr ResultTy = nullptr;
-  auto RetInfo = Info->getReturnInfo();
+  auto RetInfo = Info.getReturnInfo();
   auto RetTy = RetInfo->getType();
   switch (RetInfo->getKind()) {
   case ArgABIInfo::Kind::Ignore:
@@ -538,10 +538,10 @@ GetFuncTypeRet CodeGenTypes::getFunctionType(const FunctionDecl *FD,
     break;
   }
 
-  ASTToIRMapping IRFunctionArgs(*Info);
+  ASTToIRMapping IRFunctionArgs(Info);
 
   // Add parm type.
-  auto ArgsInfo = Info->getArgsInfo();
+  auto ArgsInfo = Info.getArgsInfo();
 
   for (unsigned i = 0, NumArgs = ArgsInfo.size(); i < NumArgs; i++) {
     unsigned FirstIRArg, NumIRArgs;
@@ -605,14 +605,14 @@ GetFuncTypeRet CodeGenTypes::getFunctionType(const FunctionDecl *FD,
 
 /// \brief Generate CGFunctionInfo for FunctionDecl.
 /// Note: Moses have no function declaration, so there is no indirect recursion.
-CGFuncInfoConstPtr CodeGenTypes::arrangeFunctionInfo(const FunctionDecl *FD) {
+CGFunctionInfo CodeGenTypes::arrangeFunctionInfo(const FunctionDecl *FD) {
   // (1) Check whether the CGFunctionInfo exists.
   auto iter = FunctionInfos.find(FD);
   if (iter != FunctionInfos.end())
     return iter->second;
 
   // (2) otherwise, save this info.
-  auto CGFuncInfo = CGFunctionInfo::create(IRCtx, FD);
-  FunctionInfos.insert({FD, CGFuncInfo});
-  return CGFuncInfo;
+  auto CGFunctionInfo = CGFunctionInfo::create(IRCtx, FD);
+  FunctionInfos.insert({FD, CGFunctionInfo});
+  return CGFunctionInfo;
 }

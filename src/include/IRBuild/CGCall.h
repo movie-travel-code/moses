@@ -97,11 +97,12 @@ private:
   bool NoReturn;
 
 public:
+  CGFunctionInfo() {}
   CGFunctionInfo(MosesIRContext &Ctx,
                  std::vector<std::pair<std::shared_ptr<ASTType>, std::string>> ArgsTy,
                  std::shared_ptr<ASTType> RetTy);
 
-  static std::shared_ptr<CGFunctionInfo const> create(MosesIRContext &Ctx,
+  static CGFunctionInfo create(MosesIRContext &Ctx,
                                                       const FunctionDecl *FD);
 
   bool isNoReturn() const { return NoReturn; }

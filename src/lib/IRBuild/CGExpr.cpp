@@ -409,8 +409,7 @@ RValue ModuleBuilder::EmitCallExpr(const CallExpr *CE) {
     assert(!CalleeAddr && "Builtin function have no function declaration.");
 
     // generate function info.
-    std::shared_ptr<CGFunctionInfo const> FI =
-        Types.arrangeFunctionInfo(FD.get());
+    CGFunctionInfo FI = Types.arrangeFunctionInfo(FD.get());
 
     auto TypeAndName = Types.getFunctionType(FD.get(), FI);
 

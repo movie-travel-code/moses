@@ -96,7 +96,7 @@ void ModuleBuilder::EmitScalarInit([[maybe_unused]] const Expr *init,
 //===---------------------------------------------------------------------===//
 void ModuleBuilder::EmitFunctionDecl(const FunctionDecl *FD) {
   // generate function info.
-  std::shared_ptr<CGFunctionInfo const> FI = Types.arrangeFunctionInfo(FD);
+  CGFunctionInfo FI = Types.arrangeFunctionInfo(FD);
 
   auto TypeAndName = Types.getFunctionType(FD, FI);
 
@@ -136,7 +136,7 @@ void ModuleBuilder::EmitFunctionDecl(const FunctionDecl *FD) {
 }
 
 /// \brief Handle the start of function.
-void ModuleBuilder::StartFunction(std::shared_ptr<CGFunctionInfo const> FnInfo,
+void ModuleBuilder::StartFunction(CGFunctionInfo FnInfo,
                                   std::shared_ptr<Function> Fn) {
   EntryBlock = CreateBasicBlock("entry", Fn);
   // EmitBlock(EntryBB);
@@ -147,7 +147,7 @@ void ModuleBuilder::StartFunction(std::shared_ptr<CGFunctionInfo const> FnInfo,
   TempCounter = 0;
 
   CurFunc->ReturnBlock = CreateBasicBlock("return", CurFunc->CurFn);
-  auto RetTy = FnInfo->getReturnInfo()->getType();
+  auto RetTy = FnInfo.getReturnInfo()->getType();
   if (RetTy->getKind() == TypeKind::VOID) {
     // Void type; nothing to return
     CurFunc->ReturnValue = nullptr;

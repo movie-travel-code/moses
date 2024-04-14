@@ -8,14 +8,12 @@
 // http://stackoverflow.com/questions/2590677/how-do-i-combine-hash-values-in-c0x
 //
 //===---------------------------------------------------------------------===//
-#ifndef HASHING_H
-#define HASHING_H
+#pragma once
 #include <functional>
 #include <string>
 #include <type_traits>
 #include <utility>
 
-namespace compiler {
 namespace Hashing {
 template <typename T> void hash_combine(size_t &seed, const T &val) {
   std::hash<T> hasher;
@@ -50,5 +48,3 @@ size_t hash_combine_range(size_t seed, ValueT begin, ValueT end) {
   return seed;
 }
 } // namespace Hashing
-} // namespace compiler
-#endif

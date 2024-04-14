@@ -3,19 +3,17 @@
 // This file is used to implement the parser.
 //
 //===---------------------------------------------------------------------===//
-#ifndef PARSER_INCLUDE
-#define PARSER_INCLUDE
+#pragma once
 #include "ASTContext.h"
 #include "ast.h"
-#include "include/Lexer/scanner.h"
+#include "Lexer/scanner.h"
 #include "sema.h"
 #include <algorithm>
 
-namespace compiler {
 namespace parse {
-using namespace compiler::ast;
-using namespace compiler::sema;
-using namespace compiler::lex;
+using namespace ast;
+using namespace sema;
+using namespace lex;
 
 namespace OperatorPrec {
 /// \brief PrecedenceLevels - These are precedences for the binary operators in
@@ -319,5 +317,3 @@ private:
   void syntaxErrorRecovery(ParseContext::context context);
 };
 } // namespace parse
-} // namespace compiler
-#endif

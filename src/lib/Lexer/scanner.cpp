@@ -3,10 +3,10 @@
 // This file is used to implements scanner.
 //
 //===------------------------------------------------------------------------===//
-#include "include/Lexer/scanner.h"
-using namespace compiler::parse;
-using namespace compiler::lex;
-using namespace compiler::tok;
+#include "Lexer/scanner.h"
+using namespace parse;
+using namespace lex;
+using namespace tok;
 
 bool Scanner::errorFlag = false;
 
@@ -59,7 +59,7 @@ void Scanner::makeToken(TokenValue tv, const TokenLocation &loc, long intvalue,
 
 void Scanner::makeToken(TokenValue tv, const TokenLocation &loc,
                         double realvalue, std::string name) {
-  std::cout << name << std::endl;
+  std::cout << name << '\n';
   LastTok = Tok;
   Tok = Token(tv, loc, realvalue, name);
   buffer.clear();
@@ -100,7 +100,6 @@ void Scanner::handleLineComment() {
     }
 
     if (!input.eof()) {
-      // \r
       getNextChar();
     }
   }
@@ -142,25 +141,25 @@ Token Scanner::getNextToken() {
     }
 
     switch (state) {
-    case Scanner::State::NONE:
+    case State::NONE:
       getNextChar();
       break;
-    case Scanner::State::END_OF_FILE:
+    case State::END_OF_FILE:
       handleEOFState();
       LastTok = Tok;
       Tok = Token();
       return Tok;
       break;
-    case Scanner::State::IDENTIFIER:
+    case State::IDENTIFIER:
       handleIdentifierState();
       break;
-    case Scanner::State::NUMBER:
+    case State::NUMBER:
       handleNumberState();
       break;
-    case Scanner::State::STRING:
+    case State::STRING:
       handleStringState();
       break;
-    case Scanner::State::OPERATION:
+    case State::OPERATION:
       handleOperationState();
       break;
     default:
@@ -305,8 +304,6 @@ void Scanner::handleIdentifierState() {
 void Scanner::handleOperationState() {
   CurLoc = getTokenLocation();
 
-  bool matched = false;
-
   addToBuffer(CurrentChar);
   addToBuffer(peekChar());
 
@@ -315,12 +312,11 @@ void Scanner::handleOperationState() {
     reduceBuffer();
     tokenKind = table.isOperator(buffer);
   } else {
-    matched = true;
     getNextChar();
   }
 
   if (tokenKind == TokenValue::UNKNOWN) {
-    std::cerr << "Bad Token!" << std::endl;
+    std::cerr << "Bad Token!\n";
     exit(1);
   }
 

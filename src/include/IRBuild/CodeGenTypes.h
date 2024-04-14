@@ -3,26 +3,24 @@
 // This file handles AST -> moses-IR type lowering.
 //
 //===---------------------------------------------------------------===//
-#ifndef CODE_GEN_TYPES_H
-#define CODE_GEN_TYPES_H
-#include "include/IR/IRType.h"
-#include "include/IR/MosesIRContext.h"
-#include "include/Parser/Type.h"
-#include "include/Parser/ast.h"
+#pragma once
+#include "IR/IRType.h"
+#include "IR/MosesIRContext.h"
+#include "Parser/Type.h"
+#include "Parser/ast.h"
 #include "CGCall.h"
 #include <cassert>
 #include <map>
 #include <set>
 #include <utility>
 
-namespace compiler {
 namespace IRBuild {
-using namespace compiler::IR;
+using namespace IR;
 class ModuleBuilder;
 
-using IRType = compiler::IR::Type;
-using IRStructTy = compiler::IR::StructType;
-using IRFuncTy = compiler::IR::FunctionType;
+using IRType = IR::Type;
+using IRStructTy = IR::StructType;
+using IRFuncTy = IR::FunctionType;
 using IRTyPtr = std::shared_ptr<IRType>;
 using IRFuncTyPtr = std::shared_ptr<IRFuncTy>;
 using CGFuncInfoConstPtr = std::shared_ptr<CGFunctionInfo const>;
@@ -46,11 +44,11 @@ class CodeGenTypes {
   ;
 
   // Contains the moses-IR type for any converted RecordDecl.
-  std::map<const ast::Type *, std::shared_ptr<StructType>> RecordDeclTypes;
+  std::map<const ast::ASTType *, std::shared_ptr<StructType>> RecordDeclTypes;
 
   // Hold CGFunctionInfo results.
   std::map<const FunctionDecl *, CGFuncInfoConstPtr> FunctionInfos;
-  std::map<const FunctionDecl *, FuncTypePtr> FunctionTypes;
+  std::map<const FunctionDecl *, std::shared_ptr<FunctionType>> FunctionTypes;
   unsigned AnonyTypesCounter;
   std::string TypeNamePrefix;
 
@@ -58,7 +56,7 @@ public:
   CodeGenTypes(MosesIRContext &IRCtx)
       : IRCtx(IRCtx), AnonyTypesCounter(0), TypeNamePrefix("@") {}
   /// ConvertType - Convert type T into a moses-IR type.
-  IRTyPtr ConvertType(ASTTyPtr type);
+  IRTyPtr ConvertType(std::shared_ptr<ASTType> type);
   GetFuncTypeRet getFunctionType(const FunctionDecl *FD,
                                  std::shared_ptr<CGFunctionInfo const> Info);
   std::shared_ptr<const CGFunctionInfo>
@@ -66,5 +64,3 @@ public:
   std::string getAnonyName();
 };
 } // namespace IRBuild
-} // namespace compiler
-#endif

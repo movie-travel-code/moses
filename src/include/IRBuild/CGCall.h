@@ -3,14 +3,12 @@
 // These classes wrap the information about a call.
 //
 //===---------------------------------------------------------------------===//
-#ifndef CGCALL_H
-#define CGCALL_H
-#include "include/IR/IRType.h"
-#include "include/Parser/Type.h"
+#pragma once
+#include "IR/IRType.h"
+#include "Parser/Type.h"
 #include <string>
 #include <vector>
 
-namespace compiler {
 namespace IRBuild {
 class ArgABIInfo;
 using namespace ast;
@@ -44,7 +42,7 @@ using AAIPtr = std::shared_ptr<ArgABIInfo>;
 //		Note: Caller allocate the space for temp memory and pass a pointer of the temp memory to the callee.
 class ArgABIInfo {
 public:
-  enum Kind {
+  enum class Kind {
     /// Direct - Pass the argument directly using the normal converted moses IR
     /// type, or by coercing to another specified type stored in 'CoerceToType'.
     Direct,
@@ -59,7 +57,7 @@ public:
   };
 
 private:
-  ASTTyPtr Ty;
+  std::shared_ptr<ASTType> Ty;
   Kind TheKind;
   // Easy to pass the parameter name to IR::Function.
   // Note:	(1) Direct-Builtin name    ----> name
@@ -76,13 +74,13 @@ private:
   bool CanBeFlattened;
 
 public:
-  ArgABIInfo(ASTTyPtr type, Kind kind, std::string name = "",
+  ArgABIInfo(std::shared_ptr<ASTType> type, Kind kind, std::string name = "",
              std::shared_ptr<IR::Type> tydata = nullptr, bool flatten = false)
       : Ty(type), TheKind(kind), Name(name), TypeData(tydata),
         CanBeFlattened(flatten) {}
 
-  static std::shared_ptr<ArgABIInfo> Create(ASTTyPtr type, Kind kind);
-  ASTTyPtr getType() const { return Ty; }
+  static std::shared_ptr<ArgABIInfo> Create(std::shared_ptr<ASTType> type, Kind kind);
+  std::shared_ptr<ASTType> getType() const { return Ty; }
   Kind getKind() const { return TheKind; }
   bool canBeFlattened() const { return CanBeFlattened; }
   IRTyPtr getCoerceeToType() const { return TypeData; }
@@ -100,18 +98,18 @@ private:
 
 public:
   CGFunctionInfo(MosesIRContext &Ctx,
-                 std::vector<std::pair<ASTTyPtr, std::string>> ArgsTy,
-                 ASTTyPtr RetTy);
+                 std::vector<std::pair<std::shared_ptr<ASTType>, std::string>> ArgsTy,
+                 std::shared_ptr<ASTType> RetTy);
 
   static std::shared_ptr<CGFunctionInfo const> create(MosesIRContext &Ctx,
                                                       const FunctionDecl *FD);
 
   bool isNoReturn() const { return NoReturn; }
 
-  unsigned getArgNums() const { return ArgInfos.size(); }
+  std::size_t getArgNums() const { return ArgInfos.size(); }
   const std::vector<AAIPtr> &getArgsInfo() const { return ArgInfos; }
-  const ASTTyPtr getParm(unsigned index) const;
-  const ArgABIInfo::Kind getKind(unsigned index) const;
+  const std::shared_ptr<ASTType> getParm(unsigned index) const;
+  ArgABIInfo::Kind getKind(unsigned index) const;
   const AAIPtr getArgABIInfo(unsigned index) const;
   AAIPtr getReturnInfo() const { return ReturnInfo; }
 
@@ -120,11 +118,8 @@ public:
   std::vector<std::string> getArgNames() const;
 
   // Generate ArgABIInfo for return type.
-  static AAIPtr classifyReturnTye(MosesIRContext &Ctx, ASTTyPtr RetTy);
-  static AAIPtr classifyArgumentType(MosesIRContext &Ctx, ASTTyPtr ArgTy,
-                                     std::string Name);
+  static AAIPtr classifyReturnTye(MosesIRContext &Ctx, std::shared_ptr<ASTType> RetTy);
+  static AAIPtr classifyArgumentType(MosesIRContext &Ctx, std::shared_ptr<ASTType> ArgTy,
+                                     const std::string &Name);
 };
 } // namespace IRBuild
-} // namespace compiler
-
-#endif

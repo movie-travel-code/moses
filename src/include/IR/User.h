@@ -9,14 +9,11 @@
 //
 //===---------------------------------------------------------------------===//
 
-#ifndef MOSES_IR_USR_H
-#define MOSES_IR_USR_H
+#pragma once
 #include "Value.h"
 #include <string>
 #include <vector>
 
-
-namespace compiler {
 namespace IR {
 /// User - The User class provides a basis for expressing the ownership of User
 /// towards other Value instances.
@@ -43,12 +40,12 @@ public:
     return Operands[i];
   }
 
-  void setOeprand(unsigned i, ValPtr Val) {
+  void setOeprand(unsigned i, std::shared_ptr<Value> Val) {
     assert(i < Operands.size() && "User out of range!");
     Operands[i] = Val;
   }
 
-  unsigned getNumOperands() const { return Operands.size(); }
+    std::size_t getNumOperands() const { return Operands.size(); }
 
   // dropAllReferences() - This function is in charge of "letting go" of all
   // objects that this User refers to. This allows one to 'delete' a whole
@@ -60,9 +57,7 @@ public:
 
   /// replaceUsesofWith - Replaces all references to the "From" definition with
   /// references to the "To" definition.
-  void replaceUsesOfWith(ValPtr From, ValPtr To);
+  void replaceUsesOfWith(std::shared_ptr<Value> From,
+                         std::shared_ptr<Value> To);
 };
 } // namespace IR
-} // namespace compiler
-
-#endif

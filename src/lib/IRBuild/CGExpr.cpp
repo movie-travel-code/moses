@@ -3,13 +3,14 @@
 // This contains code to emit Expr nodes.
 //
 //===---------------------------------------------------------------------===//
-#include "include/IRBuild/IRBuilder.h"
-using namespace compiler::IR;
-using namespace compiler::IRBuild;
-extern void print(std::shared_ptr<compiler::IR::Value> V);
+#include "IRBuild/IRBuilder.h"
+using namespace IR;
+using namespace IRBuild;
+extern void print(std::shared_ptr<IR::Value> V);
 /// \brief Emit branch condition.
-void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock,
-                                         BBPtr FalseBlock) {
+void ModuleBuilder::EmitBranchOnBoolExpr(
+    ExprASTPtr Cond, std::shared_ptr<BasicBlock> TrueBlock,
+    std::shared_ptr<BasicBlock> FalseBlock) {
   if (BinaryPtr CondBOp = std::dynamic_pointer_cast<BinaryExpr>(Cond)) {
     // Handle X && Y in a conditon.
     if (CondBOp->getOpcode() == "&&") {
@@ -43,7 +44,8 @@ void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock,
       //			}
       // At first, we generate code for "lhs > rhs", connecting "num == 0" for
       // true and "if.else" for false.
-      BBPtr LHSTrue = CreateBasicBlock(getCurLocalName("and.lhs.true"));
+      std::shared_ptr<BasicBlock> LHSTrue =
+          CreateBasicBlock(getCurLocalName("and.lhs.true"));
       EmitBranchOnBoolExpr(CondBOp->getLHS(), LHSTrue, FalseBlock);
       EmitBlock(LHSTrue);
       EmitBranchOnBoolExpr(CondBOp->getRHS(), TrueBlock, FalseBlock);
@@ -62,7 +64,8 @@ void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock,
       // Refer to "And", here also implement the short-circuit principle.
       // Emit the LHS as a conditional. If the LHS conditional is true, we want
       // to jump to the TrueBlock.
-      BBPtr LHSFalse = CreateBasicBlock(getCurLocalName("or.lhs.false"));
+      std::shared_ptr<BasicBlock> LHSFalse =
+          CreateBasicBlock(getCurLocalName("or.lhs.false"));
       EmitBranchOnBoolExpr(CondBOp->getLHS(), TrueBlock, LHSFalse);
       EmitBlock(LHSFalse);
       EmitBranchOnBoolExpr(CondBOp->getRHS(), TrueBlock, FalseBlock);
@@ -77,19 +80,23 @@ void ModuleBuilder::EmitBranchOnBoolExpr(ExprASTPtr Cond, BBPtr TrueBlock,
   }
 
   // Emit the code with the fully general case.
-  ValPtr CondV = Cond->Accept(this);
+  std::shared_ptr<Value> CondV = Cond->Accept(this);
   auto ret = CreateCondBr(CondV, TrueBlock, FalseBlock);
 }
 
-ValPtr ModuleBuilder::EvaluateExprAsBool(ExprASTPtr E) { return 0; }
+std::shared_ptr<Value>
+ModuleBuilder::EvaluateExprAsBool([[maybe_unused]] ExprASTPtr E) {
+  return 0;
+}
 
 /// \brief Handle the algebraic and boolean operation, include '+' '-' '*' '/'
 /// '%'
 ///	'<' '>' '<=' '>=' '==' '!='.
-ValPtr ModuleBuilder::EmitAlgAndBooleanOp(const CGExpr::BinOpInfo &BInfo) {
+std::shared_ptr<Value>
+ModuleBuilder::EmitAlgAndBooleanOp(const CGExpr::BinOpInfo &BInfo) {
   std::string Opcode = BInfo.BE->getOpcode();
 
-  ValPtr ret = nullptr;
+  std::shared_ptr<Value> ret = nullptr;
 
   if (Opcode == "+" || Opcode == "+=")
     ret = CreateAdd(BInfo.LHS, BInfo.RHS, getCurLocalName("add.tmp"));
@@ -130,10 +137,10 @@ ValPtr ModuleBuilder::EmitAlgAndBooleanOp(const CGExpr::BinOpInfo &BInfo) {
 
 /// \brief Handle the assign operation, include '='.
 /// e.g.	mem = num;		---->	-----------------------------
-///									| %tmp = load i32* %num
-///| 									| store i32 %tmp, i32* %mem	|
+///									| %tmp = load
+///i32* %num | | store i32 %tmp, i32* %mem	|
 ///									-----------------------------
-ValPtr ModuleBuilder::EmitBinAssignOp(const BinaryExpr *B) {
+std::shared_ptr<Value> ModuleBuilder::EmitBinAssignOp(const BinaryExpr *B) {
   LValue LHSAddr = EmitLValue(B->getLHS().get());
 
   // Aggregate
@@ -142,7 +149,7 @@ ValPtr ModuleBuilder::EmitBinAssignOp(const BinaryExpr *B) {
     EmitAggExpr(B->getRHS().get(), LHSAddr.getAddress());
     return LHSAddr.getAddress();
   } else {
-    ValPtr RHSV = B->getRHS()->Accept(this);
+    std::shared_ptr<Value> RHSV = B->getRHS()->Accept(this);
     // Store the value into the LHS.
     // --------------------Assignment operators-------------------------
     // An assignment operator stores a value in the object designated by the
@@ -156,20 +163,22 @@ ValPtr ModuleBuilder::EmitBinAssignOp(const BinaryExpr *B) {
 }
 
 /// \brief Handle the compound assign operation, include '*=' '/=' '%=' '+='
-/// '-='
-///	'&&=' '||='.
+/// '-=' '&&=' '||='.
 ///	e.g.		mem += num;		---->
-///----------------------------- 										| %tmp = load i32* %num		| 										|
-///%tmp1 = load i32* %mme	| 										| %add = i32 %tmp, i32 %tmp1|
-///| 										| store i32 %add, i32* %mem	|
-///										-------------------------
-ValPtr ModuleBuilder::EmitCompoundAssignOp(const BinaryExpr *BE) {
+///  -----------------------------
+/// |    %tmp = load i32* %num    |
+/// |    %tmp1 = load i32* %mme	  |
+/// | %add = i32 %tmp, i32 %tmp1  |
+/// | store i32 %add, i32* %mem	  |
+///	------------------------------
+std::shared_ptr<Value>
+ModuleBuilder::EmitCompoundAssignOp(const BinaryExpr *BE) {
   // (1) Emit the RHS first.
-  ValPtr RHSV = BE->getRHS()->Accept(this);
+  std::shared_ptr<Value> RHSV = BE->getRHS()->Accept(this);
 
   // (2) Load the LHS.
   LValue LHSLV = EmitLValue(BE->getLHS().get());
-  ValPtr LHSV = EmitLoadOfLValue(LHSLV).getScalarVal();
+  std::shared_ptr<Value> LHSV = EmitLoadOfLValue(LHSLV).getScalarVal();
 
   // (3) Perform the operation.
   CGExpr::BinOpInfo info;
@@ -178,7 +187,7 @@ ValPtr ModuleBuilder::EmitCompoundAssignOp(const BinaryExpr *BE) {
   info.BE = BE;
   info.Ty = BE->getType();
 
-  ValPtr ResultV = EmitAlgAndBooleanOp(info);
+  std::shared_ptr<Value> ResultV = EmitAlgAndBooleanOp(info);
 
   // (4) Store the result value into the LHS lvalue.
   // Note: 'An assignment expression has the value of the left operand after the
@@ -192,7 +201,7 @@ ValPtr ModuleBuilder::EmitCompoundAssignOp(const BinaryExpr *BE) {
 }
 
 /// \brief Handle the binary expression.
-ValPtr ModuleBuilder::EmitBinaryExpr(const BinaryExpr *B) {
+std::shared_ptr<Value> ModuleBuilder::EmitBinaryExpr(const BinaryExpr *B) {
   std::string Opcode = B->getOpcode();
   if (Opcode == "=")
     return EmitBinAssignOp(B);
@@ -269,7 +278,7 @@ LValue ModuleBuilder::EmitMemberExprLValue(const MemberExpr *ME) {
   // a.flag ----> BaseAddr
   // a.b.mem ----> BaseAddr, int * 3
   auto idx = ME->getIdx();
-  ValPtr MemberAddr =
+  std::shared_ptr<Value> MemberAddr =
       CreateGEP(Types.ConvertType(ME->getType()), BaseLValue.getAddress(), idx);
   return LValue::MakeAddr(MemberAddr);
 }
@@ -282,7 +291,7 @@ LValue ModuleBuilder::EmitCallExprLValue(const CallExpr *CE) {
 /// \brief EmitLoadOfLValue - Given an expression with complex type that
 /// represents a l-value, this method emits the address of the l-value, then
 /// loads and returns the result.
-ValPtr ModuleBuilder::EmitLoadOfLValue(const Expr *E) {
+std::shared_ptr<Value> ModuleBuilder::EmitLoadOfLValue(const Expr *E) {
   return EmitLoadOfLValue(EmitLValue(E)).getScalarVal();
 }
 
@@ -290,17 +299,17 @@ ValPtr ModuleBuilder::EmitLoadOfLValue(const Expr *E) {
 /// lvalue, this method emits the address of the lvalue, then loads the result
 /// as an rvalue, returning the rvalue.
 RValue ModuleBuilder::EmitLoadOfLValue(LValue LV) {
-  ValPtr Ptr = LV.getAddress();
+  std::shared_ptr<Value> Ptr = LV.getAddress();
   auto V = CreateLoad(LV.getAddress());
   return RValue::get(V);
 }
 
 /// \brief EmitUnaryExpr - Emit code for unary expression.
-ValPtr ModuleBuilder::EmitUnaryExpr(const UnaryExpr *UE) {
+std::shared_ptr<Value> ModuleBuilder::EmitUnaryExpr(const UnaryExpr *UE) {
   std::string Opcode = UE->getOpcode();
   // Minus
   if (Opcode == "-") {
-    ValPtr OperandV = UE->getSubExpr()->Accept(this);
+    std::shared_ptr<Value> OperandV = UE->getSubExpr()->Accept(this);
     return CreateNeg(OperandV, "neg");
   }
 
@@ -319,37 +328,40 @@ ValPtr ModuleBuilder::EmitUnaryExpr(const UnaryExpr *UE) {
   }
 
   if (Opcode == "!") {
-    ValPtr OperandV = UE->getSubExpr()->Accept(this);
+    std::shared_ptr<Value> OperandV = UE->getSubExpr()->Accept(this);
     auto ret = CreateNot(OperandV, getCurLocalName("not"));
     return ret;
   }
   return nullptr;
 }
 
-ValPtr ModuleBuilder::EmitMemberExpr(const MemberExpr *ME) { return nullptr; }
+std::shared_ptr<Value>
+ModuleBuilder::EmitMemberExpr([[maybe_unused]] const MemberExpr *ME) {
+  return nullptr;
+}
 
 /// \brief EmitPrePostIncDec - Generate code for inc and dec.
 /// e.g.  ++num(pre-inc)  ------>	  -----------------------------
 ///                                | %tmp = load i32* %num       |
-///                                | %inc = add i32 %tmp, 1	     |  ----> the result
-///                                | store i32 %inc, i32 * %num  |
+///                                | %inc = add i32 %tmp, 1	     |  ---->
+///                                the result | store i32 %inc, i32 * %num  |
 ///                                 -----------------------------
-///			num++(post-inc) ------>     -----------------------------
-///                                | %tmp1 = load i32* %num	     |  ----> the result
-///                                | %inc2 = add i32 %tmp, 1     |
-///                                | store i32 %inc2, i32* %num  |
+///			num++(post-inc) ------> -----------------------------
+///                                | %tmp1 = load i32* %num	     |  ---->
+///                                the result | %inc2 = add i32 %tmp, 1     | |
+///                                store i32 %inc2, i32* %num  |
 ///                                 -----------------------------
 /// Note: Since only integer can be increase and the decrese.
-ValPtr ModuleBuilder::EmitPrePostIncDec(const UnaryExpr *UE, bool isInc,
-                                        bool isPre) {
+std::shared_ptr<Value>
+ModuleBuilder::EmitPrePostIncDec(const UnaryExpr *UE, bool isInc, bool isPre) {
   int AmoutVal = isInc ? 1 : -1;
-  ValPtr NextVal;
+  std::shared_ptr<Value> NextVal;
   // (1) Get the sub expression's address.
   LValue LV = EmitLValue(UE->getSubExpr().get());
-  compiler::IRBuild::ASTTyPtr ValTy = UE->getSubExpr()->getType();
+  std::shared_ptr<ASTType> ValTy = UE->getSubExpr()->getType();
 
   // (2) Get the sub expression's value.
-  ValPtr InVal = EmitLoadOfLValue(LV).getScalarVal();
+  std::shared_ptr<Value> InVal = EmitLoadOfLValue(LV).getScalarVal();
 
   // (3) Perform the operationn.
   NextVal = ConstantInt::get(Context, AmoutVal);
@@ -416,23 +428,25 @@ RValue ModuleBuilder::EmitCallExpr(const CallExpr *CE) {
 
 /// \brief visit(const BinaryExpr*) - Generate code for BinaryExpr.
 /// We need to make AggregateType case special treatment.
-ValPtr ModuleBuilder::visit(const BinaryExpr *B) { return EmitBinaryExpr(B); }
+std::shared_ptr<Value> ModuleBuilder::visit(const BinaryExpr *B) {
+  return EmitBinaryExpr(B);
+}
 
-ValPtr ModuleBuilder::visit(const DeclRefExpr *DRE) {
+std::shared_ptr<Value> ModuleBuilder::visit(const DeclRefExpr *DRE) {
   auto ty = Types.ConvertType(DRE->getType());
   if (ty->isAggregateType())
     return EmitAggLoadOfLValue(DRE, nullptr);
   return EmitLoadOfLValue(DRE);
 }
 
-ValPtr ModuleBuilder::visit(const BoolLiteral *BL) {
+std::shared_ptr<Value> ModuleBuilder::visit(const BoolLiteral *BL) {
   if (BL->getVal())
     return ConstantBool::getTrue(Context);
   else
     return ConstantBool::getFalse(Context);
 }
 
-ValPtr ModuleBuilder::visit(const NumberExpr *NE) {
+std::shared_ptr<Value> ModuleBuilder::visit(const NumberExpr *NE) {
   auto CInt = ConstantInt::get(Context, NE->getVal());
   CInt->setName(std::to_string(NE->getVal()));
   return CInt;
@@ -442,16 +456,18 @@ ValPtr ModuleBuilder::visit(const NumberExpr *NE) {
 /// Note: Post-increment and Pre-increment can be distinguished by
 /// ExprValueKind.
 //// ++x is lvalue and x++ is rvalue.
-ValPtr ModuleBuilder::visit(const UnaryExpr *UE) { return EmitUnaryExpr(UE); }
+std::shared_ptr<Value> ModuleBuilder::visit(const UnaryExpr *UE) {
+  return EmitUnaryExpr(UE);
+}
 
-ValPtr ModuleBuilder::visit(const MemberExpr *ME) {
+std::shared_ptr<Value> ModuleBuilder::visit(const MemberExpr *ME) {
   auto ty = Types.ConvertType(ME->getType());
   if (ty->isAggregateType())
     return EmitAggLoadOfLValue(ME, nullptr);
   return EmitLoadOfLValue(ME);
 }
 
-ValPtr ModuleBuilder::visit(const CallExpr *CE) {
+std::shared_ptr<Value> ModuleBuilder::visit(const CallExpr *CE) {
   auto ty = Types.ConvertType(CE->getType());
   if (ty->isAggregateType())
     return EmitAggLoadOfLValue(CE, nullptr);
@@ -460,16 +476,19 @@ ValPtr ModuleBuilder::visit(const CallExpr *CE) {
 
 /// EmitScalarExpr - Emit the computation of the specified expression of
 /// scalar type, returning the result.
-ValPtr ModuleBuilder::EmitScalarExpr(const Expr *E) { return E->Accept(this); }
+std::shared_ptr<Value> ModuleBuilder::EmitScalarExpr(const Expr *E) {
+  return E->Accept(this);
+}
 
 /// EmitStoreThroughLValue - Store the specified rvalue into the specified
 /// lvalue, where both are guaranteed to the have the same type.
 void ModuleBuilder::EmitStoreThroughLValue(RValue Src, LValue Dst,
-                                           bool isInit) {
+                                           [[maybe_unused]] bool isInit) {
   EmitStoreOfScalar(Src.getScalarVal(), Dst.getAddress());
 }
 
 /// \brief Handle the scalar expression.
-void ModuleBuilder::EmitStoreOfScalar(ValPtr Value, ValPtr Addr) {
-  auto ret = CreateStore(Value, Addr);
+void ModuleBuilder::EmitStoreOfScalar(std::shared_ptr<Value> V,
+                                      std::shared_ptr<Value> Addr) {
+  auto ret = CreateStore(V, Addr);
 }

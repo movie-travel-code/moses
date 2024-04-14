@@ -3,11 +3,11 @@
 // This file is used to implement sema.
 //
 //===---------------------------------------------------------------------===//
-#include "include/Parser/sema.h"
-#include "include/Support/error.h"
-#include "include/Parser/Type.h"
-using namespace compiler::sema;
-using namespace compiler::lex;
+#include "Parser/sema.h"
+#include "Support/error.h"
+#include "Parser/Type.h"
+using namespace sema;
+using namespace lex;
 
 using VarSymPtr = std::shared_ptr<VariableSymbol>;
 using ParmSymPtr = std::shared_ptr<ParmDeclSymbol>;
@@ -18,7 +18,7 @@ using AnonTyPtr = std::shared_ptr<AnonymousType>;
 
 // Lookup the symbol with specified 'name' in the scope chain. If not found,
 // return nullptr.
-std::shared_ptr<Symbol> Scope::Resolve(std::string name) const {
+std::shared_ptr<Symbol> Scope::Resolve(const std::string &name) const {
   // Look up the name in current scope.
   for (auto item : SymbolTable)
     if (item->getLexem() == name)
@@ -38,7 +38,7 @@ void Sema::ActOnTranslationUnitStart() {
 
 /// \brief ActOnFunctionDecl - Mainly for checking function name and recording
 /// function name.
-void Sema::ActOnFunctionDeclStart(std::string name) {
+void Sema::ActOnFunctionDeclStart(const std::string &name) {
   // Check function name.
   // Note: moses doesn't support function overload now.
   if (CurScope->Resolve(name)) {
@@ -63,8 +63,8 @@ void Sema::ActOnFunctionDeclStart(std::string name) {
 }
 
 /// \brief ActOnFunctionDecl - Set return type and create new scope.
-void Sema::ActOnFunctionDecl(std::string name,
-                             std::shared_ptr<Type> returnType) {
+void Sema::ActOnFunctionDecl([[maybe_unused]] const std::string &name,
+                             std::shared_ptr<ASTType> returnType) {
   getFunctionStackTop()->setReturnType(returnType);
 
   auto OldScope = CurScope;
@@ -106,7 +106,7 @@ void Sema::ActOnCompoundStmt() {
 /// \brief Actions routines about unpack decl.
 /// var {num, mem} = anony;
 /// Mainly check redefintion.
-bool Sema::ActOnUnpackDeclElement(std::string name) {
+bool Sema::ActOnUnpackDeclElement(const std::string &name) {
   if (CurScope->CheckWhetherInCurScope(name)) {
     errorReport("Error occured in unpack decl.  Variable " + name +
                 " redefinition.");
@@ -124,7 +124,7 @@ bool Sema::ActOnBreakAndContinueStmt(bool whileContext) {
 }
 
 /// \brief Mainly current whether identifier is user defined type.
-std::shared_ptr<Type> Sema::ActOnReturnType(const std::string &name) const {
+std::shared_ptr<ASTType> Sema::ActOnReturnType(const std::string &name) const {
   if (ClassSymPtr sym = std::dynamic_pointer_cast<ClassSymbol>(
           ScopeStack[0]->CheckWhetherInCurScope(name))) {
     return sym->getType();
@@ -134,7 +134,7 @@ std::shared_ptr<Type> Sema::ActOnReturnType(const std::string &name) const {
   }
 }
 
-void Sema::ActOnParmDecl(std::string name, ParmDeclPtr parm) {
+void Sema::ActOnParmDecl(const std::string &name, ParmDeclPtr parm) {
   // Check redefinition.
   if (CurScope->CheckWhetherInCurScope(name)) {
     errorReport("Parameter redefinition.");
@@ -147,7 +147,7 @@ void Sema::ActOnParmDecl(std::string name, ParmDeclPtr parm) {
   getFunctionStackTop()->addParmVariableSymbol(vsym);
 }
 
-void Sema::ActOnClassDeclStart(std::string name) {
+void Sema::ActOnClassDeclStart(const std::string &name) {
   // check class redefinition.
   if (CurScope->CheckWhetherInCurScope(name)) {
     errorReport("Class redefinition.");
@@ -172,7 +172,7 @@ void Sema::ActOnClassDeclStart(std::string name) {
 
 /// \brief Create new variable symbol.
 void Sema::ActOnVarDecl(
-    std::string name,
+    const std::string &name,
     VarDeclPtr VD /*, std::shared_ptr<Type> declType, ExprASTPtr InitExpr*/) {
   ExprASTPtr Init = VD->getInitExpr();
   auto declType = VD->getDeclType();
@@ -186,7 +186,7 @@ void Sema::ActOnVarDecl(
   }
 }
 
-bool Sema::ActOnReturnAnonymous(std::shared_ptr<Type> type) const {
+bool Sema::ActOnReturnAnonymous(std::shared_ptr<ASTType> type) const {
   if (!type)
     return false;
 
@@ -208,7 +208,7 @@ bool Sema::ActOnReturnAnonymous(std::shared_ptr<Type> type) const {
   return true;
 }
 
-bool Sema::ActOnReturnStmt(std::shared_ptr<Type> type) const {
+bool Sema::ActOnReturnStmt(std::shared_ptr<ASTType> type) const {
   if (!getFunctionStackTop() || !getFunctionStackTop()->getReturnType())
     return false;
 
@@ -223,7 +223,7 @@ bool Sema::ActOnReturnStmt(std::shared_ptr<Type> type) const {
 
 /// \brief Act on declaration reference.
 /// Perferm name lookup and type checking.
-VarDeclPtr Sema::ActOnDeclRefExpr(std::string name) {
+VarDeclPtr Sema::ActOnDeclRefExpr(const std::string &name) {
   if (VarSymPtr vsym =
           std::dynamic_pointer_cast<VariableSymbol>(CurScope->Resolve(name))) {
     return vsym->getDecl();
@@ -238,10 +238,10 @@ VarDeclPtr Sema::ActOnDeclRefExpr(std::string name) {
 
 /// \brief Act on Call Expr.
 /// Perform name lookup and parm type checking.
-std::shared_ptr<Type>
-Sema::ActOnCallExpr(std::string name, std::vector<std::shared_ptr<Type>> args,
+std::shared_ptr<ASTType>
+Sema::ActOnCallExpr(const std::string &name, std::vector<std::shared_ptr<ASTType>> args,
                     FunctionDeclPtr &FD) {
-  std::shared_ptr<Type> ReturnType = nullptr;
+  std::shared_ptr<ASTType> ReturnType = nullptr;
 
   // First check whether the call is `print()`.
   // FIXME: In the future, we should put the builtin functions, like `pint`,
@@ -258,7 +258,7 @@ Sema::ActOnCallExpr(std::string name, std::vector<std::shared_ptr<Type>> args,
     // Construct the funtion symbol for `print`.
     // Record this func symbol.
     std::shared_ptr<FunctionSymbol> PrintSym = std::make_shared<FunctionSymbol>(
-        name, std::make_shared<Type>(TypeKind::VOID), ScopeStack[0], nullptr);
+        name, std::make_shared<ASTType>(TypeKind::VOID), ScopeStack[0], nullptr);
 
     ParmDeclPtr ParmDecl = std::make_shared<ParameterDecl>(
         SourceLocation(), SourceLocation(), "parm", false, args[0]);
@@ -292,7 +292,7 @@ Sema::ActOnCallExpr(std::string name, std::vector<std::shared_ptr<Type>> args,
       errorReport("Arguments number not match.");
     }
 
-    unsigned size = args.size();
+              std::size_t size = args.size();
     for (unsigned i = 0; i < size; i++) {
       if (!args[i]) {
         errorReport("The argument of index " + std::to_string(i) +
@@ -335,7 +335,7 @@ ExprASTPtr Sema::ActOnBinaryOperator(ExprASTPtr lhs, Token tok,
   }
 
   // Check expression's value kind.
-  std::shared_ptr<Type> type = nullptr;
+  std::shared_ptr<ASTType> type = nullptr;
   if (tok.isAssign()) {
     if (!lhs->isLValue())
       errorReport("Left hand expression must be lvalue.");
@@ -425,7 +425,7 @@ ExprASTPtr Sema::ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok) {
     errorReport("Type error. Expect user defined type.");
   }
 
-  std::shared_ptr<Type> memberType = nullptr;
+  std::shared_ptr<ASTType> memberType = nullptr;
   int idx = -1;
   /// (2) Check Member name.
   if (UDTyPtr BaseType =
@@ -495,7 +495,7 @@ ExprASTPtr Sema::ActOnUnarySubExpr(ExprASTPtr rhs) {
 /// var {num, {flag, lhs, rhs}} = anony;
 /// Shit code!
 UnpackDeclPtr Sema::ActOnUnpackDecl(UnpackDeclPtr unpackDecl,
-                                    std::shared_ptr<Type> type) {
+                                    std::shared_ptr<ASTType> type) {
   if (UnpackDeclPtr unpackd =
           std::dynamic_pointer_cast<UnpackDecl>(unpackDecl)) {
     if (!type) {
@@ -531,7 +531,7 @@ BinaryPtr Sema::ActOnAnonymousTypeVariableAssignment(ExprASTPtr lhs,
 }
 
 /// \brief Mainly check the conditon expression type.
-bool Sema::ActOnConditionExpr(std::shared_ptr<Type> type) const {
+bool Sema::ActOnConditionExpr(std::shared_ptr<ASTType> type) const {
   if (!type || type->getKind() != TypeKind::BOOL) {
     errorReport("Conditional expression is not a boolean type.");
     return false;
@@ -540,7 +540,7 @@ bool Sema::ActOnConditionExpr(std::shared_ptr<Type> type) const {
 }
 
 /// \brief Mainly check parameter declaration type.
-std::shared_ptr<Type> Sema::ActOnParmDeclUserDefinedType(Token tok) const {
+std::shared_ptr<ASTType> Sema::ActOnParmDeclUserDefinedType(Token tok) const {
   if (ClassSymPtr csym = std::dynamic_pointer_cast<ClassSymbol>(
           ScopeStack[0]->CheckWhetherInCurScope(tok.getLexem()))) {
     return csym->getType();
@@ -551,7 +551,7 @@ std::shared_ptr<Type> Sema::ActOnParmDeclUserDefinedType(Token tok) const {
 }
 
 /// \brief Mainly check variable declararion type.
-std::shared_ptr<Type> Sema::ActOnVarDeclUserDefinedType(Token tok) const {
+std::shared_ptr<ASTType> Sema::ActOnVarDeclUserDefinedType(Token tok) const {
   return ActOnParmDeclUserDefinedType(tok);
 }
 
@@ -583,7 +583,7 @@ void Sema::PopScope() {
 }
 
 /// \brief Look up name for current scope.
-std::shared_ptr<Symbol> Scope::CheckWhetherInCurScope(std::string name) {
+std::shared_ptr<Symbol> Scope::CheckWhetherInCurScope(const std::string &name) {
 
   for (auto item : SymbolTable) {
     if (item->getLexem() == name) {
@@ -607,7 +607,7 @@ std::shared_ptr<Scope> Sema::getScopeStackTop() const {
 
 UnpackDeclPtr
 Sema::unpackDeclTypeChecking(UnpackDeclPtr decl,
-                             std::shared_ptr<Type> initType) const {
+                             std::shared_ptr<ASTType> initType) const {
   if (AnonTyPtr anonyt = std::dynamic_pointer_cast<AnonymousType>(initType)) {
     if (!(decl->TypeCheckingAndTypeSetting(anonyt))) {
       errorReport("Unpack declaration type error.");
@@ -620,7 +620,7 @@ Sema::unpackDeclTypeChecking(UnpackDeclPtr decl,
     decl->getDecls(unpackDecls);
 
     // 2: types
-    std::vector<std::shared_ptr<Type>> types;
+    std::vector<std::shared_ptr<ASTType>> types;
     anonyt->getTypes(types);
 
     // 3: check
@@ -628,7 +628,7 @@ Sema::unpackDeclTypeChecking(UnpackDeclPtr decl,
       errorReport("Unpack declaration type error.");
     }
     // 3: symbol
-    unsigned size = unpackDecls.size();
+      std::size_t size = unpackDecls.size();
     for (unsigned index = 0; index < size; index++) {
       CurScope->addDef(std::make_shared<VariableSymbol>(
           unpackDecls[index]->getName(), CurScope, types[index], true,

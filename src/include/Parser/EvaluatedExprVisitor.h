@@ -4,20 +4,17 @@
 // 
 //===---------------------------------------------------------------------===//
 
-#ifndef EVALUATED_EXPR_VISITOR_H
-#define EVALUATED_EXPR_VISITOR_H
+#pragma once
 #include "ast.h"
 #include <iostream>
 #include <typeinfo>
 #include <utility>
 
-
-namespace compiler {
 namespace ast {
 struct EvalStatus {
   enum ValueKind { IntKind, BoolKind, AnonymousKind };
 
-  enum Result {
+  enum class Result {
     Constant,
     NotConstant,
     Pending
@@ -46,7 +43,7 @@ struct EvalInfo {
 
   EvalStatus evalstatus;
 
-  enum EvaluationMode {
+  enum class EvaluationMode {
     EM_PotentialConstantExpression,
 
     /// Fold the expression to a constant. Stop if we hit a side-effect
@@ -56,7 +53,7 @@ struct EvalInfo {
   /// Are we checking whether the expression is a potential constant
   /// expression?
   bool checkingPotentialConstantExpression() const {
-    return EvalMode == EM_PotentialConstantExpression;
+    return EvalMode == EvaluationMode::EM_PotentialConstantExpression;
   }
 
   EvalInfo(EvalStatus::ValueKind vk, EvaluationMode Mode)
@@ -75,10 +72,10 @@ public:
   std::vector<std::pair<int, unsigned>> ActiveBookingInfo;
 
 public:
-  typedef EvalStatus::ValueKind ValueKind;
-  typedef EvalStatus::Result Result;
+  using ValueKind = EvalStatus::ValueKind;
+  using Result = EvalStatus::Result;
 
-  typedef EvalInfo::EvaluationMode EvaluationMode;
+  using EvaluationMode = EvalInfo::EvaluationMode;
 
 public:
   virtual bool Evaluate(ExprASTPtr expr, EvalInfo &info);
@@ -123,6 +120,3 @@ public:
   bool EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) override;
 };
 } // namespace ast
-} // namespace compiler
-
-#endif

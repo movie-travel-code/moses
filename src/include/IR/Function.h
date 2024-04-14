@@ -7,15 +7,12 @@
 // and a symbol table.
 //
 //===---------------------------------------------------------------------===//
-#ifndef MOSES_IR_FUNCTION_H
-#define MOSES_IR_FUNCTION_H
+#pragma once
 #include "ConstantAndGlobal.h"
 #include "ValueSymbolTable.h"
 #include <list>
 #include <string>
 
-
-namespace compiler {
 namespace IR {
 class BasickBlock;
 /// \brief moses IR(LLVM) Argument representation.
@@ -27,16 +24,17 @@ class BasickBlock;
 /// course represents the value of the actual argument that the function was
 /// called with.
 class Argument : public Value {
-  FuncPtr Parent;
-  void setParent(FuncPtr parent);
+  std::shared_ptr<Function> Parent;
+  void setParent(std::shared_ptr<Function> parent);
 
 public:
   /// Argument ctor - If Function argument is specified, this argument is
   /// inserted at the end of the argument list for the function.
-  Argument(TyPtr Ty, std::string Name = "", FuncPtr F = nullptr);
-  void setType(TyPtr ty) { this->Ty = Ty; }
-  FuncPtr getParent() { return Parent; }
-  static bool classof(ValPtr V) {
+  Argument(TyPtr Ty, const std::string &Name = "",
+           std::shared_ptr<Function> F = nullptr);
+  void setType(TyPtr Ty) { this->Ty = Ty; }
+  std::shared_ptr<Function> getParent() { return Parent; }
+  static bool classof(std::shared_ptr<Value> V) {
     return V->getValueType() == Value::ValueTy::ArgumentVal;
   }
 
@@ -48,46 +46,58 @@ class Function : public GlobalValue {
 private:
   // Important things that make up a function!
   TyPtr ReturnType;
-  FuncTypePtr FunctionTy;
-  std::list<BBPtr> BasicBlocks;
-  std::vector<ArgPtr> Arguments;
+  std::shared_ptr<FunctionType> FunctionTy;
+  std::list<std::shared_ptr<BasicBlock>> BasicBlocks;
+  std::vector<std::shared_ptr<Argument>> Arguments;
 
 public:
-  Function(FuncTypePtr Ty, std::string Name, std::vector<std::string> Names);
+  Function(std::shared_ptr<FunctionType> Ty, const std::string &Name,
+           std::vector<std::string> Names);
 
-  static FuncPtr create(FuncTypePtr Ty, std::string Name,
-                        std::vector<std::string> Names);
-  ArgPtr operator[](unsigned index) const;
+  static std::shared_ptr<Function> create(std::shared_ptr<FunctionType> Ty,
+                                          const std::string &Name,
+                                          std::vector<std::string> Names);
+  std::shared_ptr<Argument> operator[](std::size_t index) const;
   /// \brief Set argument name and type.
-  void setArgumentInfo(unsigned index, std::string name);
+  void setArgumentInfo(unsigned index, const std::string &name);
 
-  void addBB(BBPtr B) { BasicBlocks.push_back(B); }
+  void addBB(std::shared_ptr<BasicBlock> B) { BasicBlocks.push_back(B); }
 
-  ArgPtr getArg(unsigned index) const { return (*this)[index]; }
+  std::shared_ptr<Argument> getArg(std::size_t index) const {
+    return (*this)[index];
+  }
   TyPtr getReturnType() const;
   TyPtr getFunctionType() const { return FunctionTy; }
 
   /// Get the underlying elements of the Function... the basic block list is
   /// empty for external functions.
-  std::vector<ArgPtr> &getArgumentList() { return Arguments; }
-  std::list<BBPtr> &getBasicBlockList() { return BasicBlocks; }
-  ArgPtr operator[](unsigned index) { return Arguments[index]; }
-  const BBPtr &getEntryBlock() const { return BasicBlocks.front(); }
+  std::vector<std::shared_ptr<Argument>> &getArgumentList() {
+    return Arguments;
+  }
+  std::list<std::shared_ptr<BasicBlock>> &getBasicBlockList() {
+    return BasicBlocks;
+  }
+  std::shared_ptr<Argument> operator[](std::size_t index) {
+    return Arguments[index];
+  }
+  const std::shared_ptr<BasicBlock> &getEntryBlock() const {
+    return BasicBlocks.front();
+  }
 
   /// Determine if the function is known not to recurse, directly or
   /// indirectly.
   bool doesNotRecurse() const { return true; }
   void dropAllReferences() {}
-  bool doesNotAccessMemory(unsigned n) const { return true; }
-  void setDoseNotAccessMemory(unsigned n) {}
-  bool onlyReadsMemory(unsigned n) const { return true; }
-  void setOnlyReadsMemory(unsigned n) {}
+  bool doesNotAccessMemory([[maybe_unused]] unsigned n) const { return true; }
+  void setDoseNotAccessMemory([[maybe_unused]] unsigned n) {}
+  bool onlyReadsMemory([[maybe_unused]] unsigned n) const { return true; }
+  void setOnlyReadsMemory([[maybe_unused]] unsigned n) {}
   /// Optimize this function for minimum size (-Oz).
   bool optForMinSize() const { return true; }
   /// Optimize this function for size (-Os) or minimum size (-Oz).
   bool optForSize() const { return true; }
 
-  static bool classof(ValPtr V) {
+  static bool classof(std::shared_ptr<Value> V) {
     return V->getValueType() == Value::ValueTy::FunctionVal;
   }
   /// \brief Print the function info.
@@ -107,6 +117,3 @@ public:
   void Print(std::ostringstream &out);
 };
 } // namespace IR
-} // namespace compiler
-
-#endif

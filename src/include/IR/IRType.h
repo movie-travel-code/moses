@@ -3,16 +3,15 @@
 // This file contains the declaration of the Type class.
 //
 //===---------------------------------------------------------------------===//
-#ifndef MOSES_IR_IRTYPE_H
-#define MOSES_IR_IRTYPE_H
-#include "include/Parser/Type.h"
+#pragma once
+#include "Parser/Type.h"
 #include <cassert>
 #include <iostream>
 #include <memory>
 #include <sstream>
 #include <vector>
 
-namespace compiler {
+using namespace ast;
 namespace IR {
 class Type;
 class StructType;
@@ -20,13 +19,11 @@ class FunctionType;
 class PointerType;
 class MosesIRContext;
 
-using ASTType = compiler::ast::Type;
-using ASTTyPtr = std::shared_ptr<ASTType>;
-using ASTBuiltinTy = compiler::ast::BuiltinType;
-using ASTUDTy = compiler::ast::UserDefinedType;
+using ASTBuiltinTy = ast::BuiltinType;
+using ASTUDTy = ast::UserDefinedType;
 using ASTUDTyPtr = std::shared_ptr<ASTUDTy>;
-using ASTTyKind = compiler::ast::TypeKind;
-using ASTAnonyTy = compiler::ast::AnonymousType;
+using ASTTyKind = ast::TypeKind;
+using ASTAnonyTy = ast::AnonymousType;
 using IRTyPtr = std::shared_ptr<Type>;
 using IRStructTyPtr = std::shared_ptr<StructType>;
 using IRFuncTyPtr = std::shared_ptr<FunctionType>;
@@ -37,7 +34,7 @@ public:
   //===----------------------------------------------------------===//
   // Definitions of all of the base types for the type system. Based
   // on this value, you can cast to a class defined in DerivedTypes.h.
-  enum TypeID {
+  enum class TypeID {
     VoidTy,
     LabelTy,
     IntegerTy,
@@ -53,17 +50,18 @@ private:
 
 public:
   Type(TypeID id) : ID(id) {}
+  virtual ~Type() {}
   //===-----------------------------------------------------===//
   // Accessors for working with types.
   TypeID getTypeID() const { return ID; }
-  bool isVoidType() const { return getTypeID() == VoidTy; }
-  bool isLabelTy() const { return getTypeID() == LabelTy; }
-  bool isIntegerTy() const { return getTypeID() == IntegerTy; }
-  bool isFunctionTy() const { return getTypeID() == FunctionTy; }
-  bool isStructTy() const { return getTypeID() == StructTy; }
-  bool isAnonyTy() const { return getTypeID() == AnonyTy; }
-  bool isBoolTy() const { return getTypeID() == BoolTy; }
-  bool isPointerTy() const { return getTypeID() == PointerTy; }
+  bool isVoidType() const { return getTypeID() == TypeID::VoidTy; }
+  bool isLabelTy() const { return getTypeID() == TypeID::LabelTy; }
+  bool isIntegerTy() const { return getTypeID() == TypeID::IntegerTy; }
+  bool isFunctionTy() const { return getTypeID() == TypeID::FunctionTy; }
+  bool isStructTy() const { return getTypeID() == TypeID::StructTy; }
+  bool isAnonyTy() const { return getTypeID() == TypeID::AnonyTy; }
+  bool isBoolTy() const { return getTypeID() == TypeID::BoolTy; }
+  bool isPointerTy() const { return getTypeID() == TypeID::PointerTy; }
 
   /// isSingleValueType - Return true if the type is a valid type for a
   /// register in codegen.
@@ -71,7 +69,7 @@ public:
 
   /// isAggregateType - Return true if the type is an aggregate type.
   bool isAggregateType() const {
-    return getTypeID() == StructTy || getTypeID() == AnonyTy;
+    return getTypeID() == TypeID::StructTy || getTypeID() == TypeID::AnonyTy;
   }
   //===------------------------------------------------------------===//
   // Helper for get types.
@@ -94,7 +92,7 @@ class FunctionType : public Type {
 private:
   std::vector<IRTyPtr> ContainedTys;
 
-  unsigned NumContainedTys;
+  std::size_t NumContainedTys;
 
 public:
   FunctionType(IRTyPtr retty, std::vector<IRTyPtr> parmsty);
@@ -112,9 +110,9 @@ public:
   /// returntype parm0 parm1 parm2
   /// [0] = parm0
   /// [2] = parm2
-  IRTyPtr operator[](unsigned index) const;
+  IRTyPtr operator[](std::size_t index) const;
 
-  unsigned getNumParams() const { return NumContainedTys - 1; }
+  std::size_t getNumParams() const { return NumContainedTys - 1; }
   std::vector<IRTyPtr> getParams() const { return ContainedTys; }
 
   static bool classof(IRTyPtr Ty);
@@ -124,7 +122,7 @@ public:
 
 private:
   std::vector<IRTyPtr> ConvertParmTypeToIRType(MosesIRContext &Ctx,
-                                               std::vector<ASTTyPtr> ParmTypes);
+                                               std::vector<std::shared_ptr<ASTType>> ParmTypes);
 };
 
 /// Class to represent struct types.
@@ -139,7 +137,7 @@ private:
   bool Literal;
   std::string Name;
   std::vector<IRTyPtr> ContainedTys;
-  unsigned NumContainedTys;
+  std::size_t NumContainedTys;
 
   /// For a named struct that actually has a name, this is a pointer to the
   /// symbol table entry for the struct. This is null if the type is an
@@ -150,12 +148,12 @@ public:
   /*static IRStructTyPtr Create(std::string Name);
                   static IRStructTyPtr Create(MosesIRContext &Ctx,
      std::vector<IRTyPtr> Elements, std::string Name);*/
-  static IRStructTyPtr Create(MosesIRContext &Ctx, ASTTyPtr type);
+  static IRStructTyPtr Create(MosesIRContext &Ctx, std::shared_ptr<ASTType> type);
 
   /// Create literal struct type.
   static IRStructTyPtr get(std::vector<IRTyPtr> Elements);
   /// Create literal struct type.
-  static IRStructTyPtr get(MosesIRContext &Ctx, ASTTyPtr type);
+  static IRStructTyPtr get(MosesIRContext &Ctx, std::shared_ptr<ASTType> type);
 
   virtual unsigned getSize() const override;
 
@@ -170,7 +168,7 @@ public:
   void setName(std::string Name);
 
   bool isLayoutIdentical(IRStructTyPtr Other) const;
-  unsigned getNumElements() const { return NumContainedTys; }
+  std::size_t getNumElements() const { return NumContainedTys; }
   std::vector<std::shared_ptr<Type>> getContainedTys() const {
     return ContainedTys;
   }
@@ -179,7 +177,7 @@ public:
     return ContainedTys[index];
   }
 
-  static bool classof(IRTyPtr T) { return T->getTypeID() == StructTy; }
+  static bool classof(IRTyPtr T) { return T->getTypeID() == TypeID::StructTy; }
 
   /// \brief Print the StructType Info.
   void Print(std::ostringstream &out) override;
@@ -187,7 +185,7 @@ public:
 };
 
 /// PointerType - Class to represent pointers
-class PointerType : public compiler::IR::Type {
+class PointerType : public IR::Type {
   IRTyPtr ElementTy;
 
 public:
@@ -200,6 +198,3 @@ public:
   void Print(std::ostringstream &out) override;
 };
 } // namespace IR
-} // namespace compiler
-
-#endif

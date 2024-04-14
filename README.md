@@ -1,22 +1,22 @@
 ## What is moses for?
 moses is a simple project just for improving my compiler skills, including 
 
- - 1.How to write a parser
- - 2.How to apply semantic analysis
- - 3.Code generation
- - 4.Static program analysis 
+ - 1. How to write a parser
+ - 2. How to apply semantic analysis
+ - 3. Code generation
+ - 4. Static program analysis 
    - Optimization
    - Symbolic execution
    - Pointer analysis
    - Type analysis
    - Or any static analysis skills
- - 5.How to write interpreter
- - 6.How to write a linker, debugger etc
+ - 5. How to write a interpreter
+ - 6. How to write a linker, debugger etc.
  - 7. Garbage collection
 
-But so far, I just finished `1`, `2`, `3`, `5` in 2016.06. Current buggy implementation is very simple and have many places borrowed from llvm2.6, like the IR design.
+But so far, I just finished `1`, `2`, `3`, `5` in june 2016. Current buggy implementation is very simple and have many places borrowed from llvm2.6, like the IR design.
 
-Another rule of moses is to improve my English writing skills :).
+Another role of moses is to improve my English writing skills :).
 
 *Note: The reason why it was named [moses][1] is that I am learning religious history when I am implementing this. Yea, this name is farfetched.*
 
@@ -25,8 +25,8 @@ Another rule of moses is to improve my English writing skills :).
 ```Bash
 $ mkdir build
 $ cd build
-$ cmake ..
-$ sudo make
+$ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Release ..
+$ make
 ```
 
 ## How to use

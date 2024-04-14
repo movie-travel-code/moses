@@ -3,21 +3,19 @@
 // This file defines the ASTContext interface.
 //
 //===---------------------------------------------------------------------===//
-#ifndef AST_CONTEXT_H
-#define AST_CONTEXT_H
-#include "include/Support/Hasing.h"
-#include "include/Support/TypeSet.h"
+#pragma once
+#include "Support/Hasing.h"
+#include "Support/TypeSet.h"
 #include "Type.h"
 
-using namespace compiler::SupportStructure;
-namespace compiler {
+using namespace SupportStructure;
 namespace ast {
 /// ASTContext - This class holds types that can be referred to thorought
 /// the semantic analysis of a file.
 class ASTContext {
 private:
-  typedef TypeKeyInfo::UserDefinedTypeKeyInfo UDKeyInfo;
-  typedef TypeKeyInfo::AnonTypeKeyInfo AnonTypeKeyInfo;
+  using UDKeyInfo = TypeKeyInfo::UserDefinedTypeKeyInfo;
+  using AnonTypeKeyInfo = TypeKeyInfo::AnonTypeKeyInfo;
 
 public:
   ASTContext()
@@ -36,5 +34,3 @@ public:
   bool isParseOrSemaSuccess;
 };
 } // namespace ast
-} // namespace compiler
-#endif

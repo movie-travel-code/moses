@@ -4,10 +4,10 @@ func add(lhs : int, rhs : int) -> int
 }
 const global = 10;
 
-// 这里我们可以将 "num" evaluate 成为213
+// Evalute "num" directly to 213
 var num = add(global, 20) + 23;
 
-// 这里我们可以将 "num > 0" evaluate 成为 true
+// Evalute "num > 0" directly to true
 if (num > 0)
 {
 	num = 0;

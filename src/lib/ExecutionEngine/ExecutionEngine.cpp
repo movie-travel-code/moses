@@ -3,22 +3,24 @@
 // Impletes the class ExecutionEngine.
 //
 //===---------------------------------------------------------------------===//
-#include "include/ExecutionEngine/ExecutionEngine.h"
+#include "ExecutionEngine/ExecutionEngine.h"
+#include <cstring>
 
-using namespace compiler::Interpreter;
-extern void print(std::shared_ptr<compiler::IR::Value> V);
-Interpreter::Interpreter(const std::list<ValPtr> &Insts,
+using namespace Execution;
+extern void print(std::shared_ptr<IR::Value> V);
+Interpreter::Interpreter(const std::list<std::shared_ptr<Value>> &Insts,
                          const MosesIRContext &Ctx)
     : Insts(Insts), Ctx(Ctx) {
   // Initialize the top-level-frame.
-  ECStack.push_back(ExecutionContext());
+  ECStack.emplace_back(ExecutionContext());
 
   ExecutionContext &SF = ECStack.back();
   // nullptr means top-level-frame.
   SF.CurFunction = nullptr;
   // Get the first BasicBlock to execute.
-  for (auto val : Insts) {
-    if (BBPtr BB = std::dynamic_pointer_cast<BasicBlock>(val)) {
+  for (auto &val : Insts) {
+    if (std::shared_ptr<BasicBlock> BB =
+            std::dynamic_pointer_cast<BasicBlock>(val)) {
       SF.CurBB = BB;
       break;
     }
@@ -30,8 +32,9 @@ Interpreter::Interpreter(const std::list<ValPtr> &Insts,
 }
 
 /// create - Create an interpreter ExecutionEngine. This can never fail.
-std::shared_ptr<Interpreter> Interpreter::create(const std::list<ValPtr> &Insts,
-                                                 const MosesIRContext &Ctx) {
+std::shared_ptr<Interpreter>
+Interpreter::create(const std::list<std::shared_ptr<Value>> &Insts,
+                    const MosesIRContext &Ctx) {
   return std::make_shared<Interpreter>(Insts, Ctx);
 }
 
@@ -67,7 +70,7 @@ void Interpreter::run() {
     // Interprete a single instruction & increment the "PC"
     // Current stack frame.
     ExecutionContext &SF = ECStack.back();
-    InstPtr I = SF.IssueInstruction();
+    std::shared_ptr<Instruction> I = SF.IssueInstruction();
     if (I)
       visit(I);
     else
@@ -75,7 +78,7 @@ void Interpreter::run() {
   }
 }
 
-void Interpreter::visit(InstPtr I) {
+void Interpreter::visit(std::shared_ptr<Instruction> I) {
   print(I);
   switch (I->getOpcode()) {
   case Opcode::Add:
@@ -148,7 +151,7 @@ void Interpreter::visit(InstPtr I) {
   }
 }
 
-void Interpreter::visitBinaryOperator(BOInstPtr I) {
+void Interpreter::visitBinaryOperator(std::shared_ptr<BinaryOperator> I) {
   ExecutionContext &SF = ECStack.back();
   auto Ty = I->getType();
   GenericValue Src1 = getOperandValue(I->getOperand(0).get(), SF);
@@ -194,7 +197,7 @@ void Interpreter::visitBinaryOperator(BOInstPtr I) {
 }
 
 /// visitAllocaInst - Alloca the memory and update the information.
-void Interpreter::visitAllocaInst(AllocaInstPtr I) {
+void Interpreter::visitAllocaInst(std::shared_ptr<AllocaInst> I) {
   ExecutionContext &SF = ECStack.back();
   auto PTy = std::dynamic_pointer_cast<PointerType>(I->getType());
   assert(PTy && "PTy is null.");
@@ -209,7 +212,7 @@ void Interpreter::visitAllocaInst(AllocaInstPtr I) {
   ECStack.back().Allocas.add(Memory);
 }
 
-void Interpreter::visitBranchInst(BrInstPtr I) {
+void Interpreter::visitBranchInst(std::shared_ptr<BranchInst> I) {
   ExecutionContext &SF = ECStack.back();
   auto Dest = I->getSuccessor(0);
   if (!I->isUncoditional()) {
@@ -220,7 +223,7 @@ void Interpreter::visitBranchInst(BrInstPtr I) {
   SwitchToNewBasicBlock(Dest, SF);
 }
 
-void Interpreter::visitCallInst(CallInstPtr I) {
+void Interpreter::visitCallInst(std::shared_ptr<CallInst> I) {
   ExecutionContext &SF = ECStack.back();
   // Check the current call is Intrinsic.
   if (I->isIntrinsicCall()) {
@@ -231,7 +234,7 @@ void Interpreter::visitCallInst(CallInstPtr I) {
   SF.Caller = I;
   // prepare the arg values.
   std::vector<GenericValue> ArgVals;
-  for (unsigned i = 0, size = I->getNumArgOperands(); i < size; i++)
+  for (std::size_t i = 0, size = I->getNumArgOperands(); i < size; i++)
     ArgVals.push_back(getOperandValue(I->getArgOperand(i), SF));
 
   auto Func = std::dynamic_pointer_cast<Function>(I->getOperand(0).get());
@@ -239,7 +242,7 @@ void Interpreter::visitCallInst(CallInstPtr I) {
   callFunction(Func, ArgVals);
 }
 
-void Interpreter::visitCmpInst(CmpInstPtr I) {
+void Interpreter::visitCmpInst(std::shared_ptr<CmpInst> I) {
   ExecutionContext &SF = ECStack.back();
   auto Ty = I->getOperand(0).get()->getType();
 
@@ -249,29 +252,29 @@ void Interpreter::visitCmpInst(CmpInstPtr I) {
   GenericValue Result;
 
   switch (PreD) {
-  case compiler::IR::CmpInst::CMP_EQ:
+  case IR::CmpInst::CMP_EQ:
     if (Ty->isBoolTy())
       Result.BoolVal = LHS.BoolVal == RHS.BoolVal;
     if (Ty->isIntegerTy())
       Result.BoolVal = LHS.IntVal == RHS.IntVal;
     // To Do: Userdefined type
     break;
-  case compiler::IR::CmpInst::CMP_NE:
+  case IR::CmpInst::CMP_NE:
     if (Ty->isBoolTy())
       Result.BoolVal = LHS.BoolVal != RHS.BoolVal;
     if (Ty->isIntegerTy())
       Result.IntVal = LHS.IntVal != RHS.IntVal;
     break;
-  case compiler::IR::CmpInst::CMP_GT:
+  case IR::CmpInst::CMP_GT:
     Result.BoolVal = LHS.IntVal > RHS.IntVal;
     break;
-  case compiler::IR::CmpInst::CMP_GE:
+  case IR::CmpInst::CMP_GE:
     Result.BoolVal = LHS.IntVal >= RHS.IntVal;
     break;
-  case compiler::IR::CmpInst::CMP_LT:
+  case IR::CmpInst::CMP_LT:
     Result.BoolVal = LHS.IntVal < RHS.IntVal;
     break;
-  case compiler::IR::CmpInst::CMP_LE:
+  case IR::CmpInst::CMP_LE:
     Result.BoolVal = LHS.IntVal <= RHS.IntVal;
     break;
   default:
@@ -281,20 +284,18 @@ void Interpreter::visitCmpInst(CmpInstPtr I) {
   SetGenericValue(I, Result, SF);
 }
 
-void Interpreter::visitGEPInst(GEPInstPtr I) {
+void Interpreter::visitGEPInst(std::shared_ptr<GetElementPtrInst> I) {
   ExecutionContext &SF = ECStack.back();
   void *BaseAddr = GVTOP(getOperandValue(I->getOperand(0).get(), SF));
-  unsigned long TotalIndex = 0;
   GenericValue Result;
   // GEP instruction just have two operand. Shit.
   GenericValue index = getOperandValue(I->getOperand(2).get(), SF);
 
-  TotalIndex = index.IntVal;
   Result.PointerVal = (char *)BaseAddr + index.IntVal * sizeof(int);
   SetGenericValue(I, Result, SF);
 }
 
-void Interpreter::visitLoadInst(LoadInstPtr I) {
+void Interpreter::visitLoadInst(std::shared_ptr<LoadInst> I) {
   ExecutionContext &SF = ECStack.back();
   GenericValue SrcAddr = getOperandValue(I->getOperand(0).get(), SF);
   GenericValue Result;
@@ -303,7 +304,7 @@ void Interpreter::visitLoadInst(LoadInstPtr I) {
   SetGenericValue(I, Result, SF);
 }
 
-void Interpreter::visitStoreInst(StoreInstPtr I) {
+void Interpreter::visitStoreInst(std::shared_ptr<StoreInst> I) {
   ExecutionContext &SF = ECStack.back();
   GenericValue V = getOperandValue(I->getOperand(0).get(), SF);
   GenericValue DestAddr = getOperandValue(I->getOperand(1).get(), SF);
@@ -311,7 +312,7 @@ void Interpreter::visitStoreInst(StoreInstPtr I) {
   StoreValueToMemory(V, DestAddr, I->getOperand(0).get()->getType());
 }
 
-void Interpreter::visitReturnInst(ReturnInstPtr I) {
+void Interpreter::visitReturnInst(std::shared_ptr<ReturnInst> I) {
   ExecutionContext &SF = ECStack.back();
   GenericValue ReturnV;
   bool isVoid = true;
@@ -324,7 +325,8 @@ void Interpreter::visitReturnInst(ReturnInstPtr I) {
   PopStackAndSetReturnValue(ReturnV, isVoid);
 }
 
-void Interpreter::SwitchToNewBasicBlock(BBPtr New, ExecutionContext &SF) {
+void Interpreter::SwitchToNewBasicBlock(std::shared_ptr<BasicBlock> New,
+                                        ExecutionContext &SF) {
   SF.CurBB = New;
   SF.CurInst = New->begin();
   // Now have no phi node, so return.
@@ -332,35 +334,37 @@ void Interpreter::SwitchToNewBasicBlock(BBPtr New, ExecutionContext &SF) {
 
 GenericValue Interpreter::getConstantValue(ConstantPtr C) {
   GenericValue Result;
-  if (ConstantBoolPtr CB = std::dynamic_pointer_cast<ConstantBool>(C))
+  if (std::shared_ptr<ConstantBool> CB =
+          std::dynamic_pointer_cast<ConstantBool>(C))
     Result.BoolVal = CB->getVal();
 
-  if (ConstantIntPtr CI = std::dynamic_pointer_cast<ConstantInt>(C))
+  if (std::shared_ptr<ConstantInt> CI =
+          std::dynamic_pointer_cast<ConstantInt>(C))
     Result.IntVal = CI->getVal();
   return Result;
 }
 
-GenericValue Interpreter::getOperandValue(ValPtr V, ExecutionContext &SF) {
+GenericValue
+Interpreter::getOperandValue(std::shared_ptr<Value> V,
+                             [[maybe_unused]] ExecutionContext &SF) {
   if (ConstantPtr CPV = std::dynamic_pointer_cast<Constant>(V))
     return getConstantValue(CPV);
-  else
-    return getLocalAndGlobalGV(V);
+  return getLocalAndGlobalGV(V);
 }
 
-GenericValue Interpreter::getLocalAndGlobalGV(ValPtr V) {
+GenericValue Interpreter::getLocalAndGlobalGV(std::shared_ptr<Value> V) {
   ExecutionContext &SF = ECStack.back();
   if (SF.Values.find(V) != SF.Values.end())
     return SF.Values[V];
-  else
-    return TopLevelFrame.Values[V];
+  return TopLevelFrame.Values[V];
 }
 
-void Interpreter::SetGenericValue(ValPtr V, GenericValue GV,
+void Interpreter::SetGenericValue(std::shared_ptr<Value> V, GenericValue GV,
                                   ExecutionContext &SF) {
   SF.Values[V] = GV;
 }
 
-void Interpreter::callFunction(FuncPtr Function,
+void Interpreter::callFunction(std::shared_ptr<Function> Function,
                                std::vector<GenericValue> ArgVals) {
   // Create a new stack frame.
   ECStack.push_back(ExecutionContext());
@@ -372,11 +376,12 @@ void Interpreter::callFunction(FuncPtr Function,
 
   // This is the most interesting part.
   // Handle the argument passing.
-  for (unsigned i = 0, size = Function->getArgumentList().size(); i < size; i++)
+  for (std::size_t i = 0, size = Function->getArgumentList().size(); i < size;
+       i++)
     SetGenericValue(Function->getArg(i), ArgVals[i], SF);
 }
 
-void Interpreter::callIntrinsic(CallInstPtr I) {
+void Interpreter::callIntrinsic(std::shared_ptr<CallInst> I) {
   ExecutionContext &SF = ECStack.back();
   if (I->getOperand(0).get()->getName() == "mosesir.memcpy") {
     GenericValue SrcAddr = getOperandValue(I->getOperand(2).get(), SF);
@@ -386,9 +391,9 @@ void Interpreter::callIntrinsic(CallInstPtr I) {
     auto PTy = std::dynamic_pointer_cast<IR::PointerType>(Ty);
     assert(PTy && "The operand of mosesir.memcpy must have pointer type.");
     auto ElementTy = PTy->getElementTy();
-    unsigned size = ElementTy->getSize();
+    std::size_t size = ElementTy->getSize();
 
-    memcpy((char *)GVTOP(DestAddr), (char *)GVTOP(SrcAddr), size);
+    std::memcpy((char *)GVTOP(DestAddr), (char *)GVTOP(SrcAddr), size);
   } else if (I->getOperand(0).get()->getName() == "mosesir.print") {
     GenericValue Val = getOperandValue(I->getOperand(1).get(), SF);
     auto Ty = I->getOperand(1).get()->getType();

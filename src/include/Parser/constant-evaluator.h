@@ -10,13 +10,10 @@
 // * An evaluated result, valid only if constant folding has not faild.
 //
 //==----------------------------------------------------------------------===//
-#ifndef CONSTANT_EVALUATOR_H
-#define CONSTANT_EVALUATOR_H
+#pragma once
 #include "EvaluatedExprVisitor.h"
 #include "ast.h"
 
-
-namespace compiler {
 namespace ast {
 /// constant-evaluator
 /// func add(lhs : int, rhs : int) -> int
@@ -29,10 +26,10 @@ class ConstantEvaluator {
   /// https://akrzemi1.wordpress.com/2011/05/06/compile-time-computations/
   /// http://clang.llvm.org/docs/InternalsManual.html#constant-folding-in-the-clang-ast
 public:
-  typedef EvalStatus::ValueKind ValueKind;
-  typedef EvalStatus::Result Result;
+  using ValueKind = EvalStatus::ValueKind;
+  using Result = EvalStatus::Result;
 
-  typedef EvalInfo::EvaluationMode EvaluationMode;
+  using EvaluationMode = EvalInfo::EvaluationMode;
 
 public:
   bool EvaluateAsRValue(ExprASTPtr Exp, EvalInfo &Result) const;
@@ -50,5 +47,3 @@ public:
   bool HasSideEffects(const Expr *Exp) const;
 };
 } // namespace ast
-} // namespace compiler
-#endif

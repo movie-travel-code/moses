@@ -4,9 +4,7 @@
 // lexer and parser.
 //
 //===---------------------------------------------------------------------===//
-#ifndef TOKENKINDS_INCLUDE
-#define TOKENKINDS_INCLUDE
-namespace compiler {
+#pragma once
 namespace tok {
 enum class TokenValue : unsigned short {
   IDENTIFIER,
@@ -74,6 +72,4 @@ enum class TokenValue : unsigned short {
   FILE_EOF,
   UNKNOWN
 };
-}
-} // namespace compiler
-#endif
+} // namespace tok

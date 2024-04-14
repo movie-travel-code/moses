@@ -7,11 +7,9 @@
 // because you can do certain things with these global objects that you can't
 // do to anything else. For example, use the address of one as a constant.
 //===---------------------------------------------------------------------===//
-#ifndef MOSES_IR_CONSTANT_AND_GLOBAL_H
-#define MOSES_IR_CONSTANT_AND_GLOBAL_H
+#pragma once
 #include "User.h"
 
-namespace compiler {
 namespace IR {
 class ArrayType;
 class StructType;
@@ -51,12 +49,12 @@ class GlobalValue : public User {
 
 protected:
   TyPtr ValTy;
-  GlobalValue(TyPtr Ty, ValueTy vty, std::string name = "");
+  GlobalValue(TyPtr Ty, ValueTy vty, const std::string &name = "");
 
 public:
   TyPtr getType() const { return Ty; }
   TyPtr getValType() const { return ValTy; }
-  static bool classof(const GlobalValue *T) { return true; }
+  static bool classof([[maybe_unused]] const GlobalValue *T) { return true; }
   static bool classof(const Value *V) {
     return V->getValueType() == Value::ValueTy::FunctionVal ||
            V->getValueType() == Value::ValueTy::GlobalVariableVal;
@@ -71,14 +69,16 @@ class ConstantIntegral : public Constant {
   ConstantIntegral(const ConstantIntegral &) = delete;
 
 protected:
-  ConstantIntegral(TyPtr ty) : Constant(ty) {}
+  explicit ConstantIntegral(TyPtr ty) : Constant(ty) {}
 
 public:
   /// Methods for support type inquiry through isa, cast, and dyn_cast:
-  static bool classof(const ConstantIntegral *) { return true; }
+  static bool classof([[maybe_unused]] const ConstantIntegral *) {
+    return true;
+  }
   static bool classof(const Constant *CPV); // defined in Constants.cpp
   // To Do:
-  static bool classof(const Value *V) { return true; }
+  static bool classof([[maybe_unused]] const Value *V) { return true; }
 };
 
 //===----------------------------------------------------------------===//
@@ -93,12 +93,12 @@ public:
 
   /// getTrue() - static factory methods - Return objects of the specified
   /// value.
-  static ConstantBoolPtr getTrue(MosesIRContext &Ctx) {
+  static std::shared_ptr<ConstantBool> getTrue(MosesIRContext &Ctx) {
     return std::make_shared<ConstantBool>(Ctx, true);
   }
   /// getFalse() - static factory methods - Return objects of the specified
   /// value.
-  static ConstantBoolPtr getFalse(MosesIRContext &Ctx) {
+  static std::shared_ptr<ConstantBool> getFalse(MosesIRContext &Ctx) {
     return std::make_shared<ConstantBool>(Ctx, false);
   }
   /// inverted - Return the opposite value of the current value.
@@ -116,7 +116,6 @@ public:
   void Print(std::ostringstream &out) override;
 };
 
-// ��moses�У���ʱֻ��int��bool���ͣ�int���Ϳ���ʹ��i32��ʾ��
 class ConstantInt final : public ConstantIntegral {
   int Val;
   ConstantInt(const ConstantInt &) = delete;
@@ -125,7 +124,7 @@ public:
   ConstantInt(MosesIRContext &Ctx, int val);
 
   /// \brief Get a ConstantInt for a specific value.
-  static ConstantIntPtr get(MosesIRContext &Ctx, int value) {
+  static std::shared_ptr<ConstantInt> get(MosesIRContext &Ctx, int value) {
     auto CI = std::make_shared<ConstantInt>(Ctx, value);
     CI->setName(std::to_string(value));
     return CI;
@@ -134,11 +133,12 @@ public:
   bool equalsInt(int v) const { return Val == v; }
   int getVal() const { return Val; }
   // Shit code.
-  static ConstantIntPtr getZeroValueForNegative(MosesIRContext &Ctx) {
+  static std::shared_ptr<ConstantInt>
+  getZeroValueForNegative(MosesIRContext &Ctx) {
     return std::make_shared<ConstantInt>(Ctx, 0);
   }
 
-  static bool classof(ValPtr V) {
+  static bool classof(std::shared_ptr<Value> V) {
     return V->getValueType() == Value::ValueTy::ConstantVal;
   }
 
@@ -173,6 +173,3 @@ public:
   void Print(std::ostringstream &out) override;
 };
 } // namespace IR
-} // namespace compiler
-
-#endif

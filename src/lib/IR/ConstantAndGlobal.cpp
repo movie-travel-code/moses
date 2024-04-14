@@ -3,13 +3,13 @@
 // Impletation for class 'const' and class 'global'.
 //
 //===---------------------------------------------------------------------===//
-#include "include/IR/ConstantAndGlobal.h"
-#include "include/IR/MosesIRContext.h"
+#include "IR/ConstantAndGlobal.h"
+#include "IR/MosesIRContext.h"
 
-using namespace compiler::IR;
+using namespace IR;
 //===-----------------------------------------------------------===//
 // Implements the GlobalValue.
-GlobalValue::GlobalValue(TyPtr Ty, ValueTy vty, std::string name)
+GlobalValue::GlobalValue(TyPtr Ty, ValueTy vty, const std::string &name)
     : User(PointerType::get(Ty), vty, name), ValTy(Ty) {}
 
 //===-----------------------------------------------------------===//

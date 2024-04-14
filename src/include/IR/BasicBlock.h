@@ -11,15 +11,12 @@
 // useful in the intermediate stage modification to a program.
 //
 //===---------------------------------------------------------------------===//
-#ifndef MOSES_IR_BASIC_BLOCK_H
-#define MOSES_IR_BASIC_BLOCK_H
+#pragma once
 #include "Function.h"
 #include "Instruction.h"
 #include <memory>
 #include <string>
 
-
-namespace compiler {
 namespace IR {
 class TerminatorInst;
 /// \brief moses IR(LLVM) Basic Block Representation
@@ -31,8 +28,8 @@ class TerminatorInst;
 class BasicBlock : public Value {
 private:
   // Instruction List
-  std::list<InstPtr> InstList;
-  FuncPtr Parent;
+  std::list<std::shared_ptr<Instruction>> InstList;
+  std::shared_ptr<Function> Parent;
 
   BasicBlock(const BasicBlock &) = delete;
   void operator=(const BasicBlock &) = delete;
@@ -40,7 +37,8 @@ private:
 public:
   /// BasicBlock ctor - If the function parameter is specified, the basic block
   /// is automatically inserted at the end of the function.
-  BasicBlock(std::string Name, FuncPtr Parent, BBPtr InsertBefore = nullptr);
+  BasicBlock(const std::string &Name, std::shared_ptr<Function> Parent,
+             std::shared_ptr<BasicBlock> InsertBefore = nullptr);
   ~BasicBlock() {}
 
   /// \brief Creates a new BasicBlock.
@@ -48,26 +46,28 @@ public:
   /// If the Parent parameter is specified, the basic block is automatically
   /// inserted at either the end of the function (if InsertBefore is 0), or
   /// before the specified basic block.
-  static BBPtr Create(std::string Name, FuncPtr, BBPtr = nullptr);
+  static std::shared_ptr<BasicBlock>
+  Create(const std::string &Name, std::shared_ptr<Function>,
+         std::shared_ptr<BasicBlock> = nullptr);
   bool RemoveInst(const Value *val);
-  void setParent(FuncPtr parent) { Parent = parent; }
+  void setParent(std::shared_ptr<Function> parent) { Parent = parent; }
   // Specialize setName to take care of symbol table majik
   virtual void setName(const std::string &name) override { Name = name; }
   // getParent - Return the enclosing method, or null if none
-  FuncPtr getParent() { return Parent; }
+  std::shared_ptr<Function> getParent() { return Parent; }
 
-  std::vector<BBPtr> getPredecessors() const;
+  std::vector<std::shared_ptr<BasicBlock>> getPredecessors() const;
 
   /// \brief Remove 'this' from the containing function.
   /// \returns the element after the erased one.
-  BBPtr removeFromParent();
+  std::shared_ptr<BasicBlock> removeFromParent();
 
   /// removePredecessor - This method is used to notify a BasicBlock that the
   /// specified predicesoor of the block is no longer able to reach it. This is
   /// actully not used to update the Predecessor list, but it is actully used to
   /// update the PHI nodes that reside in the block. Note that this should be
   /// called while the predecessor still refers to this block.
-  void removePredecessor(BBPtr Pred);
+  void removePredecessor(std::shared_ptr<BasicBlock> Pred);
 
   /// splitBasicBlock - This splits a basic block into two the specified
   /// instruction. Note that all instructions BEFORE the specified iterator
@@ -75,7 +75,8 @@ public:
   /// added to the new BB, and the rest of the instructions in the BB are
   /// moved to the new BB, including the old terminator. The newly formed
   /// BasicBlock is returned.
-  BBPtr splitBasicBlock(unsigned index, std::string BBName = "");
+  std::shared_ptr<BasicBlock> splitBasicBlock(unsigned index,
+                                              std::string BBName = "");
 
   /// getTerminator() - If this is a well formed basic block, the this returns
   /// a pointer to the terminator instruction. It it is not, then you get a
@@ -85,14 +86,15 @@ public:
   //===--------------------------------------------------------------------===//
   // Instruction iterator methods
   //===--------------------------------------------------------------------===//
-  std::list<InstPtr> &getInstList() { return InstList; }
-  std::list<InstPtr>::iterator Insert(Iterator InsertP, InstPtr I);
-  void Push(InstPtr I) { InstList.push_back(I); }
-  Iterator getIterator(InstPtr I);
-  std::list<InstPtr>::iterator begin();
-  std::list<InstPtr>::iterator end();
+  std::list<std::shared_ptr<Instruction>> &getInstList() { return InstList; }
+  std::list<std::shared_ptr<Instruction>>::iterator
+  Insert(Iterator InsertP, std::shared_ptr<Instruction> I);
+  void Push(std::shared_ptr<Instruction> I) { InstList.push_back(I); }
+  Iterator getIterator(std::shared_ptr<Instruction> I);
+  std::list<std::shared_ptr<Instruction>>::iterator begin();
+  std::list<std::shared_ptr<Instruction>>::iterator end();
   // methods for support type inquiry thorough isa, cast, and dyn_cast
-  static bool classof(ValPtr V) {
+  static bool classof(std::shared_ptr<Value> V) {
     return V->getValueType() == Value::ValueTy::BasicBlockVal;
   }
 
@@ -100,5 +102,3 @@ public:
   void Print(std::ostringstream &out) override;
 };
 } // namespace IR
-} // namespace compiler
-#endif

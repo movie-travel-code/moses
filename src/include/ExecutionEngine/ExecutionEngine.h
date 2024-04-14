@@ -3,16 +3,15 @@
 // This file defines the class ExecutionEngine.
 //
 //===---------------------------------------------------------------------===//
-#ifndef EXECUTION_ENGINE_H
-#define EXECUTION_ENGINE_H
+#pragma once
 
-#include "include/IR/BasicBlock.h"
-#include "include/IR/Function.h"
-#include "include/IR/IRType.h"
-#include "include/IR/Instruction.h"
-#include "include/IR/User.h"
-#include "include/IR/Value.h"
 #include "GenericValue.h"
+#include "IR/BasicBlock.h"
+#include "IR/Function.h"
+#include "IR/IRType.h"
+#include "IR/Instruction.h"
+#include "IR/User.h"
+#include "IR/Value.h"
 #include <iostream>
 #include <map>
 #include <memory>
@@ -20,9 +19,7 @@
 #include <string>
 #include <vector>
 
-
-namespace compiler {
-namespace Interpreter {
+namespace Execution {
 using namespace IR;
 using Opcode = Instruction::Opcode;
 
@@ -39,21 +36,21 @@ struct AllocaHolder {
 /// executing.
 struct ExecutionContext {
   // The currently executing function.
-  FuncPtr CurFunction;
+  std::shared_ptr<Function> CurFunction;
   // The currently executing BB
-  BBPtr CurBB;
+  std::shared_ptr<BasicBlock> CurBB;
   // The next instruction to execute.
-  std::list<InstPtr>::iterator CurInst;
+  std::list<std::shared_ptr<Instruction>>::iterator CurInst;
   // Values used in this invocation.
   // http://stackoverflow.com/questions/24239696/using-std-shared-ptr-as-stdmap-key
-  std::map<ValPtr, GenericValue> Values;
+  std::map<std::shared_ptr<Value>, GenericValue> Values;
 
   // Holds the call that called subframes.
-  CallInstPtr Caller;
+  std::shared_ptr<CallInst> Caller;
 
   // Track memory allocated by alloca.
   AllocaHolder Allocas;
-  InstPtr IssueInstruction() {
+  std::shared_ptr<Instruction> IssueInstruction() {
     if (CurInst != CurBB->end())
       return *CurInst++;
     return nullptr;
@@ -75,7 +72,7 @@ class Interpreter {
   // AtExitHandlers - List of functions to call when the program exits,
   // registered with the atexit() library function.
   // std::vector<Function*> AtExitHandlers;
-  const std::list<ValPtr> &Insts;
+  const std::list<std::shared_ptr<Value>> &Insts;
   const MosesIRContext &Ctx;
 
 private:
@@ -83,7 +80,7 @@ private:
   /// Place a call on the stack.
   void callFunction(Function *F, const std::vector<GenericValue> &ArgVals);
   /// Execute Intrinsic call.
-  void callIntrinsic(CallInstPtr I);
+  void callIntrinsic(std::shared_ptr<CallInst> I);
 
   void LoadValueFromMemory(GenericValue &Dest, GenericValue SrcAddr,
                            IR::TyPtr Ty);
@@ -91,7 +88,8 @@ private:
   void PopStackAndSetReturnValue(GenericValue ReturnValue, bool isVoid);
 
 public:
-  Interpreter(const std::list<ValPtr> &Insts, const MosesIRContext &Ctx);
+  Interpreter(const std::list<std::shared_ptr<Value>> &Insts,
+              const MosesIRContext &Ctx);
   ~Interpreter() {}
 
   /// runAtExitHandlers - Run any functions registered by the program's calls
@@ -99,8 +97,9 @@ public:
   /// void runAtExitHandlers();
 
   /// create - Create an interpreter ExecutionEngine. This can never fail.
-  static std::shared_ptr<Interpreter> create(const std::list<ValPtr> &Insts,
-                                             const MosesIRContext &Ctx);
+  static std::shared_ptr<Interpreter>
+  create(const std::list<std::shared_ptr<Value>> &Insts,
+         const MosesIRContext &Ctx);
 
   /// StoreValueToMemory - Stores the data in Val of type Ty at address Ptr.
   /// Ptr is the address of the memory at which to store Val, cast to
@@ -117,45 +116,45 @@ public:
   /// Execute instructions until nothing left to do.
   void run();
 
-  void visitReturnInst(ReturnInstPtr I);
-  void visitBranchInst(BrInstPtr I);
+  void visitReturnInst(std::shared_ptr<ReturnInst> I);
+  void visitBranchInst(std::shared_ptr<BranchInst> I);
 
-  void visitBinaryOperator(BOInstPtr I);
-  void visitCmpInst(CmpInstPtr I);
-  void visitAllocaInst(AllocaInstPtr I);
-  void visitLoadInst(LoadInstPtr I);
-  void visitStoreInst(StoreInstPtr I);
-  void visitGEPInst(GEPInstPtr I);
+  void visitBinaryOperator(std::shared_ptr<BinaryOperator> I);
+  void visitCmpInst(std::shared_ptr<CmpInst> I);
+  void visitAllocaInst(std::shared_ptr<AllocaInst> I);
+  void visitLoadInst(std::shared_ptr<LoadInst> I);
+  void visitStoreInst(std::shared_ptr<StoreInst> I);
+  void visitGEPInst(std::shared_ptr<GetElementPtrInst> I);
 
-  void visitCallInst(CallInstPtr I);
+  void visitCallInst(std::shared_ptr<CallInst> I);
 
-  void visitShl(BOInstPtr I);
-  void visitShr(BOInstPtr I);
+  void visitShl(std::shared_ptr<BinaryOperator> I);
+  void visitShr(std::shared_ptr<BinaryOperator> I);
 
-  void visit(InstPtr I);
+  void visit(std::shared_ptr<Instruction> I);
 
   void exitCalled(GenericValue GV);
 
   // SwitchToNewBasicBlock - Start execution in a new basic block and run any
   // PHI nodes in the top of the block. This is used for intraprocedural
   // control flow.
-  void SwitchToNewBasicBlock(BBPtr New, ExecutionContext &SF);
+  void SwitchToNewBasicBlock(std::shared_ptr<BasicBlock> New,
+                             ExecutionContext &SF);
 
-  GenericValue getOperandValue(ValPtr V, ExecutionContext &SF);
+  GenericValue getOperandValue(std::shared_ptr<Value> V, ExecutionContext &SF);
 
   GenericValue getConstantValue(ConstantPtr C);
 
-  GenericValue getLocalAndGlobalGV(ValPtr V);
+  GenericValue getLocalAndGlobalGV(std::shared_ptr<Value> V);
 
   void *getPointerToFunction(Function *F) { return (void *)F; };
 
   /// SetGenericValue - Update the GenericValue of specified V on the SF.
-  void SetGenericValue(ValPtr V, GenericValue GV, ExecutionContext &SF);
+  void SetGenericValue(std::shared_ptr<Value> V, GenericValue GV,
+                       ExecutionContext &SF);
 
   /// callFunction - Switch the context info and create a new stack frame.
-  void callFunction(FuncPtr Function, std::vector<GenericValue> ArgVals);
+  void callFunction(std::shared_ptr<Function> Function,
+                    std::vector<GenericValue> ArgVals);
 };
-} // namespace Interpreter
-} // namespace compiler
-
-#endif
+} // namespace Execution

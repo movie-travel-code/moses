@@ -4,10 +4,9 @@
 // such as the global type and constant uniquing tables.
 //
 //===---------------------------------------------------------------------===//
-#ifndef MOSES_IR_CONTEXT_H
-#define MOSES_IR_CONTEXT_H
-#include "include/Support/Hasing.h"
-#include "include/Support/TypeSet.h"
+#pragma once
+#include "Support/Hasing.h"
+#include "Support/TypeSet.h"
 #include "ConstantAndGlobal.h"
 #include "Function.h"
 #include "IRType.h"
@@ -16,7 +15,6 @@
 #include <string>
 #include <vector>
 
-namespace compiler {
 namespace IR {
 using namespace std;
 using namespace Hashing;
@@ -170,5 +168,3 @@ public:
   }
 };
 } // namespace IR
-} // namespace compiler
-#endif

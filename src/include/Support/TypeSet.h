@@ -3,24 +3,22 @@
 // This file defines the TypeSet class.
 //
 //===---------------------------------------------------------------------===//
-#ifndef TYPE_SET_H
-#define TYPE_SET_H
+#pragma once
 #include <vector>
-namespace compiler {
+
 namespace SupportStructure {
 template <typename ValueT, typename ValueInfoT> class TypeSet {
   std::vector<ValueT> Buckets;
 
 public:
-  typedef ValueT key_type;
-  typedef ValueT value_type;
-  typedef unsigned size_type;
+  using key_type = ValueT;
+  using value_type = ValueT;
 
-  explicit TypeSet(unsigned NumInit = 0) {}
+  explicit TypeSet([[maybe_unused]] unsigned NumInit = 0) {}
 
   bool empty() const { return Buckets.empty(); }
 
-  size_type size() const { return Buckets.size(); }
+  std::size_t size() const { return Buckets.size(); }
 
   bool isIn(const ValueT &V) const {
     if (lookup(V))
@@ -30,7 +28,7 @@ public:
 
   std::vector<ValueT> getBuckets() const { return Buckets; }
 
-  ValueT lookup(const ValueT &V) const {
+  ValueT lookup([[maybe_unused]] const ValueT &V) const {
     for (auto item : Buckets) {
       // auto item_hash = ValueInfoT::getHashValue(item);
       // auto v_hash = ValueInfoT::getHashValue(item);
@@ -47,5 +45,3 @@ public:
   }
 };
 } // namespace SupportStructure
-} // namespace compiler
-#endif

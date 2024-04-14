@@ -1,21 +1,20 @@
 //===-----------------------------SymbolTable.h---------------------------===//
 //
 // This file is used to implement SymbolTable.
-// 
+//
 //===---------------------------------------------------------------------===//
-#ifndef SYMBOL_TABLE_H
-#define SYMBOL_TABLE_H
-#include "include/IR/Instruction.h"
-#include "include/IRBuild/CGCall.h"
-#include "include/Parser/Type.h"
-#include "include/Parser/ast.h"
+#pragma once
+#include "IR/Instruction.h"
+#include "IRBuild/CGCall.h"
+#include "Parser/Type.h"
+#include "Parser/ast.h"
 #include <memory>
 #include <string>
 
-namespace compiler {
 namespace Support {
-using IRType = compiler::IR::Type;
-using namespace compiler::ast;
+using IRType = IR::Type;
+using namespace ast;
+using namespace IR;
 
 class Symbol;
 class VariableSymbol;
@@ -28,7 +27,7 @@ class ScopeSymbol;
 class Scope {
 public:
   // Scope Kind.
-  enum ScopeKind {
+  enum class ScopeKind {
     SK_Function,
     SK_Block,
     SK_While,
@@ -62,12 +61,12 @@ private:
   std::shared_ptr<ClassSymbol> BelongTo;
 
 public:
-  Scope(std::string name, unsigned depth, std::shared_ptr<Scope> paren,
+  Scope(const std::string &name, unsigned depth, std::shared_ptr<Scope> paren,
         ScopeKind kind)
       : ScopeName(name), Parent(paren), Flags(kind), Depth(depth) {}
 
   /// getFlags - Return the flags for this scope.
-  unsigned getFlags() const { return Flags; }
+  ScopeKind getFlags() const { return Flags; }
 
   /// \brief Add symbol.
   void addDef(std::shared_ptr<Symbol> sym) { SymbolTable.push_back(sym); };
@@ -77,15 +76,15 @@ public:
   /// This routine is used by the parser to resolve identifiers and help direct
   /// parsing. When the identifier cannot be found, this routine will attempt
   /// to correct the typo and classify based on the resulting name.
-  std::shared_ptr<Symbol> Resolve(std::string name) const;
+  std::shared_ptr<Symbol> Resolve(const std::string &name) const;
 
   /// \brief Perform name lookup in current scope.
   // std::shared_ptr<Symbol> LookupName(std::string name);
-  std::shared_ptr<Symbol> CheckWhetherInCurScope(std::string name);
+  std::shared_ptr<Symbol> CheckWhetherInCurScope(const std::string &name);
 
   bool isAnonymous() const { return ScopeName == ""; }
 
-  std::string getScopeName() const { return ScopeName; }
+  const std::string &getScopeName() const { return ScopeName; }
 
   void setFlags(ScopeKind F) { Flags = F; }
 
@@ -111,15 +110,16 @@ protected:
   std::string Lexem;
   ScopePtr BelongTo;
 
-  std::shared_ptr<Type> type;
+  std::shared_ptr<ASTType> type;
 
 public:
-  Symbol(std::string lexem, ScopePtr belongTo, std::shared_ptr<Type> type)
+  Symbol(const std::string &lexem, ScopePtr belongTo,
+         std::shared_ptr<ASTType> type)
       : Lexem(lexem), BelongTo(belongTo), type(type) {}
 
-  std::shared_ptr<Type> getType() const { return type; }
+  std::shared_ptr<ASTType> getType() const { return type; }
 
-  virtual std::string getLexem() { return Lexem; }
+  virtual const std::string &getLexem() { return Lexem; }
 
   virtual ~Symbol(){};
 };
@@ -129,11 +129,11 @@ public:
 class VariableSymbol final : public Symbol {
   bool IsInitial;
   VarDeclPtr VD;
-  IR::AllocaInstPtr allocaInst;
+  std::shared_ptr<AllocaInst> allocaInst;
 
 public:
-  VariableSymbol(std::string lexem, ScopePtr beongTo,
-                 std::shared_ptr<Type> type, bool initial, VarDeclPtr vd)
+  VariableSymbol(const std::string &lexem, ScopePtr beongTo,
+                 std::shared_ptr<ASTType> type, bool initial, VarDeclPtr vd)
       : Symbol(lexem, beongTo, type), IsInitial(initial), VD(vd) {}
 
   ExprASTPtr getInitExpr() const { return VD->getInitExpr(); }
@@ -142,24 +142,25 @@ public:
   void setInitial(bool initial) { IsInitial = initial; }
   bool isInitial() const { return IsInitial; }
 
-  void setAllocaInst(IR::AllocaInstPtr inst) { allocaInst = inst; }
-  IR::AllocaInstPtr getAllocaInst() const { return allocaInst; }
+  void setAllocaInst(std::shared_ptr<AllocaInst> inst) { allocaInst = inst; }
+  std::shared_ptr<AllocaInst> getAllocaInst() const { return allocaInst; }
 };
 
 /// \brief ParmDeclSymbol - This class represent parm decl.
 class ParmDeclSymbol final : public Symbol {
   ParmDeclPtr PD;
-  IR::ValPtr allocaInst;
+  std::shared_ptr<Value> allocaInst;
 
 public:
-  ParmDeclSymbol(std::string lexem, ScopePtr beongTo,
-                 std::shared_ptr<Type> type, bool initial, ParmDeclPtr pd)
+  ParmDeclSymbol(const std::string &lexem, ScopePtr beongTo,
+                 std::shared_ptr<ASTType> type, [[maybe_unused]] bool initial,
+                 ParmDeclPtr pd)
       : Symbol(lexem, beongTo, type), PD(pd) {}
 
   ParmDeclPtr getDecl() const { return PD; }
 
-  void setAllocaInst(IR::ValPtr inst) { allocaInst = inst; }
-  IR::ValPtr getAllocaInst() const { return allocaInst; }
+  void setAllocaInst(std::shared_ptr<Value> inst) { allocaInst = inst; }
+  std::shared_ptr<Value> getAllocaInst() const { return allocaInst; }
 };
 
 class FunctionSymbol final : public Symbol {
@@ -167,14 +168,14 @@ private:
   ScopePtr scope;
   std::vector<std::shared_ptr<ParmDeclSymbol>> parms;
   FunctionDeclPtr FD;
-  IR::FuncPtr FuncAddr;
+  std::shared_ptr<IR::Function> FuncAddr;
 
 public:
-  FunctionSymbol(std::string name, std::shared_ptr<Type> type,
+  FunctionSymbol(const std::string &name, std::shared_ptr<ASTType> type,
                  ScopePtr belongTo, ScopePtr scope)
       : Symbol(name, belongTo, type), scope(scope) {}
-  std::shared_ptr<Type> getReturnType() { return type; }
-  void setReturnType(std::shared_ptr<Type> type) { this->type = type; }
+  std::shared_ptr<ASTType> getReturnType() { return type; }
+  void setReturnType(std::shared_ptr<ASTType> type) { this->type = type; }
 
   void addParmVariableSymbol(std::shared_ptr<ParmDeclSymbol> parm) {
     parms.push_back(parm);
@@ -186,12 +187,14 @@ public:
     return parms[index];
   }
 
-  void setFuncAddr(IR::FuncPtr FuncAddr) { this->FuncAddr = FuncAddr; }
+  void setFuncAddr(std::shared_ptr<IR::Function> FuncAddr) {
+    this->FuncAddr = FuncAddr;
+  }
   void setFunctionDeclPointer(FunctionDeclPtr fd) { FD = fd; }
 
-  IR::FuncPtr getFuncAddr() const { return FuncAddr; }
+  std::shared_ptr<IR::Function> getFuncAddr() const { return FuncAddr; }
   ScopePtr getScope() const { return scope; }
-  unsigned getParmNum() { return parms.size(); }
+  std::size_t getParmNum() { return parms.size(); }
   FunctionDeclPtr getFuncDeclPointer() const { return FD; }
 };
 
@@ -207,12 +210,12 @@ private:
   ScopePtr scope;
 
 public:
-  ClassSymbol(std::string name, ScopePtr belongTo, ScopePtr scope)
+  ClassSymbol(const std::string &name, ScopePtr belongTo, ScopePtr scope)
       : Symbol(name, belongTo,
                std::make_shared<UserDefinedType>(TypeKind::USERDEFIED, name)),
         scope(scope) {}
 
-  void addSubType(std::shared_ptr<Type> subType, std::string name) {
+  void addSubType(std::shared_ptr<ASTType> subType, std::string name) {
     if (std::shared_ptr<UserDefinedType> UDT =
             std::dynamic_pointer_cast<UserDefinedType>(type)) {
       UDT->addSubType(subType, name);
@@ -220,7 +223,7 @@ public:
   }
 
   /// \brief get the class type
-  std::shared_ptr<Type> getType() { return Symbol::getType(); }
+  std::shared_ptr<ASTType> getType() { return Symbol::getType(); }
 };
 
 ///		func add(lhs : int, rhs : int) -> int
@@ -246,5 +249,3 @@ public:
   std::shared_ptr<Scope> getScope() const { return scope; }
 };
 } // namespace Support
-} // namespace compiler
-#endif

@@ -3,44 +3,46 @@
 // This file implements the BasicBlock class for the IR library.
 //
 //===----------------------------------------------------------------------===//
-#include "include/IR/BasicBlock.h"
-#include "include/IR/ConstantAndGlobal.h"
-#include "include/IR/IRType.h"
-#include "include/IR/Instruction.h"
+#include "IR/BasicBlock.h"
+#include "IR/ConstantAndGlobal.h"
+#include "IR/IRType.h"
+#include "IR/Instruction.h"
 
-using namespace compiler::IR;
+using namespace IR;
 
-BasicBlock::BasicBlock(std::string Name, FuncPtr Parent, BBPtr InsertBefore)
+BasicBlock::BasicBlock(const std::string &Name, std::shared_ptr<Function> Parent,
+                       [[maybe_unused]] std::shared_ptr<BasicBlock> InsertBefore)
     : Value(std::make_shared<Type>(Type::TypeID::LabelTy),
             Value::ValueTy::BasicBlockVal, Name),
       Parent(Parent) {}
 
-BBPtr BasicBlock::Create(std::string Name, FuncPtr Parent, BBPtr InsertBefore) {
+std::shared_ptr<BasicBlock> BasicBlock::Create(const std::string &Name, std::shared_ptr<Function> Parent,
+                         std::shared_ptr<BasicBlock> InsertBefore) {
   return std::make_shared<BasicBlock>(Name, Parent, InsertBefore);
 }
 
 // Get the predecessors of this basic block.
-std::vector<BBPtr> BasicBlock::getPredecessors() const {
-  std::vector<BBPtr> Predecessors;
+std::vector<std::shared_ptr<BasicBlock>> BasicBlock::getPredecessors() const {
   // (1) get the use list.
   auto Uses = getUses();
-
+  std::vector<std::shared_ptr<BasicBlock>> Predecessors;
+  Predecessors.reserve(Uses.size());
   // (2) get the use's father
-  for (auto item : Uses) {
-    auto user = item->getUser();
+  for (const auto &item : Uses) {
+    const auto *user = item->getUser();
     const Instruction *InstUser = dynamic_cast<const Instruction *>(user);
     assert(InstUser && "The user of BasicBlock must be Instruction.");
     auto Parent = InstUser->getParent();
-    Predecessors.push_back(Parent);
+    Predecessors.emplace_back(Parent);
   }
   return Predecessors;
 }
 
-std::list<InstPtr>::iterator BasicBlock::Insert(Iterator InsertP, InstPtr I) {
+std::list<std::shared_ptr<Instruction>>::iterator BasicBlock::Insert(Iterator InsertP, std::shared_ptr<Instruction> I) {
   return InstList.insert(InsertP, I);
 }
 
-Iterator BasicBlock::getIterator(InstPtr I) {
+Iterator BasicBlock::getIterator(std::shared_ptr<Instruction> I) {
   for (Iterator begin = InstList.begin(), end = InstList.end(); begin != end;
        begin++) {
     if (*begin == I) {
@@ -50,9 +52,9 @@ Iterator BasicBlock::getIterator(InstPtr I) {
   return InstList.end();
 }
 
-std::list<InstPtr>::iterator BasicBlock::begin() { return InstList.begin(); }
+std::list<std::shared_ptr<Instruction>>::iterator BasicBlock::begin() { return InstList.begin(); }
 
-std::list<InstPtr>::iterator BasicBlock::end() { return InstList.end(); }
+std::list<std::shared_ptr<Instruction>>::iterator BasicBlock::end() { return InstList.end(); }
 
 std::shared_ptr<TerminatorInst> BasicBlock::getTerminator() {
   if (InstList.empty())
@@ -74,9 +76,9 @@ bool BasicBlock::RemoveInst(const Value *val) {
 
 /// \brief Remove 'this' from the containing function.
 /// \returns the element after the erased one.
-BBPtr BasicBlock::removeFromParent() {
+std::shared_ptr<BasicBlock> BasicBlock::removeFromParent() {
   auto BlockList = getParent()->getBasicBlockList();
-  for (std::list<BBPtr>::iterator begin = BlockList.begin(),
+  for (std::list<std::shared_ptr<BasicBlock>>::iterator begin = BlockList.begin(),
                                   end = BlockList.end();
        begin != end; begin++) {
     if ((*begin).get() == this)
@@ -86,11 +88,12 @@ BBPtr BasicBlock::removeFromParent() {
   return nullptr;
 }
 
-void BasicBlock::removePredecessor(BBPtr Pred) {}
+void BasicBlock::removePredecessor([[maybe_unused]] std::shared_ptr<BasicBlock> Pred) {}
 
 /// \brief slpitBasicBlock - This splits a basic block into two at the specified
 /// instruction.
-BBPtr BasicBlock::splitBasicBlock(unsigned index, std::string BBName) {
+std::shared_ptr<BasicBlock> BasicBlock::splitBasicBlock([[maybe_unused]] unsigned index,
+                                  [[maybe_unused]] std::string BBName) {
   return nullptr;
 }
 
@@ -104,7 +107,7 @@ BBPtr BasicBlock::splitBasicBlock(unsigned index, std::string BBName) {
 ///				%tmp3 = load i32* %num
 void BasicBlock::Print(std::ostringstream &out) {
   out << " " << Name << ":\n";
-  for (auto item : InstList) {
+  for (const auto &item : InstList) {
     item->Print(out);
   }
 }

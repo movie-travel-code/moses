@@ -15,181 +15,180 @@
 // (6) Reserved identifiers are mot misused.
 // And others.
 //
-// -----------------------------------Nonsense for coding------------------------
-// Three kinds of languages:
-// (1) statically typed: All or almost all checking of types is done as part of
+// -----------------------------------Nonsense for
+// coding------------------------ Three kinds of languages: (1) statically
+// typed: All or almost all checking of types is done as part of
 //	   compilation(C, Java, including moses)
-// (2) Dynamically typed: Almost all checking of types is done as part of program
+// (2) Dynamically typed: Almost all checking of types is done as part of
+// program
 //     execution(Scheme, Lisp, python, perl).
 // ------------------------------------------------------------------------------
 //===---------------------------------------------------------------------===//
 
-#ifndef SEMA_INCLUDE
-#define SEMA_INCLUDE
-#include <string>
-#include <memory>
+#pragma once
 #include "ASTContext.h"
-#include "include/Support/Hasing.h"
-#include "include/Lexer/scanner.h"
-#include "include/Support/SymbolTable.h"
+#include "Lexer/scanner.h"
+#include "Parser/Type.h"
+#include "Support/Hasing.h"
+#include "Support/SymbolTable.h"
+#include <memory>
+#include <string>
 
-namespace compiler
-{
-namespace sema
-{
-using namespace compiler::ast;
-using namespace compiler::lex;
-using namespace compiler::Hashing;
-using namespace compiler::Support;
+
+namespace sema {
+using namespace ast;
+using namespace lex;
+using namespace Hashing;
+using namespace Support;
 
 /// sema - This implements sematic analysis and AST building for moses.
-class Sema
-{
-	Sema(const Sema &) = delete;
-	void operator=(const Sema &) = delete;
-	parse::Scanner *scan;
-	ASTContext &Ctx;
+class Sema {
+  Sema(const Sema &) = delete;
+  void operator=(const Sema &) = delete;
+  parse::Scanner *scan;
+  ASTContext &Ctx;
 
-  private:
-	std::shared_ptr<Scope> CurScope;
+private:
+  std::shared_ptr<Scope> CurScope;
 
-	/// \brief ScopeStack represents scope stack.
-	std::vector<std::shared_ptr<Scope>> ScopeStack;
+  /// \brief ScopeStack represents scope stack.
+  std::vector<std::shared_ptr<Scope>> ScopeStack;
 
-	/// \brief ScopeTree
-	std::shared_ptr<Scope> ScopeTreeRoot;
+  /// \brief ScopeTree
+  std::shared_ptr<Scope> ScopeTreeRoot;
 
-	// class B
-	// {
-	//		public:
-	//		class A
-	//		{
-	//		}
-	// }
-	std::vector<std::shared_ptr<ClassSymbol>> ClassStack;
+  // class B
+  // {
+  //		public:
+  //		class A
+  //		{
+  //		}
+  // }
+  std::vector<std::shared_ptr<ClassSymbol>> ClassStack;
 
-	// func add() -> void
-	// {
-	//		func sub() -> int {}
-	//		return sub;
-	// }
-	std::vector<std::shared_ptr<FunctionSymbol>> FunctionStack;
+  // func add() -> void
+  // {
+  //		func sub() -> int {}
+  //		return sub;
+  // }
+  std::vector<std::shared_ptr<FunctionSymbol>> FunctionStack;
 
-  public:
-	Sema(ASTContext &Ctx) : Ctx(Ctx) {}
+public:
+  Sema(ASTContext &Ctx) : Ctx(Ctx) {}
 
-  public:
-	// The functions for handling scope.
-	// Shit Code!
-	void getScannerPointer(parse::Scanner *scan) { this->scan = scan; };
-	std::shared_ptr<Scope> getCurScope() { return CurScope; }
-	std::shared_ptr<Scope> getTopLevelScope() { return ScopeStack[0]; }
-	void PushScope(std::shared_ptr<Scope> scope);
+public:
+  // The functions for handling scope.
+  // Shit Code!
+  void getScannerPointer(parse::Scanner *scan) { this->scan = scan; };
+  std::shared_ptr<Scope> getCurScope() { return CurScope; }
+  std::shared_ptr<Scope> getTopLevelScope() { return ScopeStack[0]; }
+  void PushScope(std::shared_ptr<Scope> scope);
 
-	void PopScope();
-	void PopFunctionStack();
-	void PopClassStack();
+  void PopScope();
+  void PopFunctionStack();
+  void PopClassStack();
 
-	std::shared_ptr<FunctionSymbol> getFunctionStackTop() const;
+  std::shared_ptr<FunctionSymbol> getFunctionStackTop() const;
 
-	std::shared_ptr<ClassSymbol> getClassStackTop() const;
+  std::shared_ptr<ClassSymbol> getClassStackTop() const;
 
-  public:
-	// Action routines for semantic analysis.
-	// (1) Statement
-	/// \brief Add a new function scope and symbol.
-	void ActOnTranslationUnitStart();
+public:
+  // Action routines for semantic analysis.
+  // (1) Statement
+  /// \brief Add a new function scope and symbol.
+  void ActOnTranslationUnitStart();
 
-	void ActOnFunctionDeclStart(std::string name);
+  void ActOnFunctionDeclStart(const std::string &name);
 
-	void ActOnFunctionDecl(std::string name, std::shared_ptr<Type> returnType);
+  void ActOnFunctionDecl(const std::string &name,
+                         std::shared_ptr<ASTType> returnType);
 
-	StmtASTPtr ActOnFunctionDeclEnd(std::string name);
+  StmtASTPtr ActOnFunctionDeclEnd(const std::string &name);
 
-	void ActOnParmDecl(std::string name, ParmDeclPtr parm);
+  void ActOnParmDecl(const std::string &name, ParmDeclPtr parm);
 
-	StmtASTPtr ActOnConstDecl(std::string name, std::shared_ptr<Type> type);
+  StmtASTPtr ActOnConstDecl(const std::string &name,
+                            std::shared_ptr<ASTType> type);
 
-	void ActOnVarDecl(std::string name, VarDeclPtr VD);
+  void ActOnVarDecl(const std::string &name, VarDeclPtr VD);
 
-	void ActOnClassDeclStart(std::string name);
-	void ActOnCompoundStmt();
+  void ActOnClassDeclStart(const std::string &name);
+  void ActOnCompoundStmt();
 
-	StmtASTPtr ActOnIfStmt(SourceLocation start, SourceLocation end, ExprASTPtr condtion,
-						   StmtASTPtr ThenPart, StmtASTPtr ElsePart);
+  StmtASTPtr ActOnIfStmt(SourceLocation start, SourceLocation end,
+                         ExprASTPtr condtion, StmtASTPtr ThenPart,
+                         StmtASTPtr ElsePart);
 
-	std::shared_ptr<Type> ActOnReturnType(const std::string &name) const;
+  std::shared_ptr<ASTType> ActOnReturnType(const std::string &name) const;
 
-	bool ActOnBreakAndContinueStmt(bool whileContext);
+  bool ActOnBreakAndContinueStmt(bool whileContext);
 
-	StmtASTPtr ActOnContinueStmt();
+  StmtASTPtr ActOnContinueStmt();
 
-	bool ActOnReturnStmt(std::shared_ptr<Type> type) const;
+  bool ActOnReturnStmt(std::shared_ptr<ASTType> type) const;
 
-	StmtASTPtr BuildReturnStmt();
+  StmtASTPtr BuildReturnStmt();
 
-	bool ActOnUnpackDeclElement(std::string name);
+  bool ActOnUnpackDeclElement(const std::string &name);
 
-	UnpackDeclPtr ActOnUnpackDecl(UnpackDeclPtr unpackDecl, std::shared_ptr<Type> type);
+  UnpackDeclPtr ActOnUnpackDecl(UnpackDeclPtr unpackDecl,
+                                std::shared_ptr<ASTType> type);
 
-	bool ActOnReturnAnonymous(std::shared_ptr<Type> type) const;
+  bool ActOnReturnAnonymous(std::shared_ptr<ASTType> type) const;
 
-	BinaryPtr ActOnAnonymousTypeVariableAssignment(ExprASTPtr lhs, ExprASTPtr rhs) const;
+  BinaryPtr ActOnAnonymousTypeVariableAssignment(ExprASTPtr lhs,
+                                                 ExprASTPtr rhs) const;
 
-	// (2) Expression
-	ExprASTPtr ActOnConstantExpression();
+  // (2) Expression
+  ExprASTPtr ActOnConstantExpression();
 
-	std::shared_ptr<Type> ActOnCallExpr(std::string calleeName,
-										std::vector<std::shared_ptr<Type>> Args, FunctionDeclPtr &FD);
+  std::shared_ptr<ASTType>
+  ActOnCallExpr(const std::string &calleeName,
+                std::vector<std::shared_ptr<ASTType>> Args,
+                FunctionDeclPtr &FD);
 
-	ExprASTPtr ActOnUnaryOperator();
+  ExprASTPtr ActOnUnaryOperator();
 
-	ExprASTPtr ActOnPostfixUnaryOperator();
+  ExprASTPtr ActOnPostfixUnaryOperator();
 
-	ExprASTPtr ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs);
+  ExprASTPtr ActOnBinaryOperator(ExprASTPtr lhs, Token tok, ExprASTPtr rhs);
 
-	VarDeclPtr ActOnDeclRefExpr(std::string name);
+  VarDeclPtr ActOnDeclRefExpr(const std::string &name);
 
-	ExprASTPtr ActOnStringLiteral();
+  ExprASTPtr ActOnStringLiteral();
 
-	ExprASTPtr ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok);
+  ExprASTPtr ActOnMemberAccessExpr(ExprASTPtr lhs, Token tok);
 
-	ExprASTPtr ActOnExprStmt();
+  ExprASTPtr ActOnExprStmt();
 
-	bool ActOnConditionExpr(std::shared_ptr<Type> type) const;
+  bool ActOnConditionExpr(std::shared_ptr<ASTType> type) const;
 
-	std::shared_ptr<Type> ActOnParmDeclUserDefinedType(Token tok) const;
+  std::shared_ptr<ASTType> ActOnParmDeclUserDefinedType(Token tok) const;
 
-	std::shared_ptr<Type> ActOnVarDeclUserDefinedType(Token tok) const;
+  std::shared_ptr<ASTType> ActOnVarDeclUserDefinedType(Token tok) const;
 
-	// (3) help method
-	bool isInFunctionContext() const { return FunctionStack.size() != 0; }
+  // (3) help method
+  bool isInFunctionContext() const { return FunctionStack.size() != 0; }
 
-	ExprASTPtr ActOnDecOrIncExpr(ExprASTPtr rhs);
+  ExprASTPtr ActOnDecOrIncExpr(ExprASTPtr rhs);
 
-	ExprASTPtr ActOnUnarySubExpr(ExprASTPtr rhs);
+  ExprASTPtr ActOnUnarySubExpr(ExprASTPtr rhs);
 
-	ExprASTPtr ActOnUnaryExclamatoryExpr(ExprASTPtr rhs);
+  ExprASTPtr ActOnUnaryExclamatoryExpr(ExprASTPtr rhs);
 
-	// To Do: implement RAII
-	class CompoundScopeRAII
-	{
-	};
-	// To Do: implement RAII
-	class FunctionScopeRAII
-	{
-	};
+  // To Do: implement RAII
+  class CompoundScopeRAII {};
+  // To Do: implement RAII
+  class FunctionScopeRAII {};
 
-	std::shared_ptr<Scope> getScopeStackBottom() const;
+  std::shared_ptr<Scope> getScopeStackBottom() const;
 
-  private:
-	std::shared_ptr<Scope> getScopeStackTop() const;
+private:
+  std::shared_ptr<Scope> getScopeStackTop() const;
 
-	void errorReport(const std::string &msg) const;
+  void errorReport(const std::string &msg) const;
 
-	UnpackDeclPtr unpackDeclTypeChecking(UnpackDeclPtr unpackDecl,
-										 std::shared_ptr<Type> initType) const;
+  UnpackDeclPtr unpackDeclTypeChecking(UnpackDeclPtr unpackDecl,
+                                       std::shared_ptr<ASTType> initType) const;
 };
 } // namespace sema
-} // namespace compiler
-#endif

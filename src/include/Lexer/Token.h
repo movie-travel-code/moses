@@ -1,14 +1,12 @@
-#ifndef TOKEN_INCLUDE
-#define TOKEN_INCLUDE
+#pragma once
 #include "TokenKinds.h"
 #include <string>
 
 
-namespace compiler {
 namespace lex {
 class TokenLocation {
-  unsigned LineNumber;
-  unsigned ColNumber;
+  std::size_t LineNumber;
+  std::size_t ColNumber;
   std::string FileName;
 
 public:
@@ -20,6 +18,13 @@ public:
     FileName = TL.FileName;
   }
 
+  TokenLocation& operator=(const TokenLocation &TL) {
+    LineNumber = TL.LineNumber;
+    ColNumber = TL.ColNumber;
+    FileName = TL.FileName;
+    return *this;
+  }
+
   bool operator==(const TokenLocation &tokenLoc) const {
     if (LineNumber == tokenLoc.LineNumber && ColNumber == tokenLoc.ColNumber &&
         FileName == tokenLoc.FileName)
@@ -27,19 +32,19 @@ public:
     return false;
   }
 
-  bool operator!=(const TokenLocation &tokenLoc) const {
+  [[nodiscard]] bool operator!=(const TokenLocation &tokenLoc) const {
     return !operator==(tokenLoc);
   }
 
-  TokenLocation(unsigned lineNumber, unsigned colNumber, std::string fileName)
+  TokenLocation(std::size_t lineNumber, std::size_t colNumber, std::string fileName)
       : LineNumber(lineNumber), ColNumber(colNumber), FileName(fileName) {}
 
-  void setTokenLineNumber(unsigned lineNumber) { LineNumber = lineNumber; }
-  void setTokenColNumber(unsigned colNumber) { ColNumber = colNumber; }
-  void setTokenFileName(unsigned fileName) { FileName = fileName; }
-  unsigned getTokenLineNumber() const { return LineNumber; }
-  unsigned getTokenColNumber() const { return ColNumber; }
-  std::string getTokenFileName() const { return FileName; }
+  void setTokenLineNumber(std::size_t lineNumber) { LineNumber = lineNumber; }
+  void setTokenColNumber(std::size_t colNumber) { ColNumber = colNumber; }
+  void setTokenFileName(std::size_t fileName) { FileName = fileName; }
+  [[nodiscard]] unsigned long getTokenLineNumber() const { return LineNumber; }
+  [[nodiscard]] unsigned long getTokenColNumber() const { return ColNumber; }
+  [[nodiscard]] const std::string& getTokenFileName() const { return FileName; }
   std::string toString() {
     std::string LineStr = std::to_string(LineNumber);
     std::string ColStr = std::to_string(ColNumber);
@@ -48,7 +53,7 @@ public:
 };
 
 class Token {
-  typedef tok::TokenValue TokenValue;
+  using TokenValue = tok::TokenValue;
 
   TokenValue value;
   TokenLocation loc;
@@ -62,38 +67,38 @@ class Token {
 public:
   Token();
 
-  Token(TokenValue tv, std::string lexem);
+  Token(TokenValue tv, const std::string &lexem);
 
-  Token(TokenValue tv, const TokenLocation &location, std::string lexem);
+  Token(TokenValue tv, const TokenLocation &location, const std::string &lexem);
 
   // Token(TokenValue tv, const TokenLocation& location, const std::string&
   // strValue, std::string lexem);
   Token(TokenValue tv, const TokenLocation &location, long intvalue,
-        std::string lexem);
+        const std::string &lexem);
 
   Token(TokenValue tv, const TokenLocation &location, double realvalue,
-        std::string lexem);
+        const std::string &lexem);
   enum class TokenFlags { StatrtOfLine, LeadingSpace };
 
-  void setKind(compiler::tok::TokenValue K) { value = K; }
-  TokenValue getKind() const { return value; }
+  void setKind(tok::TokenValue K) { value = K; }
+  [[nodiscard]] TokenValue getKind() const { return value; }
 
-  bool is(TokenValue K) const { return K == value; }
-  bool isNot(TokenValue K) const { return K != value; }
+  [[nodiscard]] bool is(TokenValue K) const { return K == value; }
+  [[nodiscard]] bool isNot(TokenValue K) const { return K != value; }
 
-  TokenLocation &getTokenLoc() { return loc; }
+  [[nodiscard]] TokenLocation &getTokenLoc() { return loc; }
   void setTokenLoc(const TokenLocation &loc) { this->loc = loc; }
 
   // help method
-  bool isIdentifier() { return value == TokenValue::IDENTIFIER; }
+  [[nodiscard]] bool isIdentifier() { return value == TokenValue::IDENTIFIER; }
 
-  bool isAssign() {
+  [[nodiscard]] bool isAssign() {
     return (value >= TokenValue::BO_Assign) &&
            (value <= TokenValue::BO_OrAssign);
   }
 
   // LHS and RHS must be int type.
-  bool isIntOperator() {
+  [[nodiscard]] bool isIntOperator() {
     if (value == TokenValue::BO_Add || value == TokenValue::BO_AddAssign ||
         value == TokenValue::BO_Sub || value == TokenValue::BO_SubAssign ||
         value == TokenValue::BO_Mul || value == TokenValue::BO_MulAssign ||
@@ -103,7 +108,7 @@ public:
   }
 
   // Operands must be bool type.
-  bool isBoolOperator() {
+  [[nodiscard]] bool isBoolOperator() {
     if (value == TokenValue::BO_And || value == TokenValue::BO_Or ||
         value == TokenValue::UO_Exclamatory ||
         value == TokenValue::BO_AndAssign || value == TokenValue::BO_OrAssign)
@@ -111,7 +116,7 @@ public:
     return false;
   }
 
-  bool isCmpOperator() {
+  [[nodiscard]] bool isCmpOperator() {
     if (value == TokenValue::BO_EQ || value == TokenValue::BO_GE ||
         value == TokenValue::BO_GT || value == TokenValue::BO_LE ||
         value == TokenValue::BO_LT || value == TokenValue::BO_NE)
@@ -119,7 +124,7 @@ public:
     return false;
   }
 
-  bool isArithmeticOperator() {
+  [[nodiscard]] bool isArithmeticOperator() {
     if (value == TokenValue::BO_Add || value == TokenValue::BO_AddAssign ||
         value == TokenValue::BO_Sub || value == TokenValue::BO_SubAssign ||
         value == TokenValue::BO_Mul || value == TokenValue::BO_MulAssign ||
@@ -129,7 +134,7 @@ public:
     return false;
   }
 
-  bool isLogicalOperator() {
+  [[nodiscard]] bool isLogicalOperator() {
     if (value == TokenValue::BO_EQ || value == TokenValue::BO_GE ||
         value == TokenValue::BO_GT || value == TokenValue::BO_LE ||
         value == TokenValue::BO_LT || value == TokenValue::BO_NE ||
@@ -141,50 +146,48 @@ public:
     return false;
   }
 
-  bool isKeyword() {
+  [[nodiscard]] bool isKeyword() {
     return (value >= TokenValue::KEYWORD_var) &&
            (value <= TokenValue::KEYWORD_return);
   }
 
-  bool isPunctuator() {
+  [[nodiscard]] bool isPunctuator() {
     return (value >= TokenValue::PUNCTUATOR_Left_Paren) &&
            (value <= TokenValue::PUNCTUATOR_Comma);
   }
 
-  bool isBinaryOp() {
+  [[nodiscard]] bool isBinaryOp() {
     return (value >= TokenValue::BO_Mul) &&
            (value <= TokenValue::BO_OrAssign) &&
-           (value != TokenValue::UO_Inc || value != TokenValue::UO_Dec ||
-            value != TokenValue::UO_Exclamatory);
+           value != TokenValue::UO_Inc && value != TokenValue::UO_Dec &&
+            value != TokenValue::UO_Exclamatory;
   }
 
-  bool isUnaryOp() {
+  [[nodiscard]] bool isUnaryOp() {
     return (value == TokenValue::UO_Dec) || (value == TokenValue::UO_Inc) ||
            (value == TokenValue::UO_Exclamatory);
   }
 
-  bool isCharConstant() { return value == TokenValue::CHAR_LITERAL; }
-  bool isNumericConstant() {
+  [[nodiscard]] bool isCharConstant() { return value == TokenValue::CHAR_LITERAL; }
+  [[nodiscard]] bool isNumericConstant() {
     return value == TokenValue::REAL_LITERAL ||
            value == TokenValue::INTEGER_LITERAL;
   }
-  bool isStringLiteral() { return value == TokenValue::STRING_LITERAL; }
+  [[nodiscard]] bool isStringLiteral() { return value == TokenValue::STRING_LITERAL; }
 
-  tok::TokenValue getValue() const { return value; }
+  [[nodiscard]] tok::TokenValue getValue() const { return value; }
 
-  long getIntValue() const { return intValue; }
-  double getRealValue() const { return realValue; }
-  std::string getStringValue() const { return strValue; }
-  std::string getLexem() { return lexem; }
+  [[nodiscard]] long getIntValue() const { return intValue; }
+  [[nodiscard]] double getRealValue() const { return realValue; }
+  [[nodiscard]] const std::string& getStringValue() const { return strValue; }
+  [[nodiscard]] std::string getLexem() { return lexem; }
 
-  bool operator==(const Token &token) const {
+  [[nodiscard]] bool operator==(const Token &token) const {
     if (value == token.value && loc == token.loc) {
       return true;
     }
     return false;
   }
-  bool operator!=(const Token &token) const { return !operator==(token); }
+  [[nodiscard]] bool operator!=(const Token &token) const { return !operator==(token); }
 };
 } // namespace lex
-} // namespace compiler
-#endif

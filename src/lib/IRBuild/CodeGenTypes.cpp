@@ -3,13 +3,13 @@
 // This file implements class CodeGenTypes (AST -> moses type lowering).
 //
 //===---------------------------------------------------------------------===//
-#include "include/IRbuild/CodeGenTypes.h"
-#include "include/IR/IRType.h"
+#include "IRBuild/CodeGenTypes.h"
+#include "IR/IRType.h"
 
-using namespace compiler::IRBuild;
+using namespace IRBuild;
 
-std::shared_ptr<compiler::IR::Type>
-CodeGenTypes::ConvertType(std::shared_ptr<compiler::ast::Type> type) {
+std::shared_ptr<IR::Type>
+CodeGenTypes::ConvertType(std::shared_ptr<ast::ASTType> type) {
   assert(type && "CovertType must be non-null!");
   std::shared_ptr<StructType> IRType = nullptr;
   // (1) Check type cache.

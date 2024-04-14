@@ -3,23 +3,23 @@
 // 2016.3.7
 //
 //===-------------------------------------------------------------------------===//
-#include "include/Parser/constant-evaluator.h"
-#include "include/ExecutionEngine/ExecutionEngine.h"
-#include "include/IR/Dominators.h"
-#include "include/IR/Support/IRPrinter.h"
-#include "include/IRBuild/IRBuilder.h"
-#include "include/Lexer/scanner.h"
-#include "include/Parser/ASTContext.h"
-#include "include/Parser/parser.h"
+#include "Parser/constant-evaluator.h"
+#include "ExecutionEngine/ExecutionEngine.h"
+#include "IR/Dominators.h"
+#include "IR/Support/IRPrinter.h"
+#include "IRBuild/IRBuilder.h"
+#include "Lexer/scanner.h"
+#include "Parser/ASTContext.h"
+#include "Parser/parser.h"
 #include <iostream>
 #include <sstream>
 
 
-using namespace compiler::parse;
-using namespace compiler::sema;
-using namespace compiler::IR;
-using namespace compiler::IRBuild;
-using namespace compiler::Interpreter;
+using namespace parse;
+using namespace sema;
+using namespace IR;
+using namespace IRBuild;
+using namespace Execution;
 int main(int argc, char *argv[]) {
   // FIXME: We should use more mature approach to handle user options.
   if (argc != 2) {
@@ -63,9 +63,9 @@ int main(int argc, char *argv[]) {
   mosesIR.close();
 
   DominatorTree DomTree;
-  std::vector<BBPtr> CFG;
+  std::vector<std::shared_ptr<BasicBlock>> CFG;
   for (auto item : moduleBuilder.getIRs()) {
-    if (BBPtr BB = std::dynamic_pointer_cast<BasicBlock>(item))
+    if (std::shared_ptr<BasicBlock> BB = std::dynamic_pointer_cast<BasicBlock>(item))
       CFG.push_back(BB);
   }
   DomTree.runOnCFG(CFG);

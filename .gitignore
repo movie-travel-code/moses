@@ -1,1 +1,9 @@
 build
+.cache
+CMakeCache.txt
+CMakeFiles/
+CMakeScripts/
+Debug/
+Release/
+cmake_install.cmake
+moses.xcodeproj/

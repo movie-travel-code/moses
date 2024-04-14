@@ -1,18 +1,18 @@
 //===--------------------------Instruction.cpp----------------------------===//
 // This file implements moses IR instructions.
 //===---------------------------------------------------------------------===//
-#include "include/IR/Instruction.h"
-#include "include/IR/IRType.h"
-#include "include/IR/MosesIRContext.h"
+#include "IR/Instruction.h"
+#include "IR/IRType.h"
+#include "IR/MosesIRContext.h"
 
-
-using namespace compiler::IR;
+using namespace IR;
 //===---------------------------------------------------------------------===//
 // Implements Instruction.
-Instruction::Instruction(TyPtr Ty, Opcode op, BBPtr parent, std::string Name)
+Instruction::Instruction(TyPtr Ty, Opcode op, std::shared_ptr<BasicBlock> parent,
+                         const std::string &Name)
     : User(Ty, Value::ValueTy::InstructionVal, Name), Parent(parent), op(op) {}
 
-FuncPtr Instruction::getFunction() const { return Parent->getParent(); }
+std::shared_ptr<Function> Instruction::getFunction() const { return Parent->getParent(); }
 
 bool Instruction::mayReadFromMemory() const {
   if (op == Opcode::Load)
@@ -25,7 +25,7 @@ bool Instruction::mayWriteToMemory() const {
     return true;
   return false;
 }
-// Instruction::Instruction(TyPtr Ty, Opcode op, unsigned NumOps, BBPtr
+// Instruction::Instruction(TyPtr Ty, Opcode op, unsigned NumOps, std::shared_ptr<BasicBlock>
 // InsertAtEnd) : 	User(Ty, Value::ValueTy::InstructionVal)
 //{
 //
@@ -33,8 +33,9 @@ bool Instruction::mayWriteToMemory() const {
 
 //===---------------------------------------------------------------------===//
 // Implements CmpInst.
-CmpInst::CmpInst(MosesIRContext &Ctx, InstPtr InsertBefore, Predicate pred,
-                 ValPtr LHS, ValPtr RHS, BBPtr parent, std::string Name)
+CmpInst::CmpInst(MosesIRContext &Ctx, [[maybe_unused]] std::shared_ptr<Instruction> InsertBefore,
+                 Predicate pred, std::shared_ptr<Value> LHS, std::shared_ptr<Value> RHS, std::shared_ptr<BasicBlock> parent,
+                 const std::string &Name)
     : Instruction(Type::getBoolType(Ctx), Opcode::Cmp, parent, Name),
       predicate(pred) {
   // Operands.resize(2);
@@ -45,16 +46,16 @@ CmpInst::CmpInst(MosesIRContext &Ctx, InstPtr InsertBefore, Predicate pred,
 
 CmpInst::~CmpInst() {}
 
-CmpInstPtr CmpInst::Create(MosesIRContext &Ctx, Predicate predicate, ValPtr S1,
-                           ValPtr S2, BBPtr parent, std::string name,
-                           InstPtr InsertBefore) {
+std::shared_ptr<CmpInst> CmpInst::Create(MosesIRContext &Ctx, Predicate predicate, std::shared_ptr<Value> S1,
+                           std::shared_ptr<Value> S2, std::shared_ptr<BasicBlock> parent, const std::string &name,
+                           [[maybe_unused]] std::shared_ptr<Instruction> InsertBefore) {
   return std::make_shared<CmpInst>(Ctx, nullptr, predicate, S1, S2, parent,
                                    name);
 }
 
-CmpInstPtr CmpInst::Create(MosesIRContext &Ctx, Predicate predicate, ValPtr S1,
-                           ValPtr S2, BBPtr parent, std::string name,
-                           BBPtr InsertAtEnd) {
+std::shared_ptr<CmpInst> CmpInst::Create(MosesIRContext &Ctx, Predicate predicate, std::shared_ptr<Value> S1,
+                           std::shared_ptr<Value> S2, std::shared_ptr<BasicBlock> parent, const std::string &name,
+                           [[maybe_unused]] std::shared_ptr<BasicBlock> InsertAtEnd) {
   return std::make_shared<CmpInst>(Ctx, nullptr, predicate, S1, S2, parent,
                                    name);
 }
@@ -101,8 +102,9 @@ void CmpInst::Print(std::ostringstream &out) {
 
 //===---------------------------------------------------------------------===//
 // Implements BinaryOperator Instructions.
-BinaryOperator::BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty,
-                               BBPtr parent, std::string Name)
+BinaryOperator::BinaryOperator(Opcode op, std::shared_ptr<Value> S1, std::shared_ptr<Value> S2, TyPtr Ty,
+                               std::shared_ptr<BasicBlock> parent,
+                               [[maybe_unused]] const std::string &Name)
     : Instruction(Ty, op, parent) {
   // Operands.resize(2);
   Operands.push_back(Use(S1, this));
@@ -112,40 +114,40 @@ BinaryOperator::BinaryOperator(Opcode op, ValPtr S1, ValPtr S2, TyPtr Ty,
 
 BinaryOperator::~BinaryOperator() {}
 
-BOInstPtr BinaryOperator::Create(Opcode op, ValPtr S1, ValPtr S2, BBPtr parent,
-                                 BBPtr InsertAtEnd) {
+std::shared_ptr<BinaryOperator> BinaryOperator::Create(Opcode op, std::shared_ptr<Value> S1, std::shared_ptr<Value> S2, std::shared_ptr<BasicBlock> parent,
+                                 [[maybe_unused]] std::shared_ptr<BasicBlock> InsertAtEnd) {
   assert(S1->getType() == S2->getType() &&
          "Cannot create binary operator with two operands of differing type!");
   return std::make_shared<BinaryOperator>(op, S1, S2, S1->getType(), parent);
 }
 
-BOInstPtr BinaryOperator::Create(Opcode op, ValPtr S1, ValPtr S2, BBPtr parent,
-                                 InstPtr InsertBefore) {
+std::shared_ptr<BinaryOperator> BinaryOperator::Create(Opcode op, std::shared_ptr<Value> S1, std::shared_ptr<Value> S2, std::shared_ptr<BasicBlock> parent,
+                                 [[maybe_unused]] std::shared_ptr<Instruction> InsertBefore) {
   return std::make_shared<BinaryOperator>(op, S1, S2, S1->getType(), parent);
 }
 
-BOInstPtr BinaryOperator::CreateNeg(MosesIRContext &Ctx, ValPtr Operand,
-                                    BBPtr parent, InstPtr InsertBefore) {
-  ConstantIntPtr zero = ConstantInt::getZeroValueForNegative(Ctx);
+std::shared_ptr<BinaryOperator> BinaryOperator::CreateNeg(MosesIRContext &Ctx, std::shared_ptr<Value> Operand,
+                                    std::shared_ptr<BasicBlock> parent, std::shared_ptr<Instruction> InsertBefore) {
+  std::shared_ptr<ConstantInt> zero = ConstantInt::getZeroValueForNegative(Ctx);
   return Create(Opcode::Sub, zero, Operand, parent, InsertBefore);
 }
 
-BOInstPtr BinaryOperator::CreateNeg(MosesIRContext &Ctx, ValPtr Operand,
-                                    BBPtr parent, BBPtr InsertAtEnd) {
-  ConstantIntPtr zero = ConstantInt::getZeroValueForNegative(Ctx);
+std::shared_ptr<BinaryOperator> BinaryOperator::CreateNeg(MosesIRContext &Ctx, std::shared_ptr<Value> Operand,
+                                    std::shared_ptr<BasicBlock> parent, std::shared_ptr<BasicBlock> InsertAtEnd) {
+  std::shared_ptr<ConstantInt> zero = ConstantInt::getZeroValueForNegative(Ctx);
   return Create(Opcode::Sub, zero, Operand, parent, InsertAtEnd);
 }
 
-BOInstPtr BinaryOperator::CreateNot(MosesIRContext &Ctx, ValPtr Operand,
-                                    BBPtr parent, InstPtr InsertBefore) {
-  ConstantBoolPtr True = ConstantBool::getTrue(Ctx);
+std::shared_ptr<BinaryOperator> BinaryOperator::CreateNot(MosesIRContext &Ctx, std::shared_ptr<Value> Operand,
+                                    std::shared_ptr<BasicBlock> parent, std::shared_ptr<Instruction> InsertBefore) {
+  std::shared_ptr<ConstantBool> True = ConstantBool::getTrue(Ctx);
   return Create(Opcode::Xor, Operand, True, parent, InsertBefore);
 }
 
 /// Shit code!
-BOInstPtr BinaryOperator::CreateNot(MosesIRContext &Ctx, ValPtr Operand,
-                                    BBPtr parent, BBPtr InsertAtEnd) {
-  ConstantBoolPtr True = ConstantBool::getTrue(Ctx);
+std::shared_ptr<BinaryOperator> BinaryOperator::CreateNot(MosesIRContext &Ctx, std::shared_ptr<Value> Operand,
+                                    std::shared_ptr<BasicBlock> parent, std::shared_ptr<BasicBlock> InsertAtEnd) {
+  std::shared_ptr<ConstantBool> True = ConstantBool::getTrue(Ctx);
   return Create(Opcode::Xor, Operand, True, parent, InsertAtEnd);
 }
 
@@ -155,34 +157,34 @@ BOInstPtr BinaryOperator::CreateNot(MosesIRContext &Ctx, ValPtr Operand,
 void BinaryOperator::Print(std::ostringstream &out) {
   out << Name << " =";
   switch (op) {
-  case compiler::IR::Instruction::Opcode::Add:
+  case IR::Instruction::Opcode::Add:
     out << " add";
     break;
-  case compiler::IR::Instruction::Opcode::Sub:
+  case IR::Instruction::Opcode::Sub:
     out << " sub";
     break;
-  case compiler::IR::Instruction::Opcode::Mul:
+  case IR::Instruction::Opcode::Mul:
     out << " mul";
     break;
-  case compiler::IR::Instruction::Opcode::Div:
+  case IR::Instruction::Opcode::Div:
     out << " div";
     break;
-  case compiler::IR::Instruction::Opcode::Rem:
+  case IR::Instruction::Opcode::Rem:
     out << " rem";
     break;
-  case compiler::IR::Instruction::Opcode::Shl:
+  case IR::Instruction::Opcode::Shl:
     out << " shl";
     break;
-  case compiler::IR::Instruction::Opcode::Shr:
+  case IR::Instruction::Opcode::Shr:
     out << " shr";
     break;
-  case compiler::IR::Instruction::Opcode::And:
+  case IR::Instruction::Opcode::And:
     out << " and";
     break;
-  case compiler::IR::Instruction::Opcode::Or:
+  case IR::Instruction::Opcode::Or:
     out << " or";
     break;
-  case compiler::IR::Instruction::Opcode::Xor:
+  case IR::Instruction::Opcode::Xor:
     out << " xor";
     break;
   default:
@@ -198,8 +200,8 @@ void BinaryOperator::Print(std::ostringstream &out) {
 }
 //===---------------------------------------------------------------------===//
 // StoreInst Implementation
-StoreInst::StoreInst(MosesIRContext &Ctx, ValPtr Val, ValPtr Ptr, BBPtr parent,
-                     BBPtr InsertAtEnd)
+StoreInst::StoreInst(MosesIRContext &Ctx, std::shared_ptr<Value> Val, std::shared_ptr<Value> Ptr, std::shared_ptr<BasicBlock> parent,
+                     [[maybe_unused]] std::shared_ptr<BasicBlock> InsertAtEnd)
     : Instruction(Type::getVoidType(Ctx), Opcode::Store, parent) {
   // Operands.resize(2);
   Operands.push_back(Use(Val, this));
@@ -219,8 +221,8 @@ StoreInst::StoreInst(MosesIRContext &Ctx, ValPtr Val, ValPtr Ptr, BBPtr parent,
          "Ptr must be a pointer to Val type!");
 }
 
-StoreInstPtr StoreInst::Create(MosesIRContext &Ctx, ValPtr Val, ValPtr Ptr,
-                               BBPtr parent) {
+std::shared_ptr<StoreInst> StoreInst::Create(MosesIRContext &Ctx, std::shared_ptr<Value> Val, std::shared_ptr<Value> Ptr,
+                               std::shared_ptr<BasicBlock> parent) {
   return std::make_shared<StoreInst>(Ctx, Val, Ptr, parent);
 }
 
@@ -241,14 +243,16 @@ void StoreInst::Print(std::ostringstream &out) {
 
 //===---------------------------------------------------------------------===//
 // Implements AllocInst.
-AllocaInst::AllocaInst(TyPtr Ty, BBPtr parent, std::string Name,
-                       BBPtr InsertAtEnd)
+AllocaInst::AllocaInst(TyPtr Ty, std::shared_ptr<BasicBlock> parent,
+                       [[maybe_unused]] const std::string &Name,
+                       [[maybe_unused]] std::shared_ptr<BasicBlock> InsertAtEnd)
     : UnaryOperator(PointerType::get(Ty), Opcode::Alloca, nullptr, parent),
       AllocatedType(Ty) {}
 
 AllocaInst::~AllocaInst() {}
 
-AllocaInstPtr AllocaInst::Create(TyPtr Ty, BBPtr parent, std::string Name) {
+std::shared_ptr<AllocaInst>  AllocaInst::Create(TyPtr Ty, std::shared_ptr<BasicBlock> parent,
+                                 const std::string &Name) {
   return std::make_shared<AllocaInst>(Ty, parent, Name);
 }
 
@@ -266,44 +270,47 @@ void AllocaInst::Print(std::ostringstream &out) {
 
 //===-------------------------------------------------------------===//
 //						GetElementPtrInst Class
-void GetElementPtrInst::init(ValPtr Ptr, std::vector<ValPtr> Idx) {
+void GetElementPtrInst::init(std::shared_ptr<Value> Ptr, std::vector<std::shared_ptr<Value>> Idx) {
   Operands.push_back(Use(Ptr, this));
-  for (unsigned i = 0, size = Idx.size(); i < size; i++)
+  for (std::size_t i = 0, size = Idx.size(); i < size; i++)
     Operands.push_back(Use(Idx[i], this));
 }
 
-void GetElementPtrInst::init(ValPtr Ptr, ValPtr Idx0, ValPtr Idx1) {
+void GetElementPtrInst::init(std::shared_ptr<Value> Ptr, std::shared_ptr<Value> Idx0, std::shared_ptr<Value> Idx1) {
   Operands.push_back(Use(Ptr, this));
   Operands.push_back(Use(Idx0, this));
   Operands.push_back(Use(Idx1, this));
 }
 
-GetElementPtrInst::GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr,
-                                     std::vector<ValPtr> IdxList, BBPtr parent,
-                                     std::string Name, InstPtr InsertBefore)
+GetElementPtrInst::GetElementPtrInst(TyPtr PointeeType, std::shared_ptr<Value> Ptr,
+                                     std::vector<std::shared_ptr<Value>> IdxList, std::shared_ptr<BasicBlock> parent,
+                                     [[maybe_unused]] const std::string &Name,
+                                     [[maybe_unused]] std::shared_ptr<Instruction> InsertBefore)
     : Instruction(PointerType::get(PointeeType), Opcode::GetElementPtr,
                   parent) {
   init(Ptr, IdxList);
 }
 
-GetElementPtrInst::GetElementPtrInst(TyPtr PointeeType, ValPtr Ptr, ValPtr Idx0,
-                                     ValPtr Idx1, BBPtr parent,
-                                     std::string Name)
+GetElementPtrInst::GetElementPtrInst(TyPtr PointeeType, std::shared_ptr<Value> Ptr, std::shared_ptr<Value> Idx0,
+                                     std::shared_ptr<Value> Idx1, std::shared_ptr<BasicBlock> parent,
+                                     [[maybe_unused]] const std::string &Name)
     : Instruction(PointerType::get(PointeeType), Opcode::GetElementPtr,
                   parent) {
   init(Ptr, Idx0, Idx1);
 }
 
-GEPInstPtr GetElementPtrInst::Create(TyPtr PointeeType, ValPtr Ptr, ValPtr Idx0,
-                                     ValPtr Idx1, BBPtr parent,
-                                     std::string Name, InstPtr InsertBefore) {
+std::shared_ptr<GetElementPtrInst> GetElementPtrInst::Create(TyPtr PointeeType, std::shared_ptr<Value> Ptr, std::shared_ptr<Value> Idx0,
+                                     std::shared_ptr<Value> Idx1, std::shared_ptr<BasicBlock> parent,
+                                     const std::string &Name,
+                                     [[maybe_unused]] std::shared_ptr<Instruction> InsertBefore) {
   return std::make_shared<GetElementPtrInst>(PointeeType, Ptr, Idx0, Idx1,
                                              parent, Name);
 }
 
-GEPInstPtr GetElementPtrInst::Create(TyPtr PointeeType, ValPtr Ptr,
-                                     std::vector<ValPtr> IdxList, BBPtr parent,
-                                     std::string Name, InstPtr InsertBefore) {
+std::shared_ptr<GetElementPtrInst> GetElementPtrInst::Create(TyPtr PointeeType, std::shared_ptr<Value> Ptr,
+                                     std::vector<std::shared_ptr<Value>> IdxList, std::shared_ptr<BasicBlock> parent,
+                                     const std::string &Name,
+                                     [[maybe_unused]] std::shared_ptr<Instruction> InsertBefore) {
   return std::make_shared<GetElementPtrInst>(PointeeType, Ptr, IdxList, parent,
                                              Name);
 }
@@ -322,33 +329,34 @@ TerminatorInst::~TerminatorInst() {}
 
 //===---------------------------------------------------------------------===//
 // Implements CallInst.
-CallInst::CallInst(FuncTypePtr FTy, ValPtr Func, std::vector<ValPtr> Args,
-                   BBPtr parent, std::string Name, BBPtr InsertAtEnd)
+CallInst::CallInst(std::shared_ptr<FunctionType> FTy, std::shared_ptr<Value> Func, std::vector<std::shared_ptr<Value>> Args,
+                   std::shared_ptr<BasicBlock> parent, [[maybe_unused]] const std::string &Name,
+                   [[maybe_unused]] std::shared_ptr<BasicBlock> InsertAtEnd)
     : Instruction(FTy->getReturnType(), Opcode::Call, parent), FTy(FTy),
       IsIntrisicCall(false) {
   // Operands.resize(1 + Args.size());
   Operands.push_back(Use(Func, this));
   assert(Args.size() == FTy->getNumParams() &&
          "The number of parameters is different!");
-  unsigned ArgsNum = Args.size();
+  std::size_t ArgsNum = Args.size();
   for (unsigned i = 0; i < ArgsNum; i++)
-    // To Do: �ж�Arg��������ͬ����ʹ��PointerType
     Operands.push_back(Use(Args[i], this));
 }
 
-CallInst::CallInst(IntrinsicPtr Intr, std::vector<ValPtr> Args, BBPtr parent,
-                   std::string Name, InstPtr InsertBefore)
+CallInst::CallInst(std::shared_ptr<Intrinsic> Intr, std::vector<std::shared_ptr<Value>> Args, std::shared_ptr<BasicBlock> parent,
+                   [[maybe_unused]] const std::string &Name,
+                   [[maybe_unused]] std::shared_ptr<Instruction> InsertBefore)
     : Instruction(nullptr, Opcode::Call, parent), IsIntrisicCall(true) {
   Operands.push_back(Use(Intr, this));
-  for (unsigned i = 0, size = Args.size(); i < size; i++)
+  for (std::size_t i = 0, size = Args.size(); i < size; i++)
     Operands.push_back(Use(Args[i], this));
 }
 
 CallInst::~CallInst() {}
 
-CallInstPtr CallInst::Create(ValPtr Func, std::vector<ValPtr> Args,
-                             BBPtr parent, std::string Name,
-                             InstPtr InsertBefore) {
+std::shared_ptr<CallInst> CallInst::Create(std::shared_ptr<Value> Func, std::vector<std::shared_ptr<Value>> Args,
+                             std::shared_ptr<BasicBlock> parent, const std::string &Name,
+                             [[maybe_unused]] std::shared_ptr<Instruction> InsertBefore) {
   auto func = std::dynamic_pointer_cast<Function>(Func);
   assert(func && "The Value must be the 'Function'!");
   auto functy =
@@ -357,17 +365,17 @@ CallInstPtr CallInst::Create(ValPtr Func, std::vector<ValPtr> Args,
   return std::make_shared<CallInst>(functy, Func, Args, parent, Name);
 }
 
-CallInstPtr CallInst::Create(IntrinsicPtr Intr, std::vector<ValPtr> Args,
-                             BBPtr parent, std::string Name,
-                             InstPtr InsertBefore) {
+std::shared_ptr<CallInst> CallInst::Create(std::shared_ptr<Intrinsic> Intr, std::vector<std::shared_ptr<Value>> Args,
+                             std::shared_ptr<BasicBlock> parent, const std::string &Name,
+                             [[maybe_unused]] std::shared_ptr<Instruction> InsertBefore) {
   return std::make_shared<CallInst>(Intr, Args, parent, Name);
 }
-ValPtr CallInst::getArgOperand(unsigned i) const {
+std::shared_ptr<Value> CallInst::getArgOperand(std::size_t i) const {
   assert(i < Operands.size() - 1 && "Index out of range!");
   return Operands[i + 1].get();
 }
 
-void CallInst::setArgOperand(unsigned i, ValPtr v) {
+void CallInst::setArgOperand(unsigned i, std::shared_ptr<Value> v) {
   assert(i < Operands.size() && "Index out of range!");
   Operands[i + 1] = v;
 }
@@ -387,7 +395,7 @@ void CallInst::Print(std::ostringstream &out) {
     out << " " << Operands[0].get()->getName() << "(";
     if (Operands.size() > 1) {
       // Print the parameter information.
-      unsigned Length = Operands.size();
+      std::size_t Length = Operands.size();
       for (unsigned i = 1; i < Length; i++) {
         Operands[i].get()->getType()->Print(out);
         out << " " << Operands[i].get()->getName();
@@ -409,7 +417,7 @@ void CallInst::Print(std::ostringstream &out) {
   out << " " << Operands[0].get()->getName() << "(";
   if (Operands.size() > 1) {
     // Print the parameter information.
-    unsigned Length = Operands.size();
+    std::size_t Length = Operands.size();
     for (unsigned i = 1; i < Length; i++) {
       Operands[i].get()->getType()->Print(out);
       out << " " << Operands[i].get()->getName();
@@ -425,7 +433,8 @@ void CallInst::Print(std::ostringstream &out) {
 }
 //===---------------------------------------------------------------------===//
 // Implements ReturnInst.
-ReturnInst::ReturnInst(BBPtr parent, ValPtr retVal, BBPtr InsertAtEnd)
+ReturnInst::ReturnInst(std::shared_ptr<BasicBlock> parent, std::shared_ptr<Value> retVal,
+                       [[maybe_unused]] std::shared_ptr<BasicBlock> InsertAtEnd)
     : TerminatorInst(retVal->getType(), Opcode::Ret, parent) {
   // Operands.resize(1);
   if (retVal) {
@@ -433,8 +442,8 @@ ReturnInst::ReturnInst(BBPtr parent, ValPtr retVal, BBPtr InsertAtEnd)
   }
 }
 
-ReturnInstPtr ReturnInst::Create(BBPtr parent, ValPtr retVal,
-                                 BBPtr InsertAtEnd) {
+std::shared_ptr<ReturnInst> ReturnInst::Create(std::shared_ptr<BasicBlock> parent, std::shared_ptr<Value> retVal,
+                                 std::shared_ptr<BasicBlock> InsertAtEnd) {
   return std::make_shared<ReturnInst>(parent, retVal, InsertAtEnd);
 }
 
@@ -442,7 +451,8 @@ ReturnInst::~ReturnInst() {}
 
 // Out-of-line ReturnInst method, put here so the c++ compiler can
 // choose to emit the vtable for the class in this translation unit :).
-void ReturnInst::setSuccessor(unsigned idx, BBPtr B) {
+void ReturnInst::setSuccessor([[maybe_unused]] unsigned idx,
+                              [[maybe_unused]] std::shared_ptr<BasicBlock> B) {
   assert(0 && "has no successors!");
 }
 
@@ -464,16 +474,17 @@ void ReturnInst::Print(std::ostringstream &out) {
 }
 //===---------------------------------------------------------------------===//
 // Implements the BranchInst class.
-BranchInst::BranchInst(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr parent,
-                       BBPtr InsertAtEnd)
+BranchInst::BranchInst(MosesIRContext &Ctx, std::shared_ptr<BasicBlock> IfTrue, std::shared_ptr<BasicBlock> parent,
+                       [[maybe_unused]] std::shared_ptr<BasicBlock> InsertAtEnd)
     : TerminatorInst(Type::getVoidType(Ctx), Opcode::Br, parent) {
   assert(IfTrue && "Dest basic block may not be null!");
   // Operands.resize(1);
   Operands.push_back(Use(IfTrue, this));
 }
 
-BranchInst::BranchInst(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr IfFalse,
-                       ValPtr CondV, BBPtr parent, BBPtr InsertAtEnd)
+BranchInst::BranchInst(MosesIRContext &Ctx, std::shared_ptr<BasicBlock> IfTrue, std::shared_ptr<BasicBlock> IfFalse,
+                       std::shared_ptr<Value> CondV, std::shared_ptr<BasicBlock> parent,
+                       [[maybe_unused]] std::shared_ptr<BasicBlock> InsertAtEnd)
     : TerminatorInst(Type::getVoidType(Ctx), Opcode::Br, parent) {
   assert(IfTrue && IfFalse && "Dest basic blocks may not be null!");
   assert(CondV->getType()->isBoolTy() &&
@@ -486,18 +497,18 @@ BranchInst::BranchInst(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr IfFalse,
 
 BranchInst::~BranchInst() {}
 
-BrInstPtr BranchInst::Create(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr parent,
-                             BBPtr InsertAtEnd) {
+std::shared_ptr<BranchInst> BranchInst::Create(MosesIRContext &Ctx, std::shared_ptr<BasicBlock> IfTrue, std::shared_ptr<BasicBlock> parent,
+                             std::shared_ptr<BasicBlock> InsertAtEnd) {
   return std::make_shared<BranchInst>(Ctx, IfTrue, parent, InsertAtEnd);
 }
 
-BrInstPtr BranchInst::Create(MosesIRContext &Ctx, BBPtr IfTrue, BBPtr IfFalse,
-                             ValPtr CondV, BBPtr parent, BBPtr InsertAtEnd) {
+std::shared_ptr<BranchInst> BranchInst::Create(MosesIRContext &Ctx, std::shared_ptr<BasicBlock> IfTrue, std::shared_ptr<BasicBlock> IfFalse,
+                             std::shared_ptr<Value> CondV, std::shared_ptr<BasicBlock> parent, std::shared_ptr<BasicBlock> InsertAtEnd) {
   return std::make_shared<BranchInst>(Ctx, IfTrue, IfFalse, CondV, parent,
                                       InsertAtEnd);
 }
 
-BBPtr BranchInst::getSuccessor(unsigned i) const {
+std::shared_ptr<BasicBlock> BranchInst::getSuccessor(unsigned i) const {
   assert((Operands.size() == 1 && i == 0) ||
          (Operands.size() == 3 && (i == 0 || i == 1)) &&
              "Get successors error!");
@@ -507,7 +518,7 @@ BBPtr BranchInst::getSuccessor(unsigned i) const {
   return SuccBB;
 }
 
-void BranchInst::setSuccessor(unsigned idx, BBPtr NewSucc) {
+void BranchInst::setSuccessor(unsigned idx, std::shared_ptr<BasicBlock> NewSucc) {
   assert((idx == 0 || idx == 1) && "Index out of range!");
   Operands[idx] = NewSucc;
 }
@@ -527,8 +538,9 @@ void BranchInst::Print(std::ostringstream &out) {
 }
 //===---------------------------------------------------------------------===//
 // Implements the Load instruciton.
-LoadInst::LoadInst(ValPtr Addr, BBPtr parent, std::string Name,
-                   BBPtr InsertAtEnd)
+LoadInst::LoadInst(std::shared_ptr<Value> Addr, std::shared_ptr<BasicBlock> parent,
+                   [[maybe_unused]] const std::string &Name,
+                   [[maybe_unused]] std::shared_ptr<BasicBlock> InsertAtEnd)
     : UnaryOperator(nullptr, Opcode::Load, Addr, parent) {
   auto PointerTy = std::dynamic_pointer_cast<PointerType>(Addr->getType());
   assert(PointerTy && "Addr must have pointer type.");
@@ -537,7 +549,7 @@ LoadInst::LoadInst(ValPtr Addr, BBPtr parent, std::string Name,
 
 LoadInst::~LoadInst() {}
 
-LoadInstPtr LoadInst::Create(ValPtr Addr, BBPtr parent) {
+std::shared_ptr<LoadInst> LoadInst::Create(std::shared_ptr<Value> Addr, std::shared_ptr<BasicBlock> parent) {
   return std::make_shared<LoadInst>(Addr, parent);
 }
 

@@ -3,8 +3,8 @@
 // This file implements type class.
 //
 //===---------------------------------------------------------------------===//
-#include "include/IR/IRType.h"
-using namespace compiler::IR;
+#include "IR/IRType.h"
+using namespace IR;
 using TyPtr = std::shared_ptr<Type>;
 using StructTyPtr = std::shared_ptr<StructType>;
 
@@ -12,18 +12,18 @@ using StructTyPtr = std::shared_ptr<StructType>;
 // Implements class Type.
 unsigned Type::getSize() const {
   switch (ID) {
-  case compiler::IR::Type::VoidTy:
+  case Type::TypeID::VoidTy:
     return 0;
-  case compiler::IR::Type::IntegerTy:
+  case Type::TypeID::IntegerTy:
     return sizeof(int);
-  case compiler::IR::Type::BoolTy:
+  case Type::TypeID::BoolTy:
     return sizeof(int);
-  case compiler::IR::Type::PointerTy:
+  case Type::TypeID::PointerTy:
     return sizeof(void *);
-  case compiler::IR::Type::LabelTy:
-  case compiler::IR::Type::FunctionTy:
-  case compiler::IR::Type::StructTy:
-  case compiler::IR::Type::AnonyTy:
+  case Type::TypeID::LabelTy:
+  case Type::TypeID::FunctionTy:
+  case Type::TypeID::StructTy:
+  case Type::TypeID::AnonyTy:
     break;
   default:
     break;
@@ -34,19 +34,19 @@ unsigned Type::getSize() const {
 /// \brief Print the Type info, i32 bool void and so on.
 void Type::Print(std::ostringstream &out) {
   switch (ID) {
-  case compiler::IR::Type::VoidTy:
+  case Type::TypeID::VoidTy:
     out << " void";
     break;
-  case compiler::IR::Type::LabelTy:
+  case Type::TypeID::LabelTy:
     out << " label";
     break;
-  case compiler::IR::Type::IntegerTy:
+  case Type::TypeID::IntegerTy:
     out << " int";
     break;
-  case compiler::IR::Type::BoolTy:
+  case Type::TypeID::BoolTy:
     out << " bool";
     break;
-  case compiler::IR::Type::FunctionTy:
+  case Type::TypeID::FunctionTy:
     // oops. Have no idea to handle the funciton type's name.
     out << " function.type";
     break;
@@ -81,17 +81,18 @@ std::shared_ptr<FunctionType> FunctionType::get(TyPtr retty) {
   return std::make_shared<FunctionType>(retty);
 }
 
-IRTyPtr FunctionType::operator[](unsigned index) const {
+IRTyPtr FunctionType::operator[](std::size_t index) const {
   assert(index < NumContainedTys &&
          "Index out of range when we get parm IR type.");
   return ContainedTys[index];
 }
 
-bool FunctionType::classof(IRTyPtr Ty) { return Ty->getTypeID() == FunctionTy; }
+bool FunctionType::classof(IRTyPtr Ty) {
+  return Ty->getTypeID() == TypeID::FunctionTy;
+}
 
-std::vector<IRTyPtr>
-FunctionType::ConvertParmTypeToIRType(MosesIRContext &Ctx,
-                                      std::vector<ASTTyPtr> ParmTyps) {
+std::vector<IRTyPtr> FunctionType::ConvertParmTypeToIRType(
+    MosesIRContext &Ctx, std::vector<std::shared_ptr<ASTType>> ParmTyps) {
   std::vector<IRTyPtr> IRTypes;
   for (auto item : ParmTyps) {
     switch (item->getKind()) {
@@ -118,13 +119,16 @@ FunctionType::ConvertParmTypeToIRType(MosesIRContext &Ctx,
 ///	e.g.	int (*call)(int);
 ///			call = add;
 ///
-///			%call = alloca i32 (i32)*					; <i32
-///(i32)**>
-///					~~~~~~~~~~~~~~~~		--------> Funcition type
-///<i32 (i32)> 			store i32 (i32)* @add, i32 (i32)** %call
+///			%call = alloca i32 (i32)*
+///;
+///< i32 (i32)**>
+///					~~~~~~~~~~~~~~~~ --------> Funcition
+/// type<i32 (i32)>
+///     store i32 (i32)* @add, i32 (i32)** %call
 ///					...
-///			%1 = load i32 (i32)** %call					; <i32
-///(i32)*>
+///			%1 = load i32 (i32)** %call
+///;
+///< i32 (i32)*>
 ///					...
 ///			%4 = call i32 %2(i32 %3)
 void FunctionType::Print(std::ostringstream &out) {
@@ -145,8 +149,8 @@ void FunctionType::Print(std::ostringstream &out) {
 // Implements class StructType.
 /// ����identified struct.
 
-StructType::StructType(std::vector<IRTyPtr> members, std::string Name,
-                       bool isliteral)
+StructType::StructType(std::vector<IRTyPtr> members,
+                       [[maybe_unused]] std::string Name, bool isliteral)
     : Type(TypeID::StructTy), Literal(isliteral), ContainedTys(members),
       NumContainedTys(members.size()) {}
 
@@ -157,7 +161,7 @@ StructType::StructType(std::vector<IRTyPtr> members, std::string Name,
 ///			var a : A;
 ///		}
 std::shared_ptr<StructType> StructType::Create(MosesIRContext &Ctx,
-                                               ASTTyPtr type) {
+                                               std::shared_ptr<ASTType> type) {
   std::vector<IRTyPtr> members;
   std::string Name;
   if (ASTUDTyPtr UD = std::dynamic_pointer_cast<ASTUDTy>(type)) {
@@ -183,7 +187,7 @@ std::shared_ptr<StructType> StructType::Create(MosesIRContext &Ctx,
 }
 
 std::shared_ptr<StructType> StructType::get(MosesIRContext &Ctx,
-                                            ASTTyPtr type) {
+                                            std::shared_ptr<ASTType> type) {
   std::vector<IRTyPtr> members;
   if (ASTUDTyPtr UD = std::dynamic_pointer_cast<ASTUDTy>(type)) {
     auto subtypes = UD->getMemberTypes();
@@ -224,7 +228,7 @@ std::shared_ptr<StructType> StructType::get(MosesIRContext &Ctx,
 void StructType::PrintCompleteInfo(std::ostringstream &out) {
   out << Name << " = struct.type {";
   if (NumContainedTys > 0)
-    for (unsigned i = 0, size = ContainedTys.size(); i < size; i++) {
+    for (std::size_t i = 0, size = ContainedTys.size(); i < size; i++) {
       ContainedTys[i]->Print(out);
       if (i == size - 1)
         break;

@@ -3,13 +3,13 @@
 // This file implements the class function.
 //
 //===---------------------------------------------------------------------===//
-#include "include/IR/Function.h"
-#include "include/IR/BasicBlock.h"
-using namespace compiler::IR;
+#include "IR/Function.h"
+#include "IR/BasicBlock.h"
+using namespace IR;
 
 //===---------------------------------------------------------------------===//
 // Implement class Argument.
-Argument::Argument(TyPtr Ty, std::string Name, FuncPtr F)
+Argument::Argument(TyPtr Ty, const std::string &Name, std::shared_ptr<Function> F)
     : Value(Ty, ValueTy::ArgumentVal, Name), Parent(F) {}
 
 void Argument::Print(std::ostringstream &out) {
@@ -18,40 +18,40 @@ void Argument::Print(std::ostringstream &out) {
 }
 //===---------------------------------------------------------------------===//
 // Implement class function.
-Function::Function(FuncTypePtr Ty, std::string Name,
+Function::Function(std::shared_ptr<FunctionType> Ty, const std::string &Name,
                    std::vector<std::string> Names)
     : GlobalValue(PointerType::get(Ty), Value::ValueTy::FunctionVal, Name),
       ReturnType(Ty->getReturnType()), FunctionTy(Ty) {
   // Create space for argument and set the name later.
-  for (unsigned i = 0, size = Ty->getNumParams(); i < size; i++) {
+  for (std::size_t i = 0, size = Ty->getNumParams(); i < size; i++) {
     auto ty = (*Ty)[i + 1];
     Arguments.push_back(std::make_shared<Argument>(ty, Names[i]));
   }
 }
 
 /// \brief Get the argument.
-ArgPtr Function::operator[](unsigned index) const {
+std::shared_ptr<Argument> Function::operator[](std::size_t index) const {
   assert(index < Arguments.size() &&
          "Index out of range when we get the specified Argument(IR).");
   return Arguments[index];
 }
 
 /// \brief Set argument info.
-void Function::setArgumentInfo(unsigned index, std::string name) {
+void Function::setArgumentInfo(unsigned index, const std::string &name) {
   assert(index < Arguments.size() &&
          "Index out of range when set Argument(IR) name.");
   Arguments[index]->setName(name);
 }
 
 /// \brief Create a new function.
-FuncPtr Function::create(FuncTypePtr Ty, std::string Name,
+std::shared_ptr<Function> Function::create(std::shared_ptr<FunctionType> Ty, const std::string &Name,
                          std::vector<std::string> Names) {
   auto func = std::make_shared<Function>(Ty, Name, Names);
   return func;
 }
 
 TyPtr Function::getReturnType() const {
-  if (FuncTypePtr ty = std::dynamic_pointer_cast<FunctionType>(FunctionTy))
+  if (std::shared_ptr<FunctionType> ty = std::dynamic_pointer_cast<FunctionType>(FunctionTy))
     return ty->getReturnType();
   return nullptr;
 }
@@ -67,7 +67,7 @@ void Function::Print(std::ostringstream &out) {
   ReturnType->Print(out);
   out << " " << Name << "(";
   if (!Arguments.empty()) {
-    unsigned ArgNum = Arguments.size();
+    std::size_t ArgNum = Arguments.size();
     for (unsigned i = 0; i < ArgNum; i++) {
       Arguments[i]->Print(out);
       if (i < ArgNum - 1) {
@@ -82,4 +82,4 @@ void Function::Print(std::ostringstream &out) {
   out << "}\n";
 }
 
-void Intrinsic::Print(std::ostringstream &out) {}
+void Intrinsic::Print([[maybe_unused]] std::ostringstream &out) {}

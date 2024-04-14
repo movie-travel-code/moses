@@ -3,8 +3,8 @@
 // This file defines the EvaluateExprVisitor class.
 //
 //===---------------------------------------------------------------------===//
-#include "include/Parser/EvaluatedExprVisitor.h"
-using namespace compiler::ast;
+#include "Parser/EvaluatedExprVisitor.h"
+using namespace ast;
 
 //===-----------------------------------------------------------------------------------===//
 // EvaluatedExprVisitorBase's Impletation
@@ -83,7 +83,7 @@ bool EvaluatedExprVisitorBase::EvalCallExpr(CallExprPtr CE, EvalInfo &info) {
 
   ValueKind vk;
 
-  unsigned num = CE->getArgsNum();
+  std::size_t num = CE->getArgsNum();
   for (unsigned i = 0; i < num; i++) {
     ExprASTPtr Arg = CE->getArg(i);
     if (Arg->getType()->getKind() == TypeKind::INT) {
@@ -125,8 +125,7 @@ bool EvaluatedExprVisitorBase::EvalDeclRefExpr(DeclRefExprPtr DRE,
     }
     info = declInfo;
     return true;
-  }
-  else if (ParmDeclPtr PD = std::dynamic_pointer_cast<ParameterDecl>(decl)) {
+  } else if (ParmDeclPtr PD = std::dynamic_pointer_cast<ParameterDecl>(decl)) {
     // func add(lhs : int, rhs : int) -> int
     // {
     //		return lhs + rhs;
@@ -137,7 +136,7 @@ bool EvaluatedExprVisitorBase::EvalDeclRefExpr(DeclRefExprPtr DRE,
     auto stackSize = ActiveStack.size();
     // ActiveStack
     // <start, Evalinfo> <lhs, EvalInfo> <rhs, EvalInfo>
-    for (int i = stackSize - 1; i >= 0; i--) {
+    for (unsigned long i = stackSize - 1; i >= 0; i--) {
       if (ActiveStack[i].first == PD->getParmName()) {
         info = ActiveStack[i].second;
         return true;
@@ -179,7 +178,8 @@ bool IntExprEvaluator::EvalUnaryExpr(UnaryPtr U, EvalInfo &info,
   return false;
 }
 
-bool IntExprEvaluator::EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) {
+bool IntExprEvaluator::EvalMemberExpr(MemberExprPtr ME,
+                                      [[maybe_unused]] EvalInfo &info) {
   return false;
   if (UDTyPtr UDT = std::dynamic_pointer_cast<UserDefinedType>(
           ME->getBase()->getType())) {
@@ -226,12 +226,14 @@ bool BoolExprEvaluator::EvalBinaryExpr(BinaryPtr B, EvalInfo &info,
   return true;
 }
 
-bool BoolExprEvaluator::EvalUnaryExpr(UnaryPtr U, EvalInfo &info,
+bool BoolExprEvaluator::EvalUnaryExpr([[maybe_unused]] UnaryPtr U,
+                                      [[maybe_unused]] EvalInfo &info,
                                       EvalInfo &subVal) {
   info.evalstatus.boolVal = !subVal.evalstatus.boolVal;
   return false;
 }
 
-bool BoolExprEvaluator::EvalMemberExpr(MemberExprPtr ME, EvalInfo &info) {
+bool BoolExprEvaluator::EvalMemberExpr([[maybe_unused]] MemberExprPtr ME,
+                                       [[maybe_unused]] EvalInfo &info) {
   return false;
 }

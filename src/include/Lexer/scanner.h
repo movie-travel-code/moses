@@ -1,6 +1,5 @@
-#ifndef Scanner_INCLUDE
-#define Scanner_INCLUDE
-#include "include/Support/error.h"
+#pragma once
+#include "Support/error.h"
 #include "PreStoreToken.h"
 #include "Token.h"
 #include "TokenKinds.h"
@@ -11,10 +10,8 @@
 #include <iostream>
 #include <string>
 
-
-namespace compiler {
 namespace parse {
-using namespace compiler::lex;
+using namespace lex;
 
 class Scanner {
 private:
@@ -41,11 +38,11 @@ private:
   char peekChar();
   void addToBuffer(char c);
   void reduceBuffer();
-  void makeToken(compiler::tok::TokenValue tv, const TokenLocation &loc,
+  void makeToken(tok::TokenValue tv, const TokenLocation &loc,
                  std::string name);
-  void makeToken(compiler::tok::TokenValue tv, const TokenLocation &loc,
+  void makeToken(tok::TokenValue tv, const TokenLocation &loc,
                  long intValue, std::string name);
-  void makeToken(compiler::tok::TokenValue tv, const TokenLocation &loc,
+  void makeToken(tok::TokenValue tv, const TokenLocation &loc,
                  double realValue, std::string name);
   void handleEOFState();
   void handleIdentifierState();
@@ -77,6 +74,3 @@ public:
   static void setErrorFlag(bool flag) { errorFlag = flag; }
 };
 } // namespace parse
-} // namespace compiler
-
-#endif

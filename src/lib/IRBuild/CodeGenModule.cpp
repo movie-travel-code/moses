@@ -22,7 +22,7 @@ ModuleBuilder::ModuleBuilder(std::shared_ptr<Scope> SymbolInfo,
 
 void ModuleBuilder::VisitChildren(
     std::vector<std::shared_ptr<StatementAST>> AST) {
-  unsigned ASTSize = AST.size();
+  std::size_t ASTSize = AST.size();
   for (unsigned i = 0; i < ASTSize; i++)
     AST[i].get()->Accept(this);
 }
@@ -209,11 +209,11 @@ std::shared_ptr<GetElementPtrInst> ModuleBuilder::CreateGEP([[maybe_unused]] TyP
   return nullptr;
 }
 
-std::shared_ptr<GetElementPtrInst> ModuleBuilder::CreateGEP(TyPtr Ty, std::shared_ptr<Value> Ptr, unsigned Idx,
+std::shared_ptr<GetElementPtrInst> ModuleBuilder::CreateGEP(TyPtr Ty, std::shared_ptr<Value> Ptr, std::size_t Idx,
                                     std::string Name) {
   return InsertHelper(GetElementPtrInst::Create(
       Ty, Ptr, ConstantInt::getZeroValueForNegative(Context),
-      ConstantInt::get(Context, Idx), CurBB, Name));
+      ConstantInt::get(Context, (int)Idx), CurBB, Name));
 }
 
 //===--------------------------------------------------------------===//

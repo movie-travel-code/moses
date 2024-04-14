@@ -57,13 +57,13 @@ public:
   static std::shared_ptr<Function> create(std::shared_ptr<FunctionType> Ty,
                                           const std::string &Name,
                                           std::vector<std::string> Names);
-  std::shared_ptr<Argument> operator[](unsigned index) const;
+  std::shared_ptr<Argument> operator[](std::size_t index) const;
   /// \brief Set argument name and type.
   void setArgumentInfo(unsigned index, const std::string &name);
 
   void addBB(std::shared_ptr<BasicBlock> B) { BasicBlocks.push_back(B); }
 
-  std::shared_ptr<Argument> getArg(unsigned index) const {
+  std::shared_ptr<Argument> getArg(std::size_t index) const {
     return (*this)[index];
   }
   TyPtr getReturnType() const;
@@ -77,7 +77,7 @@ public:
   std::list<std::shared_ptr<BasicBlock>> &getBasicBlockList() {
     return BasicBlocks;
   }
-  std::shared_ptr<Argument> operator[](unsigned index) {
+  std::shared_ptr<Argument> operator[](std::size_t index) {
     return Arguments[index];
   }
   const std::shared_ptr<BasicBlock> &getEntryBlock() const {

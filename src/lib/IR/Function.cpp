@@ -23,14 +23,14 @@ Function::Function(std::shared_ptr<FunctionType> Ty, const std::string &Name,
     : GlobalValue(PointerType::get(Ty), Value::ValueTy::FunctionVal, Name),
       ReturnType(Ty->getReturnType()), FunctionTy(Ty) {
   // Create space for argument and set the name later.
-  for (unsigned i = 0, size = Ty->getNumParams(); i < size; i++) {
+  for (std::size_t i = 0, size = Ty->getNumParams(); i < size; i++) {
     auto ty = (*Ty)[i + 1];
     Arguments.push_back(std::make_shared<Argument>(ty, Names[i]));
   }
 }
 
 /// \brief Get the argument.
-std::shared_ptr<Argument> Function::operator[](unsigned index) const {
+std::shared_ptr<Argument> Function::operator[](std::size_t index) const {
   assert(index < Arguments.size() &&
          "Index out of range when we get the specified Argument(IR).");
   return Arguments[index];
@@ -67,7 +67,7 @@ void Function::Print(std::ostringstream &out) {
   ReturnType->Print(out);
   out << " " << Name << "(";
   if (!Arguments.empty()) {
-    unsigned ArgNum = Arguments.size();
+    std::size_t ArgNum = Arguments.size();
     for (unsigned i = 0; i < ArgNum; i++) {
       Arguments[i]->Print(out);
       if (i < ArgNum - 1) {

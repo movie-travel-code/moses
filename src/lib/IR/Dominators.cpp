@@ -134,8 +134,8 @@ void DominatorTree::getPostOrder() {
 void DominatorTree::getReversePostOrder() {
   if (PostOrder.size() == 0)
     getPostOrder();
-  for (int i = PostOrder.size() - 1; i >= 0; --i)
-    ReversePostOrder.push_back(PostOrder[i]);
+  for (std::size_t i = PostOrder.size(); i >= 1; --i)
+    ReversePostOrder.push_back(PostOrder[i - 1]);
 }
 
 // Get the predecessors of the \parm Node.

@@ -272,7 +272,7 @@ void AllocaInst::Print(std::ostringstream &out) {
 //						GetElementPtrInst Class
 void GetElementPtrInst::init(std::shared_ptr<Value> Ptr, std::vector<std::shared_ptr<Value>> Idx) {
   Operands.push_back(Use(Ptr, this));
-  for (unsigned i = 0, size = Idx.size(); i < size; i++)
+  for (std::size_t i = 0, size = Idx.size(); i < size; i++)
     Operands.push_back(Use(Idx[i], this));
 }
 
@@ -338,7 +338,7 @@ CallInst::CallInst(std::shared_ptr<FunctionType> FTy, std::shared_ptr<Value> Fun
   Operands.push_back(Use(Func, this));
   assert(Args.size() == FTy->getNumParams() &&
          "The number of parameters is different!");
-  unsigned ArgsNum = Args.size();
+  std::size_t ArgsNum = Args.size();
   for (unsigned i = 0; i < ArgsNum; i++)
     Operands.push_back(Use(Args[i], this));
 }
@@ -348,7 +348,7 @@ CallInst::CallInst(std::shared_ptr<Intrinsic> Intr, std::vector<std::shared_ptr<
                    [[maybe_unused]] std::shared_ptr<Instruction> InsertBefore)
     : Instruction(nullptr, Opcode::Call, parent), IsIntrisicCall(true) {
   Operands.push_back(Use(Intr, this));
-  for (unsigned i = 0, size = Args.size(); i < size; i++)
+  for (std::size_t i = 0, size = Args.size(); i < size; i++)
     Operands.push_back(Use(Args[i], this));
 }
 
@@ -370,7 +370,7 @@ std::shared_ptr<CallInst> CallInst::Create(std::shared_ptr<Intrinsic> Intr, std:
                              [[maybe_unused]] std::shared_ptr<Instruction> InsertBefore) {
   return std::make_shared<CallInst>(Intr, Args, parent, Name);
 }
-std::shared_ptr<Value> CallInst::getArgOperand(unsigned i) const {
+std::shared_ptr<Value> CallInst::getArgOperand(std::size_t i) const {
   assert(i < Operands.size() - 1 && "Index out of range!");
   return Operands[i + 1].get();
 }
@@ -395,7 +395,7 @@ void CallInst::Print(std::ostringstream &out) {
     out << " " << Operands[0].get()->getName() << "(";
     if (Operands.size() > 1) {
       // Print the parameter information.
-      unsigned Length = Operands.size();
+      std::size_t Length = Operands.size();
       for (unsigned i = 1; i < Length; i++) {
         Operands[i].get()->getType()->Print(out);
         out << " " << Operands[i].get()->getName();
@@ -417,7 +417,7 @@ void CallInst::Print(std::ostringstream &out) {
   out << " " << Operands[0].get()->getName() << "(";
   if (Operands.size() > 1) {
     // Print the parameter information.
-    unsigned Length = Operands.size();
+    std::size_t Length = Operands.size();
     for (unsigned i = 1; i < Length; i++) {
       Operands[i].get()->getType()->Print(out);
       out << " " << Operands[i].get()->getName();

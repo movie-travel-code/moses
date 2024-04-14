@@ -33,7 +33,7 @@ public:
   virtual std::size_t size() const { return 0; }
   virtual std::size_t MemberNum() const { return 1; }
   virtual std::pair<std::shared_ptr<ASTType>, std::string>
-  operator[]([[maybe_unused]] unsigned idx) const {
+  operator[]([[maybe_unused]] std::size_t idx) const {
     assert(0 && "There is no chance to call this function.");
     return std::make_pair(nullptr, "");
   }

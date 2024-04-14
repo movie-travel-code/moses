@@ -117,7 +117,7 @@ public:
   //---------------------------------------------------------------------
   // Methods for handling the vector of uses of this Value.
   const Value *use_begin() const;
-  unsigned use_size() const { return Uses.size(); }
+    std::size_t use_size() const { return Uses.size(); }
   bool use_empty() const { return Uses.empty(); }
   const std::list<Use *> &getUses() const { return Uses; }
 

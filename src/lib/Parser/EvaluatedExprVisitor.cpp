@@ -83,7 +83,7 @@ bool EvaluatedExprVisitorBase::EvalCallExpr(CallExprPtr CE, EvalInfo &info) {
 
   ValueKind vk;
 
-  unsigned num = CE->getArgsNum();
+  std::size_t num = CE->getArgsNum();
   for (unsigned i = 0; i < num; i++) {
     ExprASTPtr Arg = CE->getArg(i);
     if (Arg->getType()->getKind() == TypeKind::INT) {
@@ -136,7 +136,7 @@ bool EvaluatedExprVisitorBase::EvalDeclRefExpr(DeclRefExprPtr DRE,
     auto stackSize = ActiveStack.size();
     // ActiveStack
     // <start, Evalinfo> <lhs, EvalInfo> <rhs, EvalInfo>
-    for (int i = stackSize - 1; i >= 0; i--) {
+    for (unsigned long i = stackSize - 1; i >= 0; i--) {
       if (ActiveStack[i].first == PD->getParmName()) {
         info = ActiveStack[i].second;
         return true;

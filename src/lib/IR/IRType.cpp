@@ -81,7 +81,7 @@ std::shared_ptr<FunctionType> FunctionType::get(TyPtr retty) {
   return std::make_shared<FunctionType>(retty);
 }
 
-IRTyPtr FunctionType::operator[](unsigned index) const {
+IRTyPtr FunctionType::operator[](std::size_t index) const {
   assert(index < NumContainedTys &&
          "Index out of range when we get parm IR type.");
   return ContainedTys[index];
@@ -228,7 +228,7 @@ std::shared_ptr<StructType> StructType::get(MosesIRContext &Ctx,
 void StructType::PrintCompleteInfo(std::ostringstream &out) {
   out << Name << " = struct.type {";
   if (NumContainedTys > 0)
-    for (unsigned i = 0, size = ContainedTys.size(); i < size; i++) {
+    for (std::size_t i = 0, size = ContainedTys.size(); i < size; i++) {
       ContainedTys[i]->Print(out);
       if (i == size - 1)
         break;

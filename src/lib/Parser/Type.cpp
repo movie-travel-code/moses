@@ -99,7 +99,7 @@ std::shared_ptr<ASTType> UserDefinedType::StripOffShell() const {
 }
 
 bool UserDefinedType::operator==(const ASTType &rhs) const {
-  unsigned subTypeNum = subTypes.size();
+  std::size_t subTypeNum = subTypes.size();
   try {
     const UserDefinedType &rhsUserDef =
         dynamic_cast<const UserDefinedType &>(rhs);
@@ -120,7 +120,7 @@ bool UserDefinedType::operator==(const ASTType &rhs) const {
 // Implement class AnonymousType.
 void AnonymousType::getTypes(
     std::vector<std::shared_ptr<ASTType>> &types) const {
-  unsigned size = subTypes.size();
+  std::size_t size = subTypes.size();
   for (unsigned index = 0; index < size; index++) {
     if (std::shared_ptr<AnonymousType> type =
             std::dynamic_pointer_cast<AnonymousType>(subTypes[index])) {

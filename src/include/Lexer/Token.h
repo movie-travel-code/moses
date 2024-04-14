@@ -36,14 +36,14 @@ public:
     return !operator==(tokenLoc);
   }
 
-  TokenLocation(unsigned lineNumber, unsigned colNumber, std::string fileName)
+  TokenLocation(std::size_t lineNumber, std::size_t colNumber, std::string fileName)
       : LineNumber(lineNumber), ColNumber(colNumber), FileName(fileName) {}
 
-  void setTokenLineNumber(unsigned lineNumber) { LineNumber = lineNumber; }
-  void setTokenColNumber(unsigned colNumber) { ColNumber = colNumber; }
-  void setTokenFileName(unsigned fileName) { FileName = fileName; }
-  [[nodiscard]] unsigned getTokenLineNumber() const { return LineNumber; }
-  [[nodiscard]] unsigned getTokenColNumber() const { return ColNumber; }
+  void setTokenLineNumber(std::size_t lineNumber) { LineNumber = lineNumber; }
+  void setTokenColNumber(std::size_t colNumber) { ColNumber = colNumber; }
+  void setTokenFileName(std::size_t fileName) { FileName = fileName; }
+  [[nodiscard]] unsigned long getTokenLineNumber() const { return LineNumber; }
+  [[nodiscard]] unsigned long getTokenColNumber() const { return ColNumber; }
   [[nodiscard]] const std::string& getTokenFileName() const { return FileName; }
   std::string toString() {
     std::string LineStr = std::to_string(LineNumber);

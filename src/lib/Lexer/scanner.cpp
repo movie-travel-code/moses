@@ -304,8 +304,6 @@ void Scanner::handleIdentifierState() {
 void Scanner::handleOperationState() {
   CurLoc = getTokenLocation();
 
-  bool matched = false;
-
   addToBuffer(CurrentChar);
   addToBuffer(peekChar());
 
@@ -314,7 +312,6 @@ void Scanner::handleOperationState() {
     reduceBuffer();
     tokenKind = table.isOperator(buffer);
   } else {
-    matched = true;
     getNextChar();
   }
 

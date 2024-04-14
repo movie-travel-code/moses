@@ -385,7 +385,7 @@ public:
 
   std::shared_ptr<Value> getPointerOperand();
   static unsigned getPointerOperandIndex() { return 0; }
-  unsigned getNumIndices() const { return getNumOperands() - 1; }
+    std::size_t getNumIndices() const { return getNumOperands() - 1; }
 
   /// \brief Print the GetElementPtrInst.
   void Print(std::ostringstream &out);
@@ -451,8 +451,8 @@ public:
   void setTailCallKind([[maybe_unused]] TailCallKind TCK) {}
 
   /// getNumArgOperands - Return the number of call arguments.
-  unsigned getNumArgOperands() const { return getNumOperands() - 1; }
-  std::shared_ptr<Value> getArgOperand(unsigned i) const;
+    std::size_t getNumArgOperands() const { return getNumOperands() - 1; }
+  std::shared_ptr<Value> getArgOperand(std::size_t i) const;
   void setArgOperand(unsigned i, std::shared_ptr<Value> v);
 
   std::shared_ptr<Value> getCalledFunction() const { return Operands[0].get(); }
@@ -581,7 +581,7 @@ public:
   // basic blocks, which parallels the list of incoming values.
 
   // getNumIncomingValues - Return the number of incoming edges
-  unsigned getNumIncomingValues() const { return getNumOperands(); }
+    std::size_t getNumIncomingValues() const { return getNumOperands(); }
 
   // getIncomingValue - Return incoming value number x
   std::shared_ptr<Value> getIncomingValue([[maybe_unused]] unsigned i) const {

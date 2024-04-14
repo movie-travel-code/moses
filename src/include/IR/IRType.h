@@ -92,7 +92,7 @@ class FunctionType : public Type {
 private:
   std::vector<IRTyPtr> ContainedTys;
 
-  unsigned NumContainedTys;
+  std::size_t NumContainedTys;
 
 public:
   FunctionType(IRTyPtr retty, std::vector<IRTyPtr> parmsty);
@@ -110,9 +110,9 @@ public:
   /// returntype parm0 parm1 parm2
   /// [0] = parm0
   /// [2] = parm2
-  IRTyPtr operator[](unsigned index) const;
+  IRTyPtr operator[](std::size_t index) const;
 
-  unsigned getNumParams() const { return NumContainedTys - 1; }
+  std::size_t getNumParams() const { return NumContainedTys - 1; }
   std::vector<IRTyPtr> getParams() const { return ContainedTys; }
 
   static bool classof(IRTyPtr Ty);
@@ -137,7 +137,7 @@ private:
   bool Literal;
   std::string Name;
   std::vector<IRTyPtr> ContainedTys;
-  unsigned NumContainedTys;
+  std::size_t NumContainedTys;
 
   /// For a named struct that actually has a name, this is a pointer to the
   /// symbol table entry for the struct. This is null if the type is an
@@ -168,7 +168,7 @@ public:
   void setName(std::string Name);
 
   bool isLayoutIdentical(IRStructTyPtr Other) const;
-  unsigned getNumElements() const { return NumContainedTys; }
+  std::size_t getNumElements() const { return NumContainedTys; }
   std::vector<std::shared_ptr<Type>> getContainedTys() const {
     return ContainedTys;
   }

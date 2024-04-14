@@ -38,7 +38,7 @@ void ModuleBuilder::EmitCallExprAgg(const CallExpr *CE, std::shared_ptr<Value> D
 }
 
 void ModuleBuilder::EmitAggregateCopy(std::shared_ptr<Value> DestPtr, std::shared_ptr<Value> SrcPtr,
-                                      std::shared_ptr<ASTType> Ty) {
+                                      [[maybe_unused]]std::shared_ptr<ASTType> Ty) {
   assert(Types.ConvertType(Ty)->isAggregateType() &&
          "The Object must have aggregate type.");
   // Aggregate assignment turns into Intrinsic::ir.memcpy.

@@ -45,7 +45,7 @@ public:
     Operands[i] = Val;
   }
 
-  unsigned getNumOperands() const { return Operands.size(); }
+    std::size_t getNumOperands() const { return Operands.size(); }
 
   // dropAllReferences() - This function is in charge of "letting go" of all
   // objects that this User refers to. This allows one to 'delete' a whole

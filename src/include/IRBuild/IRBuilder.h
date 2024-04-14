@@ -306,7 +306,7 @@ private:
       I->setName(Name);
       return I;
     }
-    assert(0 && "Unreachable code!");
+    return nullptr;
   }
 
   /// \brief Template specialization.
@@ -389,7 +389,7 @@ private:
   std::shared_ptr<StoreInst> CreateStore(std::shared_ptr<Value> Val, std::shared_ptr<Value> Ptr);
   std::shared_ptr<GetElementPtrInst> CreateGEP(TyPtr Ty, std::shared_ptr<Value> Ptr, std::vector<unsigned> IdxList,
                        std::string Name = "");
-  std::shared_ptr<GetElementPtrInst> CreateGEP(TyPtr Ty, std::shared_ptr<Value> Ptr, unsigned Idx,
+  std::shared_ptr<GetElementPtrInst> CreateGEP(TyPtr Ty, std::shared_ptr<Value> Ptr, std::size_t Idx,
                        std::string Name = "");
 
   //===---------------------------------------------------------------===//

@@ -25,8 +25,8 @@ Another role of moses is to improve my English writing skills :).
 ```Bash
 $ mkdir build
 $ cd build
-$ cmake ..
-$ sudo make
+$ cmake -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_BUILD_TYPE=Release ..
+$ make
 ```
 
 ## How to use

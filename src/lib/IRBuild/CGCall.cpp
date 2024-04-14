@@ -24,10 +24,10 @@ class ASTToIRMapping {
   struct IRArgs {
     // Argument is expanded to IR arguments at positions.
     // [FirstArgIndex, FirstArgIndex + NumberOfArgs).
-    unsigned FirstArgIndex;
-    unsigned NumberOfArgs;
+    std::size_t FirstArgIndex;
+    std::size_t NumberOfArgs;
 
-    IRArgs(unsigned first, unsigned length)
+    IRArgs(std::size_t first, std::size_t length)
         : FirstArgIndex(first), NumberOfArgs(length) {}
   };
   std::vector<IRArgs> ArgInfo;
@@ -39,7 +39,7 @@ public:
   bool hasSRetArg() const { return HasSRet; }
   unsigned totalIRArgs() const { return TotalIRArgs; }
 
-  std::pair<unsigned, unsigned> getIRArgs(unsigned ArgNo) const {
+  std::pair<unsigned, unsigned> getIRArgs(std::size_t ArgNo) const {
     assert(ArgNo < ArgInfo.size() && "Index out of range.");
     return std::make_pair(ArgInfo[ArgNo].FirstArgIndex,
                           ArgInfo[ArgNo].NumberOfArgs);
@@ -200,7 +200,7 @@ void ModuleBuilder::ExpandTypeFromArgs(
          ASTTy->getKind() == TypeKind::USERDEFIED &&
              "Can only expand class types.");
   auto Addr = LV.getAddress();
-  for (unsigned i = 0, size = ASTTy->MemberNum(); i < size; i++) {
+  for (std::size_t i = 0, size = ASTTy->MemberNum(); i < size; i++) {
     auto ty = Types.ConvertType((*ASTTy)[i].first);
     auto LV = LValue::MakeAddr(CreateGEP(ty, Addr, i));
     EmitStoreThroughLValue(RValue::get(SubArgs[i]), LV);
@@ -216,7 +216,7 @@ void ModuleBuilder::ExpandTypeToArgs(
          ASTTy->getKind() == TypeKind::USERDEFIED &&
              "Can only expand class types.");
   auto Addr = Src.getAggregateAddr();
-  for (unsigned i = 0, size = ASTTy->MemberNum(); i < size; i++) {
+  for (std::size_t i = 0, size = ASTTy->MemberNum(); i < size; i++) {
     auto ty = Types.ConvertType((*ASTTy)[i].first);
     auto forPrint = CreateGEP(ty, Addr, i);
 
@@ -281,7 +281,7 @@ RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
 
   auto ArgsInfo = CGFunInfo->getArgsInfo();
   assert(ArgsInfo.size() == CallArgs.size() && "Arguments number don't match!");
-  unsigned ArgsNum = ArgsInfo.size();
+  std::size_t ArgsNum = ArgsInfo.size();
   for (unsigned i = 0; i < ArgsNum; i++) {
     auto ArgInfo = ArgsInfo[i];
     auto ArgVal = CallArgs[i].first;
@@ -543,7 +543,7 @@ GetFuncTypeRet CodeGenTypes::getFunctionType(const FunctionDecl *FD,
   // Add parm type.
   auto ArgsInfo = Info->getArgsInfo();
 
-  for (unsigned i = 0, NumArgs = ArgsInfo.size(); i < NumArgs; i++) {
+  for (std::size_t i = 0, NumArgs = ArgsInfo.size(); i < NumArgs; i++) {
     unsigned FirstIRArg, NumIRArgs;
     std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(i);
     switch (ArgsInfo[i]->getKind()) {

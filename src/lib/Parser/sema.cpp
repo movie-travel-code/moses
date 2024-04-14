@@ -292,7 +292,7 @@ Sema::ActOnCallExpr(const std::string &name, std::vector<std::shared_ptr<ASTType
       errorReport("Arguments number not match.");
     }
 
-    unsigned size = args.size();
+              std::size_t size = args.size();
     for (unsigned i = 0; i < size; i++) {
       if (!args[i]) {
         errorReport("The argument of index " + std::to_string(i) +
@@ -628,7 +628,7 @@ Sema::unpackDeclTypeChecking(UnpackDeclPtr decl,
       errorReport("Unpack declaration type error.");
     }
     // 3: symbol
-    unsigned size = unpackDecls.size();
+      std::size_t size = unpackDecls.size();
     for (unsigned index = 0; index < size; index++) {
       CurScope->addDef(std::make_shared<VariableSymbol>(
           unpackDecls[index]->getName(), CurScope, types[index], true,

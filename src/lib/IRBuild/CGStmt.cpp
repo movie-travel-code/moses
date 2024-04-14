@@ -206,7 +206,7 @@ std::shared_ptr<Value> ModuleBuilder::visit(const CompoundStmt *comstmt) {
   }
 
   // (2) Generated the code for children.
-  unsigned size = comstmt->getSize();
+  std::size_t size = comstmt->getSize();
   for (unsigned i = 0; i < size; ++i) {
     auto ret = (*comstmt)[i]->Accept(this);
   }

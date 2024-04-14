@@ -106,7 +106,7 @@ public:
 
   bool isNoReturn() const { return NoReturn; }
 
-  unsigned getArgNums() const { return ArgInfos.size(); }
+  std::size_t getArgNums() const { return ArgInfos.size(); }
   const std::vector<AAIPtr> &getArgsInfo() const { return ArgInfos; }
   const std::shared_ptr<ASTType> getParm(unsigned index) const;
   ArgABIInfo::Kind getKind(unsigned index) const;

@@ -975,7 +975,7 @@ ExprASTPtr Parser::ParseAnonymousInitExpr() {
     expectToken(TokenValue::PUNCTUATOR_Comma, ",", true);
   }
 
-  unsigned size = initExprs.size();
+    std::size_t size = initExprs.size();
   for (unsigned i = 0; i < size; i++) {
     initTypes.push_back(initExprs[i]->getType());
   }

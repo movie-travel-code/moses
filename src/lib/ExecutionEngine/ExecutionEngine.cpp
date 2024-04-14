@@ -234,7 +234,7 @@ void Interpreter::visitCallInst(std::shared_ptr<CallInst> I) {
   SF.Caller = I;
   // prepare the arg values.
   std::vector<GenericValue> ArgVals;
-  for (unsigned i = 0, size = I->getNumArgOperands(); i < size; i++)
+  for (std::size_t i = 0, size = I->getNumArgOperands(); i < size; i++)
     ArgVals.push_back(getOperandValue(I->getArgOperand(i), SF));
 
   auto Func = std::dynamic_pointer_cast<Function>(I->getOperand(0).get());

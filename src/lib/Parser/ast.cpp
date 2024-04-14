@@ -25,7 +25,7 @@ StmtASTPtr CompoundStmt::operator[](std::size_t index) const {
 
 //===---------------------------UnpackDecl-----------------------------===//
 bool UnpackDecl::TypeCheckingAndTypeSetting(AnonTyPtr type) {
-  unsigned size = decls.size();
+  std::size_t size = decls.size();
   if (type->getSubTypesNum() != size) {
     return false;
   }
@@ -63,7 +63,7 @@ std::vector<VarDeclPtr> UnpackDecl::operator[](std::size_t index) const {
 }
 
 void UnpackDecl::getDecls(std::vector<VarDeclPtr> &SubDecls) const {
-  unsigned size = decls.size();
+  std::size_t size = decls.size();
   for (unsigned index = 0; index < size; index++) {
     if (UnpackDeclPtr unpackd =
             std::dynamic_pointer_cast<UnpackDecl>(decls[index])) {

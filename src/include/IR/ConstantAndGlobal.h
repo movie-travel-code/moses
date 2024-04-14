@@ -116,7 +116,6 @@ public:
   void Print(std::ostringstream &out) override;
 };
 
-// ��moses�У���ʱֻ��int��bool���ͣ�int���Ϳ���ʹ��i32��ʾ��
 class ConstantInt final : public ConstantIntegral {
   int Val;
   ConstantInt(const ConstantInt &) = delete;

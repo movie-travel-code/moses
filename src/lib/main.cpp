@@ -11,15 +11,22 @@
 #include "Lexer/scanner.h"
 #include "Parser/ASTContext.h"
 #include "Parser/parser.h"
+
+#include "gflags/gflags.h"
+
 #include <iostream>
 #include <sstream>
-
 
 using namespace parse;
 using namespace sema;
 using namespace IR;
 using namespace IRBuild;
 using namespace Execution;
+
+DEFINE_bool(print_tokens, true, "Print the token.");
+DEFINE_bool(print_ir, true, "Print the IR.");
+DEFINE_string(output_ir, "", "Set the ir output path.");
+
 int main(int argc, char *argv[]) {
   // FIXME: We should use more mature approach to handle user options.
   if (argc != 2) {
@@ -48,15 +55,18 @@ int main(int argc, char *argv[]) {
   std::ostringstream out;
   IRPrinter::Print(IRContext, out);
   IRPrinter::Print(moduleBuilder.getIRs(), out);
-  cout << out.str();
-  cout << "--------------------------------------------------------------------"
-          "------------\n";
+  if (FLAGS_print_ir) {
+    cout << out.str();
+  }
 
   // Set the output path.
   // FIXME: Maybe we should allow user to provide a output path.
-  std::string OutputPath(argv[1]);
-  OutputPath = OutputPath.substr(0, OutputPath.size() - 2);
-  OutputPath += "mi";
+  std::string OutputPath;
+  //if (FLAGS_output_ir == "") {
+    OutputPath = argv[1];
+    OutputPath = OutputPath.substr(0, OutputPath.size() - 2);
+    OutputPath += "mi";
+  //}
 
   std::ofstream mosesIR(OutputPath);
   mosesIR << out.str();

@@ -13,7 +13,6 @@ namespace IRBuild {
 class ArgABIInfo;
 using namespace ast;
 using namespace IR;
-using AAIPtr = std::shared_ptr<ArgABIInfo>;
 
 // Note: Moses temporarily support single TU, so CallingConvention is very
 // simple(variation of cdecl).
@@ -74,12 +73,13 @@ private:
   bool CanBeFlattened;
 
 public:
+  ArgABIInfo() {}
   ArgABIInfo(std::shared_ptr<ASTType> type, Kind kind, std::string name = "",
              std::shared_ptr<IR::Type> tydata = nullptr, bool flatten = false)
       : Ty(type), TheKind(kind), Name(name), TypeData(tydata),
         CanBeFlattened(flatten) {}
 
-  static std::shared_ptr<ArgABIInfo> Create(std::shared_ptr<ASTType> type, Kind kind);
+  static ArgABIInfo Create(std::shared_ptr<ASTType> type, Kind kind);
   std::shared_ptr<ASTType> getType() const { return Ty; }
   Kind getKind() const { return TheKind; }
   bool canBeFlattened() const { return CanBeFlattened; }
@@ -90,18 +90,19 @@ public:
 /// CGFunctionInfo - Class to encapsulate the information about a function
 /// definition.
 class CGFunctionInfo {
-  std::vector<AAIPtr> ArgInfos;
-  AAIPtr ReturnInfo;
+  std::vector<ArgABIInfo> ArgInfos;
+  ArgABIInfo ReturnInfo;
 
 private:
   bool NoReturn;
 
 public:
+  CGFunctionInfo() {}
   CGFunctionInfo(MosesIRContext &Ctx,
                  std::vector<std::pair<std::shared_ptr<ASTType>, std::string>> ArgsTy,
                  std::shared_ptr<ASTType> RetTy);
 
-  static std::shared_ptr<CGFunctionInfo const> create(MosesIRContext &Ctx,
+  static CGFunctionInfo create(MosesIRContext &Ctx,
                                                       const FunctionDecl *FD);
 
   bool isNoReturn() const { return NoReturn; }
@@ -110,16 +111,16 @@ public:
   const std::vector<AAIPtr> &getArgsInfo() const { return ArgInfos; }
   const std::shared_ptr<ASTType> getParm(unsigned index) const;
   ArgABIInfo::Kind getKind(unsigned index) const;
-  const AAIPtr getArgABIInfo(unsigned index) const;
-  AAIPtr getReturnInfo() const { return ReturnInfo; }
+  const ArgABIInfo getArgABIInfo(unsigned index) const;
+  ArgABIInfo getReturnInfo() const { return ReturnInfo; }
 
   /// \brief func add(lhs:int, rhs:int) -> int {}
   ///				   {'', 'lhs', 'rhs'}
   std::vector<std::string> getArgNames() const;
 
   // Generate ArgABIInfo for return type.
-  static AAIPtr classifyReturnTye(MosesIRContext &Ctx, std::shared_ptr<ASTType> RetTy);
-  static AAIPtr classifyArgumentType(MosesIRContext &Ctx, std::shared_ptr<ASTType> ArgTy,
+  static ArgABIInfo classifyReturnTye(MosesIRContext &Ctx, std::shared_ptr<ASTType> RetTy);
+  static ArgABIInfo classifyArgumentType(MosesIRContext &Ctx, std::shared_ptr<ASTType> ArgTy,
                                      const std::string &Name);
 };
 } // namespace IRBuild

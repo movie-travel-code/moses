@@ -51,7 +51,7 @@ private:
 void ASTToIRMapping::construct(const CGFunctionInfo &FI) {
   auto RetAI = FI.getReturnInfo();
   unsigned IRCursorArgNo = 0;
-  if (RetAI->getKind() == ArgABIInfo::Kind::InDirect) {
+  if (RetAI.getKind() == ArgABIInfo::Kind::InDirect) {
     // SRet
     HasSRet = true;
     IRCursorArgNo++;
@@ -59,12 +59,12 @@ void ASTToIRMapping::construct(const CGFunctionInfo &FI) {
   }
 
   for (auto item : FI.getArgsInfo()) {
-    switch (item->getKind()) {
+    switch (item.getKind()) {
     case ArgABIInfo::Kind::Direct:
       // coerce or flatten.
-      if (item->getType()->getKind() == TypeKind::USERDEFIED ||
-          item->getType()->getKind() == TypeKind::ANONYMOUS) {
-        auto ty = item->getType();
+      if (item.getType()->getKind() == TypeKind::USERDEFIED ||
+          item.getType()->getKind() == TypeKind::ANONYMOUS) {
+        auto ty = item.getType();
         ArgInfo.push_back(IRArgs(IRCursorArgNo, ty->MemberNum()));
         IRCursorArgNo += ty->MemberNum();
       } else {
@@ -99,7 +99,7 @@ void ASTToIRMapping::construct(const CGFunctionInfo &FI) {
 /// 		define i32 func(%struct.1 lhs) {}
 ///							~~~~~~~~
 /// Therefore, we should refer to 'inalloca' attribute in future.
-void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
+void ModuleBuilder::EmitFunctionPrologue(CGFunctionInfo FunInfo,
                                          std::shared_ptr<Function> fun) {
   // Create a pointer value for every parameter declaration. This usually
   // entails copying one or more IR arguments into an alloca.
@@ -116,19 +116,19 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
   //			}
   auto FuncType = fun->getFunctionType();
   bool isSRet = false;
-  if (FunInfo->getReturnInfo()->getKind() == ArgABIInfo::Kind::InDirect) {
+  if (FunInfo.getReturnInfo().getKind() == ArgABIInfo::Kind::InDirect) {
     fun->getArg(0)->setName(getCurLocalName("agg.result"));
     isSRet = true;
   }
 
-  ASTToIRMapping IRFunctionArgs(*FunInfo);
-  for (unsigned i = 0; i < FunInfo->getArgNums(); i++) {
-    auto ArgInfo = FunInfo->getArgABIInfo(i);
+  ASTToIRMapping IRFunctionArgs(FunInfo);
+  for (unsigned i = 0; i < FunInfo.getArgNums(); i++) {
+    auto ArgInfo = FunInfo.getArgABIInfo(i);
     auto Arg = CurFunc->CurFuncDecl->getParmDecl(i).get();
     unsigned FirstIRArg, NumIRArgs;
     std::tie(FirstIRArg, NumIRArgs) =
         IRFunctionArgs.getIRArgs(isSRet ? i + 1 : i);
-    switch (ArgInfo->getKind()) {
+    switch (ArgInfo.getKind()) {
     case ArgABIInfo::Kind::InDirect: {
       std::shared_ptr<Value> V = fun->getArg(FirstIRArg);
       EmitParmDecl(Arg, V);
@@ -136,7 +136,7 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
     }
     case ArgABIInfo::Kind::Direct: {
       std::shared_ptr<Value> V = fun->getArg(FirstIRArg);
-      auto ArgType = Types.ConvertType(ArgInfo->getType());
+      auto ArgType = Types.ConvertType(ArgInfo.getType());
       if (ArgType->isAggregateType()) {
         // If this structure was wxpanded into multiple arguments then we
         // need to create a temporary and reconstruct it from the arguments.
@@ -151,7 +151,7 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
           fun->getArg(index)->setName(Name + "." +
                                       std::to_string(index - FirstIRArg));
         }
-        ExpandTypeFromArgs(ArgInfo->getType(), LValue::MakeAddr(Temp), SubArgs);
+        ExpandTypeFromArgs(ArgInfo.getType(), LValue::MakeAddr(Temp), SubArgs);
         EmitParmDecl(Arg, Temp);
       } else {
         EmitParmDecl(Arg, fun->getArg(FirstIRArg));
@@ -159,24 +159,24 @@ void ModuleBuilder::EmitFunctionPrologue(CGFuncInfoConstPtr FunInfo,
       break;
     }
     case ArgABIInfo::Kind::Ignore:
-      EmitParmDecl(Arg, CreateAlloca(Types.ConvertType(ArgInfo->getType())));
+      EmitParmDecl(Arg, CreateAlloca(Types.ConvertType(ArgInfo.getType())));
       break;
     }
   }
 }
 
 /// EmitFunctionEpilog - Emit the code to return the given temporary.
-void ModuleBuilder::EmitFunctionEpilogue(CGFuncInfoConstPtr CGFnInfo) {
+void ModuleBuilder::EmitFunctionEpilogue(CGFunctionInfo CGFnInfo) {
   std::shared_ptr<Value> RV = nullptr;
-  auto RetInfo = CGFnInfo->getReturnInfo();
+  auto RetInfo = CGFnInfo.getReturnInfo();
 
-  switch (RetInfo->getKind()) {
+  switch (RetInfo.getKind()) {
   case ArgABIInfo::Kind::Direct:
     RV = CreateLoad(CurFunc->ReturnValue);
     break;
   case ArgABIInfo::Kind::InDirect:
     EmitAggregateCopy(CurFunc->CurFn->getArg(0), CurFunc->ReturnValue,
-                      RetInfo->getType());
+                      RetInfo.getType());
     break;
   case ArgABIInfo::Kind::Ignore:
     break;
@@ -263,33 +263,33 @@ RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
 ///	When we come across 'add(n)', we should emit 'n' first and emit
 /// callexpr.
 RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
-                               CGFuncInfoConstPtr CGFunInfo,
+                               CGFunctionInfo CGFunInfo,
                                std::shared_ptr<Value> FuncAddr,
                                CallArgList CallArgs) {
   std::vector<std::shared_ptr<Value>> Args;
   // Handle struct-return functions by passing a pointer to the location that we
   // would like to return into.
-  auto RetInfo = CGFunInfo->getReturnInfo();
+  auto RetInfo = CGFunInfo.getReturnInfo();
 
   // If the call return a temporary with struct return, create a temporary
   // alloca to hold the result.
-  if (RetInfo->getKind() == ArgABIInfo::Kind::InDirect) {
-    auto forPrint = CreateAlloca(Types.ConvertType(RetInfo->getType()),
+  if (RetInfo.getKind() == ArgABIInfo::Kind::InDirect) {
+    auto forPrint = CreateAlloca(Types.ConvertType(RetInfo.getType()),
                                  getCurLocalName("ret.tmp"));
     Args.push_back(forPrint);
   }
 
-  auto ArgsInfo = CGFunInfo->getArgsInfo();
+  auto ArgsInfo = CGFunInfo.getArgsInfo();
   assert(ArgsInfo.size() == CallArgs.size() && "Arguments number don't match!");
   std::size_t ArgsNum = ArgsInfo.size();
   for (unsigned i = 0; i < ArgsNum; i++) {
     auto ArgInfo = ArgsInfo[i];
     auto ArgVal = CallArgs[i].first;
-    auto ty = Types.ConvertType(ArgInfo->getType());
-    switch (ArgInfo->getKind()) {
+    auto ty = Types.ConvertType(ArgInfo.getType());
+    switch (ArgInfo.getKind()) {
     case ArgABIInfo::Kind::Direct:
       if (ty->isAggregateType()) {
-        ExpandTypeToArgs(ArgInfo->getType(), ArgVal, Args);
+        ExpandTypeToArgs(ArgInfo.getType(), ArgVal, Args);
       } else {
         Args.push_back(CallArgs[i].first.getScalarVal());
       }
@@ -316,15 +316,15 @@ RValue ModuleBuilder::EmitCall(const FunctionDecl *FD,
   }
 
   auto CallRest = CreateCall(FuncAddr, Args);
-  switch (RetInfo->getKind()) {
+  switch (RetInfo.getKind()) {
   case ArgABIInfo::Kind::InDirect:
     return RValue::getAggregate(Args[0]);
   case ArgABIInfo::Kind::Direct:
     // (1) AggregateType coerce
     // (2) BuiltinType
-    if (Types.ConvertType(RetInfo->getType())->isAggregateType()) {
+    if (Types.ConvertType(RetInfo.getType())->isAggregateType()) {
       std::shared_ptr<Value> V =
-          CreateAlloca(Types.ConvertType(RetInfo->getType()), "%coerce");
+          CreateAlloca(Types.ConvertType(RetInfo.getType()), "%coerce");
       CreateCoercedStore(CallRest, V);
       return RValue::getAggregate(V);
     } else {
@@ -355,9 +355,9 @@ void ModuleBuilder::EmitCallArgs(CallArgList &CallArgs,
 
 //===--------------------------------------------------------------------------===//
 // Implements the ArgABIInfo
-std::shared_ptr<ArgABIInfo> ArgABIInfo::Create(std::shared_ptr<ASTType> type,
+ArgABIInfo ArgABIInfo::Create(std::shared_ptr<ASTType> type,
                                                Kind kind) {
-  return std::make_shared<ArgABIInfo>(type, kind);
+  return ArgABIInfo(type, kind);
 }
 
 //===--------------------------------------------------------------------------===//
@@ -381,16 +381,16 @@ CGFunctionInfo::CGFunctionInfo(
 ///       void                          ----> Ignore
 ///       struct{int/bool}              ----> Direct(coerce to int)
 ///       struct{int/bool, int/bool}    ----> InDirect(sret hidden pointer)
-AAIPtr CGFunctionInfo::classifyReturnTye(MosesIRContext &Ctx,
+ArgABIInfo CGFunctionInfo::classifyReturnTye(MosesIRContext &Ctx,
                                          std::shared_ptr<ASTType> RetTy) {
   if (RetTy->getKind() == TypeKind::VOID)
-    return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Ignore);
+    return ArgABIInfo(RetTy, ArgABIInfo::Kind::Ignore);
 
   if (RetTy->getKind() == TypeKind::INT)
-    return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "",
+    return ArgABIInfo(RetTy, ArgABIInfo::Kind::Direct, "",
                                         IR::Type::getIntType(Ctx));
   if (RetTy->getKind() == TypeKind::BOOL)
-    return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "",
+    return ArgABIInfo(RetTy, ArgABIInfo::Kind::Direct, "",
                                         IR::Type::getIntType(Ctx));
 
   // small structures which are register sized are generally returned
@@ -398,16 +398,16 @@ AAIPtr CGFunctionInfo::classifyReturnTye(MosesIRContext &Ctx,
   if (RetTy->size() <= 32) {
     auto coreTy = RetTy->StripOffShell();
     if (coreTy->getKind() == TypeKind::INT)
-      return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "",
+      return ArgABIInfo(RetTy, ArgABIInfo::Kind::Direct, "",
                                           IR::Type::getIntType(Ctx));
     if (coreTy->getKind() == TypeKind::BOOL)
-      return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "",
+      return ArgABIInfo(RetTy, ArgABIInfo::Kind::Direct, "",
                                           IR::Type::getIntType(Ctx));
     if (coreTy->getKind() == TypeKind::VOID)
-      return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::Direct, "",
+      return ArgABIInfo(RetTy, ArgABIInfo::Kind::Direct, "",
                                           IR::Type::getVoidType(Ctx));
   }
-  return std::make_shared<ArgABIInfo>(RetTy, ArgABIInfo::Kind::InDirect,
+  return ArgABIInfo(RetTy, ArgABIInfo::Kind::InDirect,
                                       "%ret.addr");
 }
 
@@ -418,17 +418,17 @@ AAIPtr CGFunctionInfo::classifyReturnTye(MosesIRContext &Ctx,
 /// ----> Direct(coerce to
 /// int-i32) 			struct{int/bool, int/bool}		----> Direct(flatten
 /// int, int) 			struct{int/bool, int/bool,,,}	----> Indirect(hidden pointer)
-AAIPtr CGFunctionInfo::classifyArgumentType(MosesIRContext &Ctx,
+ArgABIInfo CGFunctionInfo::classifyArgumentType(MosesIRContext &Ctx,
                                             std::shared_ptr<ASTType> ArgTy,
                                             const std::string &Name) {
   if (ArgTy->getKind() == TypeKind::VOID)
-    return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Ignore, Name);
+    return ArgABIInfo(ArgTy, ArgABIInfo::Kind::Ignore, Name);
 
   if (ArgTy->getKind() == TypeKind::BOOL)
-    return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Direct, Name,
+    return ArgABIInfo(ArgTy, ArgABIInfo::Kind::Direct, Name,
                                         IR::Type::getBoolType(Ctx));
   if (ArgTy->getKind() == TypeKind::INT)
-    return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Direct, Name,
+    return ArgABIInfo(ArgTy, ArgABIInfo::Kind::Direct, Name,
                                         IR::Type::getIntType(Ctx));
 
   // small structures which are register sized are generally returned
@@ -438,40 +438,40 @@ AAIPtr CGFunctionInfo::classifyArgumentType(MosesIRContext &Ctx,
     // case 2: class A { var m:bool; }; class B{ var m:A; };
     // case 3: var num = {{{int}}}
     // To Do: We need to strip off the '{' and '}' to get the core type.
-    return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Direct, Name,
+    return ArgABIInfo(ArgTy, ArgABIInfo::Kind::Direct, Name,
                                         IR::Type::getIntType(Ctx));
   }
 
   if (ArgTy->size() <= 64)
-    return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::Direct, Name,
+    return ArgABIInfo(ArgTy, ArgABIInfo::Kind::Direct, Name,
                                         nullptr, true);
-  return std::make_shared<ArgABIInfo>(ArgTy, ArgABIInfo::Kind::InDirect,
+  return ArgABIInfo(ArgTy, ArgABIInfo::Kind::InDirect,
                                       ModuleBuilder::LocalInstNamePrefix +
                                           Name + ".addr");
 }
 
-CGFuncInfoConstPtr CGFunctionInfo::create(MosesIRContext &Ctx,
+CGFunctionInfo CGFunctionInfo::create(MosesIRContext &Ctx,
                                           const FunctionDecl *FD) {
   std::vector<std::pair<std::shared_ptr<ASTType>, std::string>> ArgsTy;
   for (auto item : FD->getParms()) {
     ArgsTy.push_back({item->getDeclType(), item->getName()});
   }
-  return std::make_shared<CGFunctionInfo>(Ctx, ArgsTy, FD->getReturnType());
+  return CGFunctionInfo(Ctx, ArgsTy, FD->getReturnType());
 }
 
 const std::shared_ptr<ASTType> CGFunctionInfo::getParm(unsigned index) const {
   assert(index <= getArgNums() - 1 &&
          "Index out of range when we get FunctionInfo.");
-  return ArgInfos[index]->getType();
+  return ArgInfos[index].getType();
 }
 
 ArgABIInfo::Kind CGFunctionInfo::getKind(unsigned index) const {
   assert(index <= getArgNums() - 1 &&
          "Index out of range when we get FunctionInfo.");
-  return ArgInfos[index]->getKind();
+  return ArgInfos[index].getKind();
 }
 
-const AAIPtr CGFunctionInfo::getArgABIInfo(unsigned index) const {
+const ArgABIInfo CGFunctionInfo::getArgABIInfo(unsigned index) const {
   assert(index <= getArgNums() - 1 &&
          "Index out of range when we get FunctionInfo.");
   return ArgInfos[index];
@@ -481,9 +481,9 @@ const AAIPtr CGFunctionInfo::getArgABIInfo(unsigned index) const {
 /// To Do: efficiency
 std::vector<std::string> CGFunctionInfo::getArgNames() const {
   std::vector<std::string> Names;
-  Names.push_back(ReturnInfo->getArgName());
-  for_each(ArgInfos.begin(), ArgInfos.end(), [&Names](const AAIPtr &arginfo) {
-    Names.push_back(arginfo->getArgName());
+  Names.push_back(ReturnInfo.getArgName());
+  for_each(ArgInfos.begin(), ArgInfos.end(), [&Names](const ArgABIInfo &arginfo) {
+    Names.push_back(arginfo.getArgName());
   });
   return Names;
 }
@@ -514,21 +514,21 @@ std::vector<std::string> CGFunctionInfo::getArgNames() const {
 ///				ret
 ///			}
 GetFuncTypeRet CodeGenTypes::getFunctionType(const FunctionDecl *FD,
-                                             CGFuncInfoConstPtr Info) {
-  std::vector<std::string> ArgNames;
-  std::vector<TyPtr> ArgTypes;
+                                             CGFunctionInfo Info) {
+  std::vector<std::string> ArgNames(FD->getParaNum());
+  std::vector<TyPtr> ArgTypes(FD->getParaNum());
 
   // (1) Create the llvm::FunctionType
   TyPtr ResultTy = nullptr;
-  auto RetInfo = Info->getReturnInfo();
-  auto RetTy = RetInfo->getType();
-  switch (RetInfo->getKind()) {
+  auto RetInfo = Info.getReturnInfo();
+  auto RetTy = RetInfo.getType();
+  switch (RetInfo.getKind()) {
   case ArgABIInfo::Kind::Ignore:
     ResultTy = IR::Type::getVoidType(IRCtx);
     break;
   case ArgABIInfo::Kind::InDirect:
     ArgTypes.push_back(PointerType::get(ConvertType(RetTy)));
-    ArgNames.push_back(RetInfo->getArgName());
+    ArgNames.push_back(RetInfo.getArgName());
     ResultTy = IR::Type::getVoidType(IRCtx);
     break;
   case ArgABIInfo::Kind::Direct:
@@ -538,62 +538,62 @@ GetFuncTypeRet CodeGenTypes::getFunctionType(const FunctionDecl *FD,
     break;
   }
 
-  ASTToIRMapping IRFunctionArgs(*Info);
+  ASTToIRMapping IRFunctionArgs(Info);
 
   // Add parm type.
-  auto ArgsInfo = Info->getArgsInfo();
+  auto ArgsInfo = Info.getArgsInfo();
 
   for (std::size_t i = 0, NumArgs = ArgsInfo.size(); i < NumArgs; i++) {
     unsigned FirstIRArg, NumIRArgs;
     std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(i);
-    switch (ArgsInfo[i]->getKind()) {
+    switch (ArgsInfo[i].getKind()) {
     case ArgABIInfo::Kind::Direct:
-      if (ArgsInfo[i]->getType()->getKind() == TypeKind::USERDEFIED ||
-          ArgsInfo[i]->getType()->getKind() == TypeKind::ANONYMOUS) {
+      if (ArgsInfo[i].getType()->getKind() == TypeKind::USERDEFIED ||
+          ArgsInfo[i].getType()->getKind() == TypeKind::ANONYMOUS) {
         // Can be flattened.
         // Shit Code! Shit Code! Shit Code!
         unsigned count = 0;
-        if (ArgsInfo[i]->canBeFlattened()) {
+        if (ArgsInfo[i].canBeFlattened()) {
           auto StructTy = std::dynamic_pointer_cast<UserDefinedType>(
-              ArgsInfo[i]->getType());
+              ArgsInfo[i].getType());
           if (StructTy) {
             for (auto item : StructTy->getMemberTypes()) {
               auto StripOffTy = item.first->StripOffShell();
               ArgTypes.push_back(
                   ConvertType(StripOffTy == nullptr ? item.first : StripOffTy));
-              ArgNames.push_back(ArgsInfo[i]->getArgName() + "." +
+              ArgNames.push_back(ArgsInfo[i].getArgName() + "." +
                                  std::to_string(count++));
             }
             break;
           }
           auto AnonyTy =
-              std::dynamic_pointer_cast<AnonymousType>(ArgsInfo[i]->getType());
+              std::dynamic_pointer_cast<AnonymousType>(ArgsInfo[i].getType());
           count = 0;
           if (AnonyTy) {
             for (auto item : AnonyTy->getSubTypes()) {
               ArgTypes.push_back(ConvertType(item->StripOffShell()));
-              ArgNames.push_back(ArgsInfo[i]->getArgName() + "." +
+              ArgNames.push_back(ArgsInfo[i].getArgName() + "." +
                                  std::to_string(count++));
             }
             break;
           }
           assert(0 && "Unreachable code!");
         } else {
-          ArgTypes.push_back(ArgsInfo[i]->getCoerceeToType());
-          ArgNames.push_back(ArgsInfo[i]->getArgName());
+          ArgTypes.push_back(ArgsInfo[i].getCoerceeToType());
+          ArgNames.push_back(ArgsInfo[i].getArgName());
         }
       } else {
-        ArgTypes.push_back(ConvertType(ArgsInfo[i]->getType()));
-        ArgNames.push_back(ArgsInfo[i]->getArgName());
+        ArgTypes.push_back(ConvertType(ArgsInfo[i].getType()));
+        ArgNames.push_back(ArgsInfo[i].getArgName());
       }
       break;
     case ArgABIInfo::Kind::InDirect:
-      ArgTypes.push_back(PointerType::get(ConvertType(ArgsInfo[i]->getType())));
-      ArgNames.push_back(ArgsInfo[i]->getArgName() + ".addr");
+      ArgTypes.push_back(PointerType::get(ConvertType(ArgsInfo[i].getType())));
+      ArgNames.push_back(ArgsInfo[i].getArgName() + ".addr");
       break;
     case ArgABIInfo::Kind::Ignore:
       ArgTypes.push_back(IR::Type::getVoidType(IRCtx));
-      ArgNames.push_back(ArgsInfo[i]->getArgName());
+      ArgNames.push_back(ArgsInfo[i].getArgName());
       break;
     }
   }
@@ -605,7 +605,7 @@ GetFuncTypeRet CodeGenTypes::getFunctionType(const FunctionDecl *FD,
 
 /// \brief Generate CGFunctionInfo for FunctionDecl.
 /// Note: Moses have no function declaration, so there is no indirect recursion.
-CGFuncInfoConstPtr CodeGenTypes::arrangeFunctionInfo(const FunctionDecl *FD) {
+CGFunctionInfo CodeGenTypes::arrangeFunctionInfo(const FunctionDecl *FD) {
   // (1) Check whether the CGFunctionInfo exists.
   auto iter = FunctionInfos.find(FD);
   if (iter != FunctionInfos.end())

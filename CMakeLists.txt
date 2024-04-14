@@ -3,9 +3,12 @@ project (moses)
 
 SET(CMAKE_BUILD_TYPE "Debug")
 ADD_DEFINITIONS("-W -Wall -Werror -std=c++2a")
+find_package(gflags REQUIRED)
+
 ADD_SUBDIRECTORY(src)
 ADD_EXECUTABLE(moses ${CMAKE_SOURCE_DIR}/src/lib/main.cpp)
-TARGET_LINK_LIBRARIES(moses Engine IRSupport IR IRBuild Lexer Parser Support)
+
+TARGET_LINK_LIBRARIES(moses Engine IRSupport IR IRBuild Lexer Parser Support gflags)
 
 TARGET_INCLUDE_DIRECTORIES(moses PRIVATE ${CMAKE_SOURCE_DIR}/src/include)
 TARGET_INCLUDE_DIRECTORIES(Engine PRIVATE ${CMAKE_SOURCE_DIR}/src/include)

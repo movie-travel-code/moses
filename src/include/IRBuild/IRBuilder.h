@@ -60,7 +60,7 @@ struct BinOpInfo {
 /// for Funciton.
 struct FunctionBuilderStatus {
   FunctionDecl *CurFuncDecl;
-  CGFuncInfoConstPtr CGFnInfo;
+  CGFunctionInfo CGFnInfo;
   TyPtr FnRetTy;
   std::shared_ptr<Function> CurFn;
   // Count the return expr(contain implicit return-expr).
@@ -108,7 +108,7 @@ struct FunctionBuilderStatus {
   std::shared_ptr<Value> ReturnValue;
 
   explicit FunctionBuilderStatus()
-      : CurFuncDecl(nullptr), CGFnInfo(nullptr), FnRetTy(nullptr),
+      : CurFuncDecl(nullptr), CGFnInfo(), FnRetTy(nullptr),
         CurFn(nullptr), NumReturnExprs(0), TopLevelTempCounter(0),
         ReturnValue(nullptr) {}
 };
@@ -249,7 +249,7 @@ private:
   RValue EmitCall(const FunctionDecl *FD, std::shared_ptr<Value> FuncAddr,
                   const std::vector<ExprASTPtr> &Args);
 
-  RValue EmitCall(const FunctionDecl *FD, CGFuncInfoConstPtr CGFunInfo,
+  RValue EmitCall(const FunctionDecl *FD, CGFunctionInfo CGFunInfo,
                   std::shared_ptr<Value> FuncAddr, CallArgList CallArgs);
 
   /// EmitCallArg - Emit a single call argument.
@@ -441,7 +441,7 @@ private:
   void EmitFunctionDecl(const FunctionDecl *FD);
 
   /// \brief Handle the start of function.
-  void StartFunction(std::shared_ptr<CGFunctionInfo const> FnInfo, std::shared_ptr<Function> Fn);
+  void StartFunction(CGFunctionInfo FnInfo, std::shared_ptr<Function> Fn);
 
   /// \brief Complete IR generation of the current function. It is legal to call
   /// this function even if there is no current insertion point.
@@ -473,7 +473,7 @@ private:
   //          ======================
   //         |     subl $N, %esp    |
   //          ======================
-  void EmitFunctionPrologue(std::shared_ptr<CGFunctionInfo const> FunInfo,
+  void EmitFunctionPrologue(CGFunctionInfo FunInfo,
                             std::shared_ptr<Function> fun);
 
   // EmitFunctionEpilogue - Reverse the actions of the function prologue and
@@ -495,7 +495,7 @@ private:
   //              ======================
   //             |   ret                |
   //              ======================
-  void EmitFunctionEpilogue(CGFuncInfoConstPtr CGFnInfo);
+  void EmitFunctionEpilogue(CGFunctionInfo CGFnInfo);
   //===---------------------------------------------------------===//
   // Emit code for stmts.
 
